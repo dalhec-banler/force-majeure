@@ -177,7 +177,7 @@
       <div id="sigmeter"><i></i><i></i><i></i><i></i><i></i><i></i></div>
       <div id="ladder">Nothing. No one is looking.</div>
       <span id="dosnum"></span>
-      <label class="kv" for="containment"><span>containment budget</span>
+      <label class="kv" for="containment"><span>containment budget ($M)</span>
         <span class="num" id="contval">0</span></label>
       <input type="range" id="containment" min="0" max="40" value="0" step="1">
     </div>
@@ -218,15 +218,16 @@
     <ul>
       <li><b>Commit</b> up to two operations and a containment budget, then
         resolve the season. Most of what you order lands seasons later.</li>
-      <li><b>The rings on the globe</b> are each region's natural variance
-        envelope. Anomalies that stay inside read as weather. Anomalies that
-        break the ring read as <i>evidence</i>.</li>
-      <li><b>Move the driver, not the region.</b> Slower, but the anomaly
-        arrives looking like climate. Acting into a real ENSO swing hides
-        your signature inside the noise.</li>
-      <li><b>Fire wants a drought first.</b> Build it, then ignite.</li>
-      <li>Watch treasury, mandate, price, and the attribution ladder. At the
-        top of the ladder the record becomes public, and it is yours.</li>
+      <li><b>The ring around each region</b> is what nature could plausibly
+        do on its own. Stay inside it and you were never here. Break it and
+        somebody starts a file.</li>
+      <li><b>Move the ocean, not the country.</b> Slower — but the failed
+        harvest arrives looking like climate, two borders from your
+        fingerprints.</li>
+      <li><b>Fire wants a drought first.</b> Build it, then wait for
+        lightning that was coming anyway.</li>
+      <li>Watch the money, the fear, the price of grain, and the ladder. At
+        the top of the ladder the record becomes public, and it is yours.</li>
     </ul>
     <p>One honest run, no undo. Write a prediction each season — the archive
       scores you against them at the end.</p>
@@ -268,11 +269,12 @@ fillCaps($("opA")); fillCaps($("opB")); fillRegions($("tgtA")); fillRegions($("t
 function capInfo(name){
   const c = CAPS.find(x=>x.name===name);
   if(!c || c.type==="NONE") return "";
-  const bits=[`cost ${c.cost}`,`lag ${c.lag} season${c.lag===1?"":"s"}`,`signature ${c.sig}`];
-  if(c.type==="DRIVER") bits.push(`target: ${c.fixedTarget} (fixed)`);
-  if(typeof c.dispTo==="string") bits.push(`displaces → ${c.dispTo} later`);
-  if(c.needsDrought) bits.push("needs prior-season drought");
-  if(c.resil>0) bits.push(`resilience +${c.resil}`);
+  const bits=[`$${c.cost}M`,`lands in ${c.lag} season${c.lag===1?"":"s"}`,
+              c.sig>=20? "leaves a loud signature" : c.sig>=10? "leaves a signature" : c.sig>0? "quiet" : "invisible"];
+  if(c.type==="DRIVER") bits.push(`works through the ${c.fixedTarget} system`);
+  if(typeof c.dispTo==="string") bits.push(`what you move surfaces elsewhere, later`);
+  if(c.needsDrought) bits.push("wants the target already dry");
+  if(c.resil>0) bits.push("hardens the region, permanently");
   return bits.join(" · ");
 }
 function syncOpRow(op,tgt,info){
@@ -410,11 +412,13 @@ function hoverCheck(e){
   const r=REG[best], row=lastRow();
   const a=row?row.anomalies[best]:0, s=row?row.sigmas[best]:r.sigma;
   const y=row?row.yields[best]:100, res=row?row.resil[best]:0;
+  const read = a<-s? "Drought beyond anything in the record"
+    : a<-0.5? "Drought building" : a>s? "Flooding beyond the record"
+    : a>0.7? "Unusually wet season" : "Seasonal norms";
   h.innerHTML=`<b>${r.name.toUpperCase()}</b>${r.homeland?" · HOMELAND":""}<br>
-    ${r.crop} · ${r.weight}% of world supply<br>
-    anomaly <span class="num">${a.toFixed(2)}</span> / envelope ±<span class="num">${s.toFixed(2)}</span>
-    ${Math.abs(a)>s?' <span style="color:var(--red)">OUTSIDE</span>':""}<br>
-    yield <span class="num">${y.toFixed(1)}</span>${res?` · resilience ${res}`:""}`;
+    ${read}. ${r.crop} harvest at <span class="num">${y.toFixed(0)}%</span>
+    · ${r.weight}% of world supply${res?` · hardened`:""}<br>
+    <span style="color:var(--ink-faint)">anomaly ${a.toFixed(2)} vs natural range ±${s.toFixed(2)}${Math.abs(a)>s?" — outside":""}</span>`;
   h.style.display="block";
   h.style.left=Math.min(mx+14,W-240)+"px"; h.style.top=(my+10)+"px";
 }
@@ -442,22 +446,22 @@ function fmt(n,d=1){ return n.toLocaleString("en-US",{minimumFractionDigits:d,ma
 
 function updateHUD(row, prev){
   $("clock").textContent = `${row.year} · ${row.qtr.toUpperCase()}  ·  S${row.t}/40`;
-  $("treasury").textContent = fmt(row.treasury);
+  $("treasury").textContent = "$"+fmt(row.treasury)+"M";
   const dt = row.treasury-(prev?prev.treasury:eng.assumptions.startingTreasury);
-  $("tredelta").textContent=(dt>=0?"+":"")+fmt(dt);
+  $("tredelta").textContent=(dt>=0?"+$":"−$")+fmt(Math.abs(dt))+"M";
   $("tredelta").className="delta "+(dt>=0?"up":"down");
-  $("budgetin").textContent="+"+fmt(row.budgetIn);
-  $("spend").textContent="−"+fmt(row.opsSpend+row.containment+eng.assumptions.overhead);
+  $("budgetin").textContent="+$"+fmt(row.budgetIn)+"M";
+  $("spend").textContent="−$"+fmt(row.opsSpend+row.containment+eng.assumptions.overhead)+"M";
   $("mandate").textContent=fmt(row.mandate,0);
   $("mbar").style.width=row.mandate+"%";
-  $("sevnote").textContent= row.severity>0.4? "the world looks dangerous"
-    : row.severity>0.1? "elevated variance" : "calm world";
+  $("sevnote").textContent= row.severity>0.4? "hearings are going well"
+    : row.severity>0.1? "the committee is uneasy" : "a calm world defunds you";
   $("price").textContent=fmt(row.price);
   const dp=prev? row.price-prev.price:0;
   $("pricedelta").textContent=(dp>=0?"+":"")+fmt(dp);
   $("pricedelta").className="delta "+(dp>=0?"up":"down");
-  $("hyield").textContent=fmt(row.yields[REG.findIndex(r=>r.homeland)]);
-  $("revenue").textContent=fmt(row.revenue);
+  $("hyield").textContent=fmt(row.yields[REG.findIndex(r=>r.homeland)],0)+"%";
+  $("revenue").textContent="$"+fmt(row.revenue)+"M";
   $("ladder").textContent=row.ladderText;
   $("ladder").className = row.dossier>=80? "hot":"";
   const rung = eng.ladder.filter(l=>row.dossier>=l.threshold).length-1;
@@ -494,8 +498,12 @@ $("resolve").addEventListener("click", async ()=>{
   t++;
   const row = eng.resolve(t, cmd);
   await phaseShow(1);
+  const seasonName=(ti)=>{ const c=MODEL.climate[ti-1];
+    return c? `${c.qtr.toLowerCase()} ${c.year}` : "beyond the decade"; };
   for(const op of row.committed)
-    wire(`SEALED — <b>${op.cap}</b> → ${op.target}${op.mag&&op.cap!=="Adaptation Investment"?` (magnitude ${fmt(op.mag,2)}, lands S${op.t+op.lag})`:""}`,"op");
+    wire(`SEALED — <b>${op.cap.toUpperCase()}</b> · ${op.target}`+
+      (op.resil>0? " · takes effect at once"
+       : ` · lands ${seasonName(op.t+op.lag)}`),"op");
   if(cmd.prediction) wire(`PREDICTION LOGGED — “${cmd.prediction}”`);
   await phaseShow(2);
   const nowMs=performance.now();
@@ -503,7 +511,15 @@ $("resolve").addEventListener("click", async ()=>{
   for(const e of row.landed){
     const toPos = e.kind==="region"? REGPOS[e.target] : DRVPOS[e.target];
     if(toPos && !reduced) flash.push({from:homePos, to:toPos, until:nowMs+1500, dur:1500});
-    wire(`LANDED — <b>${e.cap}</b> reaches ${e.target} (${e.mag>0?"+":""}${fmt(e.mag,2)})`,"op");
+    if(e.cap.includes("displacement"))
+      wire(`The energy you moved surfaces in the ${e.target} system. The ledger always settles.`,"op");
+    else if(e.kind==="driver")
+      wire(`Your <b>${e.cap}</b> work takes hold in the ${e.target} system. The consequences are now in transit.`,"op");
+    else {
+      const ri=REG.findIndex(r=>r.name===e.target);
+      const loud = ri>=0 && Math.abs(row.anomalies[ri])>row.sigmas[ri];
+      wire(`Your <b>${e.cap}</b> work reaches ${e.target}. ${loud? "It is drawing eyes." : "Nothing in the papers."}`,"op");
+    }
   }
   // edge propagation pulses: driver → each strongly-coupled region
   if(!reduced) for(const [d,[la,lo]] of Object.entries(DRVPOS)){
@@ -515,17 +531,27 @@ $("resolve").addEventListener("click", async ()=>{
   await phaseShow(3);
   for(let ri=0;ri<REG.length;ri++){
     const a=row.anomalies[ri], s=row.sigmas[ri], r=REG[ri];
-    if(Math.abs(a)>s*eng.assumptions.severityThreshold && Math.abs(a)>0.6)
-      wire(`SEVERE — ${r.name}: ${a<0?"drought":"flood-excess"} anomaly ${fmt(a,2)} `
-           +`(envelope ±${fmt(s,2)})${Math.abs(a)>s?" — <b>outside natural range</b>":""}`,"sev");
+    if(Math.abs(a)>s*eng.assumptions.severityThreshold && Math.abs(a)>0.6){
+      const pct=fmt(row.yields[ri],0);
+      wire(a<0
+        ? `${r.crop} fails across <b>${r.name}</b> — harvest at ${pct}%.`
+          +(Math.abs(a)>s? " Nothing in the record compares." : " A hard season, within nature's range.")
+        : `Floodwaters take the ${r.name} ${r.crop} crop — harvest at ${pct}%.`
+          +(Math.abs(a)>s? " Beyond anything on file." : ""),"sev");
+    }
   }
-  if(prev && Math.abs(row.price-prev.price)>6)
-    wire(`MARKET — grain ${row.price>prev.price?"spikes":"slides"} to ${fmt(row.price)}; `
-         +`homeland revenue ${fmt(row.revenue)}`);
+  if(prev && Math.abs(row.price-prev.price)>6){
+    const up=row.price>prev.price;
+    const hy=row.yields[REG.findIndex(r=>r.homeland)];
+    wire(`Grain ${up?"spikes":"slides"} ${fmt(Math.abs(row.price-prev.price)/prev.price*100,0)}% on the season`
+      +(up&&hy>=95? " — your exporters prosper while others queue." : "."));
+  }
   await phaseShow(4);
   const prevRung = prev? eng.ladder.filter(l=>prev.dossier>=l.threshold).length:1;
   const rung = eng.ladder.filter(l=>row.dossier>=l.threshold).length;
   if(rung>prevRung) wire(`ATTRIBUTION — ${row.ladderText}`,"att");
+  else if(row.landed.some(e=>e.sig>0))
+    wire(`FILED — natural variability. No inquiry opened.`,"op");
   updateHUD(row, prev);
   $("phasename").textContent="FORECAST";
   $("predict").value=""; $("opA").value="— none —"; $("opB").value="— none —";
@@ -554,7 +580,7 @@ function showArchive(finalRow){
     <table><tr><th>tenure</th><th>operations</th><th>seasons outside envelope</th>
     <th>peak dossier</th><th>final treasury</th></tr>
     <tr><td>${rows.length} seasons</td><td>${opsDone}</td><td>${outside}</td>
-    <td>${fmt(peakDos)}</td><td>${fmt(finalRow.treasury)}</td></tr></table>`;
+    <td>${fmt(peakDos)}</td><td>$${fmt(finalRow.treasury)}M</td></tr></table>`;
   html += `<p>${ naturalOps
     ? "Every operation you ran is still filed as natural variability. No one will ever know. Whether that is victory is not a question this office answers."
     : peakDos>=115 ? "History concluded a programme existed. Several events you did not cause are attributed to you; several you did cause are not."
