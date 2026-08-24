@@ -9,7 +9,8 @@
  */
 "use strict";
 
-function createEngine(MODEL) {
+function createEngine(MODEL, opts) {
+  const rivalsOn = !!(opts && opts.rivals);
   const A = {};
   for (const [cell, o] of Object.entries(MODEL.assumptions)) A[cell] = o.value;
   // Named views of the ASSUMPTIONS cells the sheet references.
@@ -44,7 +45,7 @@ function createEngine(MODEL) {
 
   const state = { ops: [], rows: [] };            // rows[t-1] = season t
 
-  function makeOp(t, capName, targetRegion, prevAnomalies) {
+  function makeOp(t, capName, targetRegion, prevAnomalies, owner) {
     const cap = capByName[capName];
     if (!cap || cap.type === "NONE") return null;
     const target = cap.type === "DRIVER" ? cap.fixedTarget : targetRegion;
@@ -62,7 +63,26 @@ function createEngine(MODEL) {
           lag: cap.lag + cap.dispExtraLag }
       : null;
     return { t, cap: cap.name, type: cap.type, target, mag, lag: cap.lag,
-             sig: cap.sig, cost: cap.cost, disp, resil: cap.resil };
+             sig: cap.sig, cost: cap.cost, disp, resil: cap.resil,
+             owner: owner || "player" };
+  }
+
+  /* The Eastern Program — a rival wheat exporter running its own weather
+   * war. Deterministic schedule (no RNG); physically identical ops through
+   * the same pipeline. Its signatures never touch the player's dossier —
+   * its chaos still raises severity, and therefore the player's mandate.
+   * Enabled only with createEngine(MODEL, {rivals:true}); the no-rivals
+   * baseline remains the exact ENGINE-sheet conformance target. */
+  function rivalPlan(tt) {
+    if (!rivalsOn || tt < 6) return [];
+    const plan = [];
+    if ((tt - 6) % 7 === 0)
+      plan.push({ cap: "Cloud Seeding", target: "Black Sea Steppe" });
+    if (tt > 14 && (tt - 6) % 7 === 3)
+      plan.push({ cap: "Watershed Interference",
+                  target: "North American Plains" });
+    if (tt === 22) plan.push({ cap: "Ocean Thermal Forcing" });
+    return plan;
   }
 
   /* Resolve season t (must be rows.length+1). cmd = {opA, opB, targetA,
@@ -77,8 +97,12 @@ function createEngine(MODEL) {
     const committed = [];
     for (const [capName, target] of [[cmd.opA, cmd.targetA],
                                      [cmd.opB, cmd.targetB]]) {
-      const op = makeOp(t, capName, target, prevAnom);
+      const op = makeOp(t, capName, target, prevAnom, "player");
       if (op) { committed.push(op); state.ops.push(op); }
+    }
+    for (const r of rivalPlan(t)) {
+      const op = makeOp(t, r.cap, r.target, prevAnom, "rival");
+      if (op) state.ops.push(op);
     }
     const containment = Math.max(0, cmd.containment || 0);
 
@@ -89,11 +113,11 @@ function createEngine(MODEL) {
       if (op.t + op.lag === t && op.mag !== 0)
         landed.push({ kind: DRIVERS.includes(op.target) ? "driver" : "region",
                       target: op.target, mag: op.mag, cap: op.cap,
-                      committedT: op.t, sig: op.sig });
+                      committedT: op.t, sig: op.sig, owner: op.owner });
       if (op.disp && op.t + op.disp.lag === t)
         landed.push({ kind: "driver", target: op.disp.to, mag: op.disp.mag,
                       cap: op.cap + " (displacement)", committedT: op.t,
-                      sig: 0 });
+                      sig: 0, owner: op.owner });
     }
 
     // R3 — driver totals: natural + landed driver injections.
@@ -165,7 +189,9 @@ function createEngine(MODEL) {
     // amplified by how far outside the envelope the world is.
     const envelopeStress = REGIONS.reduce((s, r, ri) =>
       s + Math.max(0, Math.abs(anomalies[ri]) / sigmas[ri] - 1), 0) / NR;
-    const landedSig = landed.reduce((s, e) => s + e.sig, 0);
+    // only the player's signatures feed the player's dossier
+    const landedSig = landed.reduce(
+      (s, e) => s + (e.owner === "player" ? e.sig : 0), 0);
     const attribution = landedSig
       * (1 + P.envelopeMultWeight * envelopeStress);
     const prevDossier = prev ? prev.dossier : 0;
