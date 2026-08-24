@@ -29,7 +29,7 @@ sim/                        DOES NOT EXIST YET. Gated on the prototype
 ## Status
 
 - [x] Deliverable 1 — Technical Design Document (`docs/technical-design.md`)
-- [ ] Deliverable 2 — Data ingestion layer (`ingest/`)
+- [x] Deliverable 2 — Data ingestion layer (`ingest/`) — driver series + basin activity live; ERA5/FAOSTAT gated on the authored 64-region list
 - [ ] Core loop validated (prototype played honestly, forty seasons)
 - [ ] Open questions in handoff §8 resolved (blocked on the author, not on us)
 

@@ -1,0 +1,44 @@
+{
+  "entries": {
+    "amo": {
+      "bytes": 19294,
+      "dataset_version": "psl-amo-unsmoothed-live",
+      "fetched_at": "2026-08-24T17:45:17+00:00",
+      "raw_file": "data/raw/amon.us.long.data",
+      "sha256": "9bf4d13f5c695ed96ac1bfcca60d1a7fcf5cf0e7586cbb39a6734e5c42111eab",
+      "url": "https://psl.noaa.gov/data/correlation/amon.us.long.data"
+    },
+    "dmi": {
+      "bytes": 19861,
+      "dataset_version": "psl-dmi-had-live",
+      "fetched_at": "2026-08-24T17:45:17+00:00",
+      "raw_file": "data/raw/dmi.had.long.data",
+      "sha256": "42c1000e221addacac4451b8b9ddfbc5ee732b99ee69b0be5105e69ebe881e05",
+      "url": "https://psl.noaa.gov/gcos_wgsp/Timeseries/Data/dmi.had.long.data"
+    },
+    "hurdat2": {
+      "bytes": 7082381,
+      "dataset_version": "hurdat2-1851-2025-02272026.txt",
+      "fetched_at": "2026-08-24T17:45:18+00:00",
+      "raw_file": "data/raw/hurdat2-1851-2025-02272026.txt",
+      "sha256": "1b9b0c7beed5b4505838658b1d30e159fc84330c60891a58cfcf43ae55c37202",
+      "url": "https://www.nhc.noaa.gov/data/hurdat/hurdat2-1851-2025-02272026.txt"
+    },
+    "oni": {
+      "bytes": 22975,
+      "dataset_version": "cpc-oni-live",
+      "fetched_at": "2026-08-24T17:45:16+00:00",
+      "raw_file": "data/raw/oni.ascii.txt",
+      "sha256": "d1827d2687ff7262756af3b1d88feb2af59478096956dc741000d94dc54f937f",
+      "url": "https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt"
+    },
+    "pdo": {
+      "bytes": 43702,
+      "dataset_version": "psl-pdo-ersstv5-live",
+      "fetched_at": "2026-08-24T17:45:17+00:00",
+      "raw_file": "data/raw/pdo.timeseries.ersstv5.csv",
+      "sha256": "5eea2fc79331a37d4d3413e8074e350c79134425a7361579c55f41c3edbc52c0",
+      "url": "https://psl.noaa.gov/pdo/data/pdo.timeseries.ersstv5.csv"
+    }
+  }
+}
