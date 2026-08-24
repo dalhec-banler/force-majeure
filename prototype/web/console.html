@@ -207,7 +207,7 @@
     <div id="banner"></div>
     <div id="traywrap">
       <div id="armed"></div>
-      <div id="toolinfo">Pick a tool. Aim it at the world.</div>
+      <div id="toolinfo">Pick a tool. Aim it at the world. Scroll to zoom.</div>
       <div id="toolbar"></div>
     </div>
   </div>
@@ -526,6 +526,7 @@ let t = 0;                       // last resolved season
 let flash = [];                  // travelling arcs
 let shocks = [];                 // expanding event shockwaves
 let effects = [];                // persistent spectacle: fire, smoke, storm...
+let vehicles = [];               // planes and ships on mission
 let running = true;
 let telemetry = false;
 let pendingTool = null;          // tool waiting for a globe click
@@ -537,8 +538,18 @@ function fmt(n,d=1){ return n.toLocaleString("en-US",
 function lastRow(){ return eng.state.rows[t-1]; }
 
 /* ------------------------------------------------------------ tool tray */
+const DESC={
+  "Cloud Seeding":"silver-iodide flights wring rain from passing clouds",
+  "Watershed Interference":"dams, diversions, quiet sabotage — a region's water goes missing",
+  "Fire Enablement":"fuel, access roads, delayed ignition — a fire waiting for lightning",
+  "Adaptation Investment":"reservoirs, seed banks, hardened farms at home",
+  "Ocean Thermal Forcing":"ships stir warm water into the Atlantic conveyor",
+  "Stratospheric Aerosol Inj.":"high-altitude flights veil the sky; the planet cools",
+  "ENSO Forcing":"tips the Pacific into an artificial El Niño — the world's weather leans with it",
+  "Ionospheric Coupling [T3]":"the directed-energy option. It works. It cannot be denied",
+};
 function capInfo(c){
-  const bits=[`$${c.cost}M`,`lands in ${c.lag} season${c.lag===1?"":"s"}`,
+  const bits=[DESC[c.name]||"", `$${c.cost}M`,`lands in ${c.lag} season${c.lag===1?"":"s"}`,
     c.sig>=20? "loud signature" : c.sig>=10? "leaves a signature" : c.sig>0? "quiet" : "invisible"];
   if(c.type==="DRIVER") bits.push(`works through the ${c.fixedTarget} system`);
   if(typeof c.dispTo==="string") bits.push("what you move surfaces elsewhere, later");
@@ -572,7 +583,7 @@ function toolClick(c){
     renderTray();
     $("toolinfo").textContent = pendingTool?
       `${c.name} — click a region on the globe · ${capInfo(c)}` :
-      "Pick a tool. Aim it at the world.";
+      "Pick a tool. Aim it at the world. Scroll to zoom.";
   }
 }
 function renderTray(){
@@ -590,13 +601,15 @@ function renderTray(){
 
 /* ---------------------------------------------------------------- globe */
 const cv = $("globe"), cx = cv.getContext("2d");
-let W=0,H=0,CXp=0,CYp=0,Rp=0, rot = -30, tilt = -18, dragging=false, moved=0, lastX=0;
+let W=0,H=0,CXp=0,CYp=0,Rp=0,Rbase=0,zoom=1,
+    rot = -30, tilt = -18, dragging=false, moved=0, lastX=0;
 function sizeGlobe(){
   const rect = cv.parentElement.getBoundingClientRect();
   const dpr = devicePixelRatio||1;
   cv.width = rect.width*dpr; cv.height = rect.height*dpr;
   cx.setTransform(dpr,0,0,dpr,0,0);
-  W=rect.width; H=rect.height; CXp=W/2; CYp=H/2-14; Rp=Math.min(W,H)*0.40;
+  W=rect.width; H=rect.height; CXp=W/2; CYp=H/2-14;
+  Rbase=Math.min(W,H)*0.40; Rp=Rbase*zoom;
 }
 addEventListener("resize", sizeGlobe); sizeGlobe();
 let lastY=0;
@@ -612,6 +625,9 @@ cv.addEventListener("pointermove",e=>{
   }
   else hoverCheck(e); });
 cv.addEventListener("pointerleave",()=>$("hover").style.display="none");
+cv.addEventListener("wheel",e=>{ e.preventDefault();
+  zoom=Math.max(1,Math.min(5,zoom*Math.exp(-e.deltaY*0.0012)));
+  Rp=Rbase*zoom; },{passive:false});
 
 const D2R = Math.PI/180;
 function project(lat,lon){
@@ -632,6 +648,7 @@ function initEarth(){
   const fs=`precision mediump float;
     uniform sampler2D uT,uCl;uniform vec2 uC;
     uniform float uR,uRot,uTilt,uClOff,uHasCl;
+    uniform vec3 uRV[8];uniform float uRD[8];
     void main(){
       vec2 p=(gl_FragCoord.xy-uC)/uR;
       float r2=dot(p,p);
@@ -647,6 +664,15 @@ function initEarth(){
       float lon=atan(p.x,z0)-uRot;
       vec2 uv=vec2(fract(lon/6.2831853+0.5),0.5-lat/3.14159265);
       vec3 col=texture2D(uT,uv).rgb;
+      // drought browns the land itself — green space disappearing
+      vec3 ve=vec3(cos(lat)*sin(lon),sin(lat),cos(lat)*cos(lon));
+      float dry=0.0;
+      for(int i=0;i<8;i++){
+        float dd=acos(clamp(dot(ve,uRV[i]),-1.,1.));
+        dry+=uRD[i]*smoothstep(0.34,0.08,dd);
+      }
+      dry=clamp(dry,0.,1.);
+      col=mix(col, vec3(dot(col,vec3(.33)))*vec3(1.18,0.92,0.55), dry*0.8);
       if(uHasCl>0.5){
         float c=texture2D(uCl,vec2(fract(uv.x+uClOff),uv.y)).r;
         col=mix(col,vec3(1.0),c*0.5);
@@ -673,7 +699,13 @@ function initEarth(){
   glU={ C:gl.getUniformLocation(pr,"uC"), R:gl.getUniformLocation(pr,"uR"),
         Rot:gl.getUniformLocation(pr,"uRot"), Tilt:gl.getUniformLocation(pr,"uTilt"),
         ClOff:gl.getUniformLocation(pr,"uClOff"), HasCl:gl.getUniformLocation(pr,"uHasCl"),
-        T:gl.getUniformLocation(pr,"uT"), Cl:gl.getUniformLocation(pr,"uCl") };
+        T:gl.getUniformLocation(pr,"uT"), Cl:gl.getUniformLocation(pr,"uCl"),
+        RV:gl.getUniformLocation(pr,"uRV[0]"), RD:gl.getUniformLocation(pr,"uRD[0]") };
+  const rv=new Float32Array(24);
+  REG.forEach((r,i)=>{ const [la,lo]=REGPOS[r.name].map(x=>x*Math.PI/180);
+    rv[i*3]=Math.cos(la)*Math.sin(lo); rv[i*3+1]=Math.sin(la);
+    rv[i*3+2]=Math.cos(la)*Math.cos(lo); });
+  gl.uniform3fv(glU.RV, rv);
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   function loadTex(unit, src, flag){
     const img=new Image();
@@ -704,6 +736,9 @@ function drawEarth(nowMs){
   gl.uniform1f(glU.ClOff, (nowMs*0.0000115)%1);
   gl.uniform1f(glU.HasCl, (texReady&2)?1:0);
   gl.uniform1i(glU.T,0); gl.uniform1i(glU.Cl,1);
+  const row=lastRow(), dry=new Float32Array(8);
+  if(row) for(let i=0;i<8;i++) dry[i]=Math.max(0,Math.min(1,-row.anomalies[i]/1.6));
+  gl.uniform1fv(glU.RD, dry);
   gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
   return true;
 }
@@ -741,18 +776,19 @@ function drawEffects(nowMs){
       cx.fillStyle="rgba(45,32,26,.6)";
       cx.beginPath(); cx.arc(p.x,p.y,k*0.6,0,7); cx.fill();
     } else if(e.type==="fire"){
+      const ks=k*(e.scale||1);
       for(let i=0;i<5;i++){
-        const fx=p.x+Math.sin(i*2.1+nowMs/90)*k*0.5, fy=p.y+Math.cos(i*1.7+nowMs/110)*k*0.4;
+        const fx=p.x+Math.sin(i*2.1+nowMs/90)*ks*0.5, fy=p.y+Math.cos(i*1.7+nowMs/110)*ks*0.4;
         const fl=0.55+0.45*Math.sin(nowMs/70+i*2.3);
-        const g=cx.createRadialGradient(fx,fy,0,fx,fy,k*0.55);
+        const g=cx.createRadialGradient(fx,fy,0,fx,fy,ks*0.55);
         g.addColorStop(0,`rgba(255,190,90,${0.85*fl})`);
         g.addColorStop(0.4,`rgba(224,90,52,${0.5*fl})`);
         g.addColorStop(1,"rgba(224,90,52,0)");
-        cx.fillStyle=g; cx.beginPath(); cx.arc(fx,fy,k*0.55,0,7); cx.fill();
+        cx.fillStyle=g; cx.beginPath(); cx.arc(fx,fy,ks*0.55,0,7); cx.fill();
       }
       for(let i=0;i<9;i++){                       // smoke, drifting downwind, slow
         const ph=((nowMs/3600)+i/9)%1;
-        const sx=p.x+ph*k*4.4+i*2, sy=p.y-ph*k*1.4-Math.sin(i*1.3)*3;
+        const sx=p.x+ph*ks*4.4+i*2, sy=p.y-ph*ks*1.4-Math.sin(i*1.3)*3;
         cx.fillStyle=`rgba(150,150,150,${0.32*(1-ph)})`;
         cx.beginPath(); cx.arc(sx,sy,2.5+ph*9,0,7); cx.fill();
       }
@@ -765,20 +801,8 @@ function drawEffects(nowMs){
         cx.strokeStyle=`rgba(91,200,232,${0.7*(1-ph)})`;
         cx.beginPath(); cx.moveTo(rx,ry); cx.lineTo(rx-1.5,ry+4); cx.stroke();
       }
-    } else if(e.type==="storm"){                  // cyclone, from orbit
-      const rv=nowMs/900;
-      for(let arm=0;arm<3;arm++){
-        cx.strokeStyle="rgba(205,238,255,.8)"; cx.lineWidth=1.6;
-        cx.beginPath();
-        for(let s=0;s<16;s++){
-          const th=rv+arm*2.094+s*0.28, rr=k*0.12+s*k*0.09;
-          const px=p.x+Math.cos(th)*rr, py=p.y+Math.sin(th)*rr*0.85;
-          s?cx.lineTo(px,py):cx.moveTo(px,py);
-        }
-        cx.stroke();
-      }
-      cx.fillStyle="rgba(225,248,255,.95)";
-      cx.beginPath(); cx.arc(p.x,p.y,2,0,7); cx.fill(); cx.lineWidth=1;
+    } else if(e.type==="storm"){                  // hurricane, radar-painted
+      drawCyclone(p, 1.45, nowMs, true);
     } else if(e.type==="oceanheat"){
       const pulse=0.5+0.5*Math.sin(nowMs/350);
       const g=cx.createRadialGradient(p.x,p.y,0,p.x,p.y,k*1.7);
@@ -801,19 +825,31 @@ const VOLCANOES=[
    line:"Kilauea pours new land into the sea. Crowds gather at dusk to watch."},
 ];
 const volcanoActive=(i,ts)=> ((ts + i*3) % 9) < 2;
-function drawSpiral(p, scale, alpha, nowMs, speed){
+/* a hurricane as it looks from orbit / on radar: filled spiral rainbands,
+   dense core, and a real eye (erased through to the earth below) */
+function drawCyclone(p, scale, nowMs, radar){
   const k=Rp*0.055*scale;
+  const ang=nowMs/3800;
+  cx.save();
   for(let arm=0;arm<3;arm++){
-    cx.strokeStyle=`rgba(235,242,248,${alpha})`; cx.lineWidth=1.5;
-    cx.beginPath();
-    for(let s=0;s<16;s++){
-      const th=nowMs/speed+arm*2.094+s*0.28, rr=k*0.12+s*k*0.09;
-      const px=p.x+Math.cos(th)*rr, py=p.y+Math.sin(th)*rr*0.85;
-      s?cx.lineTo(px,py):cx.moveTo(px,py);
+    for(let s=23;s>=0;s--){
+      const th=ang+arm*2.094+s*0.235;
+      const rr=k*(0.18+s*0.075);
+      const bx=p.x+Math.cos(th)*rr, by=p.y+Math.sin(th)*rr*0.9;
+      const br=Math.max(1.2, k*(0.27-s*0.006));
+      cx.fillStyle = radar
+        ? (s<7? "rgba(226,70,50,.62)" : s<14? "rgba(232,196,60,.5)"
+                                      : "rgba(90,205,95,.4)")
+        : `rgba(245,248,252,${0.55-s*0.014})`;
+      cx.beginPath(); cx.arc(bx,by,br,0,7); cx.fill();
     }
-    cx.stroke();
   }
-  cx.lineWidth=1;
+  cx.fillStyle = radar? "rgba(232,96,62,.8)" : "rgba(250,252,255,.9)";
+  cx.beginPath(); cx.arc(p.x,p.y,k*0.32,0,7); cx.fill();
+  cx.globalCompositeOperation="destination-out";
+  cx.fillStyle="rgba(0,0,0,1)";
+  cx.beginPath(); cx.arc(p.x,p.y,k*0.1,0,7); cx.fill();
+  cx.restore();
 }
 function drawAmbient(nowMs){
   const k=Rp*0.055;
@@ -823,7 +859,7 @@ function drawAmbient(nowMs){
     const lat=basins[i][0]+4*Math.sin(t*1.3+i*2.1);
     const lon=basins[i][1]-((t*11+i*43)%55)-(nowMs*0.00045*(1+i*0.3))%360;
     const p=project(lat,lon); if(!p.vis) continue;
-    drawSpiral(p, 0.9+i*0.15, 0.4, nowMs, 2600+i*500);
+    drawCyclone(p, 0.8+i*0.12, nowMs+i*900, false);
   }
   // volcanoes: vent glow + large slow smoke plume when active
   for(let i=0;i<VOLCANOES.length;i++){
@@ -907,6 +943,13 @@ function drawGlobe(now){
     cx.beginPath(); cx.arc(p.x,p.y,2.6,0,7); cx.fill();
     if(r.homeland){ cx.strokeStyle="rgba(83,217,123,.7)";
       cx.beginPath(); cx.arc(p.x,p.y,5,0,7); cx.stroke(); }
+    if(row && row.yields[ri]<60){       // famine indicator, pulsing
+      const grave = row.yields[ri]<40;
+      cx.font="11px "+getComputedStyle(document.body).getPropertyValue("--mono");
+      cx.fillStyle=(grave? "rgba(224,82,82,":"rgba(224,164,88,")
+        +(0.55+0.4*Math.sin(nowMs/280))+")";
+      cx.fillText("⚠", p.x-4, p.y-k*sig-6);
+    }
     if(pendingTool){ cx.strokeStyle=`rgba(83,217,123,${0.4+0.3*Math.sin(nowMs/300)})`;
       cx.beginPath(); cx.arc(p.x,p.y,8,0,7); cx.stroke(); }
   }
@@ -925,6 +968,42 @@ function drawGlobe(now){
     const py=(1-tt)*(1-tt)*a.y+2*(1-tt)*tt*cyp+tt*tt*b.y;
     cx.fillStyle="#c8f5d5"; cx.beginPath(); cx.arc(px,py,2.6,0,7); cx.fill();
     cx.lineWidth=1;
+  }
+  // vehicles: your planes and ships, doing the job
+  vehicles = vehicles.filter(v=>nowMs < v.start+v.dur+300);
+  for(const v of vehicles){
+    const a=project(...v.from), b=project(...v.to);
+    if(!a.vis||!b.vis) continue;
+    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2, dx=b.x-a.x, dy=b.y-a.y;
+    const nx=CXp-mx, ny=CYp-my, nl=Math.hypot(nx,ny)||1;
+    const hi = v.kind==="plane"? 0.4 : 0.08;
+    const cxp=mx-(nx/nl)*Math.hypot(dx,dy)*hi, cyp=my-(ny/nl)*Math.hypot(dx,dy)*hi;
+    const tt=Math.min(1,(nowMs-v.start)/v.dur);
+    const bz=(u)=>[ (1-u)*(1-u)*a.x+2*(1-u)*u*cxp+u*u*b.x,
+                    (1-u)*(1-u)*a.y+2*(1-u)*u*cyp+u*u*b.y ];
+    // contrail / wake
+    cx.strokeStyle = v.kind==="plane"? "rgba(240,248,244,.5)":"rgba(180,225,240,.45)";
+    cx.lineWidth=1.3; cx.beginPath();
+    for(let u=Math.max(0,tt-0.3);u<=tt;u+=0.03){
+      const [px,py]=bz(u); u<=Math.max(0,tt-0.3)+0.001? cx.moveTo(px,py):cx.lineTo(px,py);
+    }
+    cx.stroke(); cx.lineWidth=1;
+    const [px,py]=bz(tt), [qx,qy]=bz(Math.min(1,tt+0.02));
+    const hd=Math.atan2(qy-py,qx-px);
+    cx.save(); cx.translate(px,py); cx.rotate(hd);
+    if(v.kind==="plane"){
+      cx.fillStyle="#eef6f0";
+      cx.beginPath();
+      cx.moveTo(5,0); cx.lineTo(-3,-1.2); cx.lineTo(-1,0); cx.lineTo(-3,1.2);
+      cx.closePath(); cx.fill();
+      cx.beginPath(); cx.moveTo(1.2,0); cx.lineTo(-1.5,-3.6); cx.lineTo(-0.2,0);
+      cx.lineTo(-1.5,3.6); cx.closePath(); cx.fill();
+    } else {
+      cx.fillStyle="#dceee6";
+      cx.fillRect(-3.5,-1.4,7,2.8);
+      cx.fillRect(-1,-2.6,2,1.4);
+    }
+    cx.restore();
   }
   shocks = shocks.filter(s=>nowMs<s.until);
   for(const s of shocks){
@@ -1109,14 +1188,27 @@ $("resolve").addEventListener("click", async ()=>{
   await phaseShow(1);
   const seasonName=(ti)=>{ const c=MODEL.climate[ti-1];
     return c? `${c.qtr.toLowerCase()} ${c.year}` : "beyond the decade"; };
-  for(const op of row.committed)
+  const homePos = REGPOS[REG.find(r=>r.homeland).name];
+  const PLANES=["Cloud Seeding","Stratospheric Aerosol Inj.","Fire Enablement"];
+  const SHIPS=["Ocean Thermal Forcing","ENSO Forcing"];
+  for(const op of row.committed){
     wire(`SEALED — <b>${op.cap.toUpperCase()}</b> · ${op.target}`+
       (op.resil>0? " · takes effect at once"
        : ` · lands ${seasonName(op.t+op.lag)}`),"op");
+    if(!reduced){
+      if(PLANES.includes(op.cap)){
+        const dest = op.cap==="Stratospheric Aerosol Inj."
+          ? [homePos[0]+16, homePos[1]+55] : (REGPOS[op.target]||homePos);
+        vehicles.push({kind:"plane",from:homePos,to:dest,
+                       start:performance.now(),dur:2600});
+      } else if(SHIPS.includes(op.cap) && DRVPOS[op.target])
+        vehicles.push({kind:"ship",from:homePos,to:DRVPOS[op.target],
+                       start:performance.now(),dur:3800});
+    }
+  }
   if(cmd.prediction) wire(`PREDICTION LOGGED — “${cmd.prediction}”`);
   await phaseShow(2);
   const nowMs=performance.now();
-  const homePos = REGPOS[REG.find(r=>r.homeland).name];
   for(const e of row.landed){
     const toPos = e.kind==="region"? REGPOS[e.target] : DRVPOS[e.target];
     if(toPos && !reduced) flash.push({from:homePos, to:toPos, until:nowMs+1500, dur:1500});
@@ -1166,6 +1258,8 @@ $("resolve").addEventListener("click", async ()=>{
       shocks.push({pos,until:performance.now()+1600,dur:1600});
       alertStrip((a<0?"HARVEST COLLAPSE — ":"FLOOD EVENT — ")+r.name.toUpperCase());
       if(!shaken){ shakeNow(); shaken=true; }
+      if(a<0)                              // deep drought sparks wildfire
+        effects.push({type:"fire",pos,bornT:t,life:1,scale:0.55});
     }
     if(sevStreak[ri]>=2 && a<0)
       news(DATELINE[r.name],"Food prices triple in the capital. Unrest spreading province by province.",true);
@@ -1206,7 +1300,7 @@ $("resolve").addEventListener("click", async ()=>{
   updateHUD(row, prev);
   $("phasename").textContent="FORECAST";
   $("predict").value=""; slots=[]; pendingTool=null; renderTray();
-  $("toolinfo").textContent="Pick a tool. Aim it at the world.";
+  $("toolinfo").textContent="Pick a tool. Aim it at the world. Scroll to zoom.";
   if(row.status==="exposed"||row.status==="insolvent"||row.status==="dissolved"||t>=eng.seasons){
     running=false; setTimeout(()=>showArchive(row), reduced?0:900);
   }
