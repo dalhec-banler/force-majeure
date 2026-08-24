@@ -1,0 +1,16 @@
+# Raw fetched datasets are never committed — the repo holds fetch code, not payloads.
+# ERA5 alone is enormous. See docs/handoff.md §2.
+data/raw/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+
+# Excel lock files
+~$*.xlsx
