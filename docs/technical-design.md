@@ -912,6 +912,12 @@ document are stack-neutral by construction.
 
 ## Appendix A — Flags for the author (cut levers and proposals)
 
+> **Status update 2026-08-24:** the author reviewed and delegated these
+> decisions, with a recorded north star (`docs/north-star.md`). Items 1–4
+> are **accepted** as scoped below. Item 5 is resolved: the reactive window
+> is **retained** (ADR-0008). Items 6–7 are **accepted** (ADR-0005, now
+> Accepted). Item 8 is handled in ingestion (`ingest/sources/backfill`).
+
 Handoff §9 asks for anything materially cheaper if a named system is cut, and
 for proposals to be flagged rather than silently adopted. Ordered by savings:
 
@@ -954,16 +960,24 @@ for proposals to be flagged rather than silently adopted. Ordered by savings:
 8. **Small data gap:** ONI begins 1950; 1946–49 needs backfill or authoring
    (§6.3).
 
-## Appendix B — Open questions (handoff §8), mapped, not resolved
+## Appendix B — Open questions (handoff §8): RESOLVED under delegated authority
 
-| Question | What it blocks here | What this document did meanwhile |
+The author reviewed Deliverable 1 and delegated these decisions
+(2026-08-24), with the north star (`docs/north-star.md`) as the tiebreaker.
+Each resolution has its own ADR with full rationale:
+
+| Question | Resolution | ADR |
 |---|---|---|
-| Graph scale (§23.1) | Content pack authoring volume; nothing structural | Engine budget verified to 200 nodes (§5.4); schema is count-agnostic. Decide on legibility grounds. |
-| Time compression tiers & step-up triggers (§23.6) | Interrupt/cadence *content* | Architecture made cadence-blind (§5.2); any trigger rule is data. |
-| Trade graph visibility at start (§23.2) | Forecast/UI only | F1 already takes a revealed-subset input (§2.6); same mechanism serves trade visibility either way. |
-| Rival ops directly visible? (§23.3) | Evidence kinds shown to player; reactive-window value (App. A #5) | Suspicion state modeled independently of visibility. |
-| Campaign structure: sandbox vs arc (§23.4) | Scheduled-event content; nothing in the engine | Pack supports authored events and generators simultaneously (§6.4). |
-| Failure recovery after exposure begins (§23.5) | Dossier decay/containment tuning; possibly a rung-descent rule | Ladder is data (§1.7); descent rules are a pack constant away — awaiting the design call. |
+| Graph scale (§23.1) | 64 regions, 5 drivers (ENSO, IOD, NATL, PDO, GLOBAL); hard caps 80/8 | ADR-0006 |
+| Trade graph visibility at start (§23.2) | Fully visible; hidden state is edges and rival intent only | ADR-0007 |
+| Rival ops directly visible? (§23.3) | Never in play; inferred from anomalies, revealed later by the Glomar clock and the archive | ADR-0007 |
+| Campaign structure (§23.4) | Sandbox with authored event calendar; no plot | ADR-0008 |
+| Failure recovery after exposure (§23.5) | Recoverable below rung 5; rung 5 sets a permanent dossier floor; rung 7 terminal | ADR-0009 |
+| Time compression tiers & triggers (§23.6) | Three tiers; step-ups on capability-tier unlocks (or ENMOD/2010 backstops); one-way, finer-zoom always allowed | ADR-0010 |
+
+Also resolved from the gaps register: meta-progression (#10) is
+informational-only persistence — ADR-0011; data licensing (#11) — EM-DAT
+excluded entirely, ADR-0012.
 
 ---
 

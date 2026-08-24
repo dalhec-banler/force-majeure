@@ -1,6 +1,9 @@
 # ADR-0005: Energy ledger legs balance at posting; residual routes to envelope widening
 
-**Status:** PROPOSED — awaiting author sign-off (balance implications)
+**Status:** Accepted · 2026-08-24 — author delegated the decision after review;
+accepted including the Cascade-threshold corollary. The feedback loop (heavy
+intervention → wider envelopes → cheaper deniability) is retained as the
+design's thesis made mechanical.
 
 ## Context
 Brief §6.2: consequences are conserved. Handoff §3.4: make it a checked
