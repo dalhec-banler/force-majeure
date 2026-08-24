@@ -176,11 +176,15 @@ function createEngine(MODEL) {
     for (const rung of MODEL.ladder)
       if (dossier >= rung.threshold) ladderText = rung.text;
 
-    // A3 — loss checks. Obsolescence: warning per the sheet's PLAY!S column;
-    // dissolution after 4 consecutive warned seasons is a house rule serving
-    // handoff constraint 3 (a pure turtle must be able to lose).
+    // A3 — loss checks. Obsolescence: warning per the sheet's PLAY!S column,
+    // gated on genuine inactivity — the committee counts you idle only if no
+    // operation was committed in the last 4 seasons (ops in flight ARE your
+    // visible output). Dissolution after 4 consecutive warned seasons is a
+    // house rule serving handoff constraint 3 (a turtle must be able to
+    // lose); playtest-tuned 2026-08-24 after "way too easy to get defunded".
     let status = "running";
-    const obsolescent = t > 8 && mandate <= P.mandateBase + 1;
+    const recentOp = state.ops.some((o) => o.t > t - 4);
+    const obsolescent = t > 8 && mandate <= P.mandateBase + 1 && !recentOp;
     const obsStreak = obsolescent ? ((prev ? prev.obsStreak : 0) + 1) : 0;
     if (dossier >= 200) status = "exposed";
     else if (treasury < 0) status = "insolvent";

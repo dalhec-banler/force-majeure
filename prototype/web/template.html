@@ -35,8 +35,9 @@
   #clock{font-size:15px;font-weight:600;min-width:9.5em;text-align:right}
 
   main{display:grid;grid-template-columns:1fr 360px;min-height:0}
-  #globe-wrap{position:relative;min-width:0}
-  #globe{display:block;width:100%;height:100%;cursor:grab}
+  #globe-wrap{position:relative;min-width:0;background:#04070a}
+  #earth{position:absolute;inset:0;width:100%;height:100%}
+  #globe{display:block;width:100%;height:100%;cursor:grab;position:relative;z-index:2}
   #globe.aiming{cursor:crosshair}
   #globe:active{cursor:grabbing}
   #globe.aiming:active{cursor:crosshair}
@@ -199,6 +200,7 @@
 
 <main>
   <div id="globe-wrap">
+    <canvas id="earth"></canvas>
     <canvas id="globe"></canvas>
     <div id="alerts"></div>
     <div id="hover"></div>
@@ -387,10 +389,17 @@ function sizeGlobe(){
   W=rect.width; H=rect.height; CXp=W/2; CYp=H/2-14; Rp=Math.min(W,H)*0.40;
 }
 addEventListener("resize", sizeGlobe); sizeGlobe();
-cv.addEventListener("pointerdown",e=>{dragging=true;moved=0;lastX=e.clientX;cv.setPointerCapture(e.pointerId)});
+let lastY=0;
+cv.addEventListener("pointerdown",e=>{dragging=true;moved=0;lastX=e.clientX;lastY=e.clientY;cv.setPointerCapture(e.pointerId)});
 cv.addEventListener("pointerup",e=>{ dragging=false; if(moved<5) globeClick(e); });
 cv.addEventListener("pointermove",e=>{
-  if(dragging){ const dx=e.clientX-lastX; moved+=Math.abs(dx); rot+=dx*0.35; lastX=e.clientX; }
+  if(dragging){
+    const dx=e.clientX-lastX, dy=e.clientY-lastY;
+    moved+=Math.abs(dx)+Math.abs(dy);
+    rot+=dx*0.35;
+    tilt=Math.max(-80,Math.min(80,tilt+dy*0.3));
+    lastX=e.clientX; lastY=e.clientY;
+  }
   else hoverCheck(e); });
 cv.addEventListener("pointerleave",()=>$("hover").style.display="none");
 
@@ -401,6 +410,94 @@ function project(lat,lon){
   const y=y0*Math.cos(ti)-z0*Math.sin(ti), z=y0*Math.sin(ti)+z0*Math.cos(ti);
   return {x:CXp+Rp*x0, y:CYp-Rp*y, vis:z>0.02, z};
 }
+/* ------------------------- the earth itself: Blue Marble, live clouds */
+const EARTH_SRC = "__EARTH__";
+const CLOUD_SRC = "__CLOUDS__";
+const ec = $("earth");
+let gl=null, glU=null, texReady=0;
+function initEarth(){
+  gl = ec.getContext("webgl",{alpha:true,antialias:true,premultipliedAlpha:false});
+  if(!gl) return;
+  const vs="attribute vec2 aP;void main(){gl_Position=vec4(aP,0.,1.);}";
+  const fs=`precision mediump float;
+    uniform sampler2D uT,uCl;uniform vec2 uC;
+    uniform float uR,uRot,uTilt,uClOff,uHasCl;
+    void main(){
+      vec2 p=(gl_FragCoord.xy-uC)/uR;
+      float r2=dot(p,p);
+      if(r2>1.0){
+        float d=sqrt(r2)-1.0;
+        float a=exp(-d*14.0)*0.5;
+        gl_FragColor=vec4(0.5,0.68,0.95,a);return;}
+      float z=sqrt(1.0-r2);
+      float ct=cos(uTilt),st=sin(uTilt);
+      float y0=p.y*ct+z*st;
+      float z0=-p.y*st+z*ct;
+      float lat=asin(clamp(y0,-1.,1.));
+      float lon=atan(p.x,z0)-uRot;
+      vec2 uv=vec2(fract(lon/6.2831853+0.5),0.5-lat/3.14159265);
+      vec3 col=texture2D(uT,uv).rgb;
+      if(uHasCl>0.5){
+        float c=texture2D(uCl,vec2(fract(uv.x+uClOff),uv.y)).r;
+        col=mix(col,vec3(1.0),c*0.5);
+      }
+      col*=0.5+0.5*z;
+      float rim=smoothstep(0.82,1.0,sqrt(r2));
+      col=mix(col,vec3(0.55,0.7,0.95),rim*0.28);
+      gl_FragColor=vec4(col,1.0);
+    }`;
+  function sh(type,src){ const s=gl.createShader(type); gl.shaderSource(s,src);
+    gl.compileShader(s); return s; }
+  const pr=gl.createProgram();
+  gl.attachShader(pr,sh(gl.VERTEX_SHADER,vs));
+  gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,fs));
+  gl.linkProgram(pr);
+  if(!gl.getProgramParameter(pr,gl.LINK_STATUS)){ gl=null; return; }
+  gl.useProgram(pr);
+  const buf=gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+  const aP=gl.getAttribLocation(pr,"aP");
+  gl.enableVertexAttribArray(aP);
+  gl.vertexAttribPointer(aP,2,gl.FLOAT,false,0,0);
+  glU={ C:gl.getUniformLocation(pr,"uC"), R:gl.getUniformLocation(pr,"uR"),
+        Rot:gl.getUniformLocation(pr,"uRot"), Tilt:gl.getUniformLocation(pr,"uTilt"),
+        ClOff:gl.getUniformLocation(pr,"uClOff"), HasCl:gl.getUniformLocation(pr,"uHasCl"),
+        T:gl.getUniformLocation(pr,"uT"), Cl:gl.getUniformLocation(pr,"uCl") };
+  gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  function loadTex(unit, src, flag){
+    const img=new Image();
+    img.onload=()=>{ const tx=gl.createTexture();
+      gl.activeTexture(gl.TEXTURE0+unit); gl.bindTexture(gl.TEXTURE_2D,tx);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,img);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.REPEAT);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+      texReady|=flag; };
+    img.src=src;
+  }
+  loadTex(0, EARTH_SRC, 1);
+  if(CLOUD_SRC.startsWith("data:")) loadTex(1, CLOUD_SRC, 2);
+}
+initEarth();
+function drawEarth(nowMs){
+  if(!gl || !(texReady&1)) return false;
+  const dpr=devicePixelRatio||1;
+  const w=Math.round(W*dpr), h=Math.round(H*dpr);
+  if(ec.width!==w||ec.height!==h){ ec.width=w; ec.height=h; gl.viewport(0,0,w,h); }
+  gl.clearColor(0,0,0,0); gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.uniform2f(glU.C, CXp*dpr, h-CYp*dpr);
+  gl.uniform1f(glU.R, Rp*dpr);
+  gl.uniform1f(glU.Rot, rot*D2R);
+  gl.uniform1f(glU.Tilt, tilt*D2R);
+  gl.uniform1f(glU.ClOff, (nowMs*0.0000115)%1);
+  gl.uniform1f(glU.HasCl, (texReady&2)?1:0);
+  gl.uniform1i(glU.T,0); gl.uniform1i(glU.Cl,1);
+  gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+  return true;
+}
+
 function nearestRegion(e){
   const rect=cv.getBoundingClientRect(), mx=e.clientX-rect.left, my=e.clientY-rect.top;
   let best=null,bd=22;
@@ -443,11 +540,11 @@ function drawEffects(nowMs){
         g.addColorStop(1,"rgba(224,90,52,0)");
         cx.fillStyle=g; cx.beginPath(); cx.arc(fx,fy,k*0.55,0,7); cx.fill();
       }
-      for(let i=0;i<7;i++){                       // smoke, drifting downwind
-        const ph=((nowMs/2600)+i/7)%1;
-        const sx=p.x+ph*k*3.4+i*2, sy=p.y-ph*k*1.2-Math.sin(i*1.3)*3;
-        cx.fillStyle=`rgba(150,150,150,${0.3*(1-ph)})`;
-        cx.beginPath(); cx.arc(sx,sy,2.5+ph*8,0,7); cx.fill();
+      for(let i=0;i<9;i++){                       // smoke, drifting downwind, slow
+        const ph=((nowMs/3600)+i/9)%1;
+        const sx=p.x+ph*k*4.4+i*2, sy=p.y-ph*k*1.4-Math.sin(i*1.3)*3;
+        cx.fillStyle=`rgba(150,150,150,${0.32*(1-ph)})`;
+        cx.beginPath(); cx.arc(sx,sy,2.5+ph*9,0,7); cx.fill();
       }
     } else if(e.type==="rain"){
       cx.fillStyle="rgba(190,225,210,.22)";
@@ -482,21 +579,77 @@ function drawEffects(nowMs){
   }
 }
 
+/* ambient life — cosmetic weather; the planet breathes on its own */
+const VOLCANOES=[
+  {name:"Etna", pos:[37.7,15.0], dl:"CATANIA",
+   line:"Etna in full eruption. Ash closes Mediterranean air routes."},
+  {name:"Popocatépetl", pos:[19.0,-98.6], dl:"MEXICO CITY",
+   line:"Popocatépetl sends ash ten kilometres up. The city sweeps grey streets."},
+  {name:"Merapi", pos:[-7.5,110.4], dl:"JAKARTA",
+   line:"Merapi erupting. Villages on the slopes evacuated."},
+  {name:"Kilauea", pos:[19.4,-155.3], dl:"HONOLULU",
+   line:"Kilauea pours new land into the sea. Crowds gather at dusk to watch."},
+];
+const volcanoActive=(i,ts)=> ((ts + i*3) % 9) < 2;
+function drawSpiral(p, scale, alpha, nowMs, speed){
+  const k=Rp*0.055*scale;
+  for(let arm=0;arm<3;arm++){
+    cx.strokeStyle=`rgba(235,242,248,${alpha})`; cx.lineWidth=1.5;
+    cx.beginPath();
+    for(let s=0;s<16;s++){
+      const th=nowMs/speed+arm*2.094+s*0.28, rr=k*0.12+s*k*0.09;
+      const px=p.x+Math.cos(th)*rr, py=p.y+Math.sin(th)*rr*0.85;
+      s?cx.lineTo(px,py):cx.moveTo(px,py);
+    }
+    cx.stroke();
+  }
+  cx.lineWidth=1;
+}
+function drawAmbient(nowMs){
+  const k=Rp*0.055;
+  // slow roaming cyclones, one per basin, drifting west
+  const basins=[[15,-52],[13,138],[-13,72]];
+  for(let i=0;i<3;i++){
+    const lat=basins[i][0]+4*Math.sin(t*1.3+i*2.1);
+    const lon=basins[i][1]-((t*11+i*43)%55)-(nowMs*0.00045*(1+i*0.3))%360;
+    const p=project(lat,lon); if(!p.vis) continue;
+    drawSpiral(p, 0.9+i*0.15, 0.4, nowMs, 2600+i*500);
+  }
+  // volcanoes: vent glow + large slow smoke plume when active
+  for(let i=0;i<VOLCANOES.length;i++){
+    if(!volcanoActive(i, Math.max(1,t))) continue;
+    const p=project(...VOLCANOES[i].pos); if(!p.vis) continue;
+    const fl=0.6+0.4*Math.sin(nowMs/120+i);
+    cx.fillStyle=`rgba(255,150,60,${0.9*fl})`;
+    cx.beginPath(); cx.arc(p.x,p.y,1.8,0,7); cx.fill();
+    for(let j=0;j<10;j++){
+      const ph=((nowMs/5200)+j/10)%1;
+      const sx=p.x+ph*k*4.6+Math.sin(j*2.7)*2;
+      const sy=p.y-ph*k*2.4-Math.sin(j*1.1)*2;
+      cx.fillStyle=`rgba(128,118,108,${0.36*(1-ph)})`;
+      cx.beginPath(); cx.arc(sx,sy,2+ph*11,0,7); cx.fill();
+    }
+  }
+}
 function drawGlobe(now){
   if(!dragging && !reduced) rot += 0.022;
   const nowMs=now||0;
   cx.clearRect(0,0,W,H);
-  const g = cx.createRadialGradient(CXp,CYp,Rp*0.1,CXp,CYp,Rp*1.06);
-  g.addColorStop(0,"#0d1a12"); g.addColorStop(0.94,"#0b150e");
-  g.addColorStop(1,"rgba(83,217,123,0)");
-  cx.fillStyle=g; cx.beginPath(); cx.arc(CXp,CYp,Rp*1.06,0,7); cx.fill();
-  cx.strokeStyle="rgba(83,217,123,.35)"; cx.lineWidth=1;
-  cx.beginPath(); cx.arc(CXp,CYp,Rp,0,7); cx.stroke();
-  cx.strokeStyle="rgba(83,217,123,.08)";
-  for(let la=-60;la<=60;la+=30) strokePath(pts(90,i=>[la,-180+i*4]));
-  for(let lo=-180;lo<180;lo+=30) strokePath(pts(60,i=>[-88+i*3,lo]));
-  cx.strokeStyle="rgba(140,220,165,.55)"; cx.lineWidth=1;
-  for(const ring of LAND) strokePath(ring.map(([lo,la])=>[la,lo]));
+  const earthOn = drawEarth(nowMs);
+  if(!earthOn){
+    // fallback: the phosphor wireframe, if WebGL is unavailable
+    const g = cx.createRadialGradient(CXp,CYp,Rp*0.1,CXp,CYp,Rp*1.06);
+    g.addColorStop(0,"#0d1a12"); g.addColorStop(0.94,"#0b150e");
+    g.addColorStop(1,"rgba(83,217,123,0)");
+    cx.fillStyle=g; cx.beginPath(); cx.arc(CXp,CYp,Rp*1.06,0,7); cx.fill();
+    cx.strokeStyle="rgba(83,217,123,.35)"; cx.lineWidth=1;
+    cx.beginPath(); cx.arc(CXp,CYp,Rp,0,7); cx.stroke();
+    cx.strokeStyle="rgba(83,217,123,.08)";
+    for(let la=-60;la<=60;la+=30) strokePath(pts(90,i=>[la,-180+i*4]));
+    for(let lo=-180;lo<180;lo+=30) strokePath(pts(60,i=>[-88+i*3,lo]));
+    cx.strokeStyle="rgba(140,220,165,.55)"; cx.lineWidth=1;
+    for(const ring of LAND) strokePath(ring.map(([lo,la])=>[la,lo]));
+  }
 
   const row = lastRow();
   // aerosol color grade + drifting stratospheric veil
@@ -512,6 +665,7 @@ function drawGlobe(now){
     cx.strokeStyle=`rgba(224,164,88,${Math.min(0.6,glob*0.4)})`;
     cx.beginPath(); cx.arc(CXp,CYp,Rp*1.05,0,7); cx.stroke();
   }
+  drawAmbient(nowMs);
   drawEffects(nowMs);
 
   for(const [d,[la,lo]] of Object.entries(DRVPOS)){
@@ -676,7 +830,7 @@ function updateHUD(row, prev){
   const b=$("banner");
   if(row.status==="obsolescence-warning"){
     b.style.display="block";
-    b.textContent=`▲ COMMITTEE IS ASKING WHAT YOU ARE FOR (${row.obsStreak}/4 quiet reviews to dissolution)`;
+    b.textContent=`▲ NO OPERATIONS IN A YEAR — COMMITTEE ASKING WHAT YOU ARE FOR (${row.obsStreak}/4 reviews to dissolution)`;
   } else b.style.display="none";
 }
 
@@ -739,6 +893,9 @@ $("resolve").addEventListener("click", async ()=>{
   t++;
   const row = eng.resolve(t, cmd);
   effects = effects.filter(e=> t - e.bornT < e.life);
+  for(let i=0;i<VOLCANOES.length;i++)
+    if(volcanoActive(i,t) && !volcanoActive(i,t-1))
+      news(VOLCANOES[i].dl, VOLCANOES[i].line);
   await phaseShow(1);
   const seasonName=(ti)=>{ const c=MODEL.climate[ti-1];
     return c? `${c.qtr.toLowerCase()} ${c.year}` : "beyond the decade"; };
