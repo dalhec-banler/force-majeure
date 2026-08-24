@@ -19,87 +19,138 @@
        font-size:13px;line-height:1.45;overflow:hidden}
   #app{display:grid;grid-template-rows:auto 1fr auto;height:100%}
 
-  /* header */
-  header{display:flex;align-items:baseline;gap:14px;padding:8px 14px 6px;
-         border-bottom:1px solid var(--line);background:var(--panel)}
+  /* header = the SimCity top bar: identity, funds, fear, grain, date */
+  header{display:flex;align-items:baseline;gap:16px;padding:8px 14px 6px;
+         border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
   header h1{font-size:15px;font-weight:600;letter-spacing:.22em}
-  header .sub{color:var(--ink-dim);font-size:11px;letter-spacing:.08em}
+  .stat{display:flex;align-items:baseline;gap:6px;font-variant-numeric:tabular-nums}
+  .stat .lbl{font-size:9px;letter-spacing:.2em;color:var(--ink-faint)}
+  .stat .val{font-size:15px;font-weight:600}
+  .stat .d{font-size:10px}
+  .d.up{color:var(--green)} .d.down{color:var(--red)}
+  #hMandateWrap{width:70px;height:7px;background:var(--panel2);align-self:center;position:relative}
+  #hMandate{position:absolute;inset:0 auto 0 0;background:var(--amber)}
   #phase{margin-left:auto;font-size:11px;letter-spacing:.18em;color:var(--ink-dim)}
   #phase b{color:var(--green);font-weight:500}
-  #clock{font-size:15px;font-weight:600;color:var(--ink);min-width:9.5em;text-align:right}
+  #clock{font-size:15px;font-weight:600;min-width:9.5em;text-align:right}
 
-  main{display:grid;grid-template-columns:1fr 380px;min-height:0}
+  main{display:grid;grid-template-columns:1fr 360px;min-height:0}
   #globe-wrap{position:relative;min-width:0}
   #globe{display:block;width:100%;height:100%;cursor:grab}
+  #globe.aiming{cursor:crosshair}
   #globe:active{cursor:grabbing}
+  #globe.aiming:active{cursor:crosshair}
+
   #hover{position:absolute;pointer-events:none;background:rgba(10,15,12,.92);
          border:1px solid var(--line);padding:7px 10px;font-size:11.5px;
-         display:none;max-width:230px;z-index:5}
+         display:none;max-width:240px;z-index:5}
   #hover b{color:var(--green);letter-spacing:.06em}
   #hover .num{font-variant-numeric:tabular-nums}
-  #banner{position:absolute;left:14px;bottom:12px;font-size:11px;
-          color:var(--amber);letter-spacing:.1em;display:none}
+  #banner{position:absolute;left:14px;bottom:96px;font-size:11px;
+          color:var(--amber);letter-spacing:.1em;display:none;z-index:4}
 
-  /* right rail */
+  /* alerts — breaking-news chyrons over the globe */
+  #alerts{position:absolute;top:10px;left:50%;transform:translateX(-50%);
+          display:flex;flex-direction:column;gap:6px;align-items:center;
+          z-index:6;pointer-events:none}
+  .alertstrip{background:rgba(26,9,9,.94);border:1px solid var(--red);
+              color:var(--red);padding:6px 20px;font-size:12px;font-weight:600;
+              letter-spacing:.2em;white-space:nowrap;animation:alertin .25s ease-out}
+  @keyframes alertin{from{transform:translateY(-16px);opacity:0}}
+  #alarmflash{position:fixed;inset:0;pointer-events:none;z-index:9;opacity:0;
+    background:radial-gradient(ellipse at center,rgba(224,82,82,0) 40%,rgba(224,82,82,.3))}
+  #alarmflash.on{animation:alarmpulse .9s ease-out}
+  @keyframes alarmpulse{0%{opacity:1}100%{opacity:0}}
+  .shake{animation:shake .4s}
+  @keyframes shake{20%{transform:translate(4px,-3px)}40%{transform:translate(-4px,3px)}
+    60%{transform:translate(3px,2px)}80%{transform:translate(-2px,-2px)}}
+  @keyframes blink{50%{opacity:.2}}
+
+  /* the tool tray — SimCity's palette, over the globe */
+  #traywrap{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);
+            display:flex;flex-direction:column;align-items:center;gap:7px;z-index:5}
+  #armed{display:flex;gap:8px}
+  .pill{background:rgba(15,23,18,.95);border:1px solid var(--green);color:var(--green);
+        font-size:10.5px;letter-spacing:.1em;padding:4px 9px;display:flex;gap:8px;
+        align-items:center}
+  .pill button{background:none;border:none;color:var(--red);cursor:pointer;
+               font-size:11px;padding:0;font-family:var(--mono)}
+  #toolinfo{font-size:10.5px;color:var(--ink-dim);background:rgba(10,15,12,.85);
+            padding:2px 10px;min-height:1.4em;max-width:80vw;text-align:center}
+  #toolbar{display:flex;gap:6px;background:rgba(15,23,18,.94);
+           border:1px solid var(--line);padding:7px}
+  .tool{width:64px;padding:6px 2px 5px;background:var(--panel2);
+        border:1px solid var(--line);color:var(--ink);cursor:pointer;
+        display:flex;flex-direction:column;align-items:center;gap:2px;
+        font-family:var(--mono)}
+  .tool .ic{font-size:19px;line-height:1;filter:saturate(.55) brightness(1.05)}
+  .tool .nm{font-size:8px;letter-spacing:.04em;color:var(--ink-dim);text-align:center;
+            line-height:1.25;height:2.4em;overflow:hidden}
+  .tool .pr{font-size:9px;color:var(--amber)}
+  .tool:hover{border-color:var(--ink-dim)}
+  .tool.sel{border-color:var(--green);background:#12251a}
+  .tool.off{opacity:.35;cursor:default}
+
+  /* right rail: the news is the interface */
   #rail{border-left:1px solid var(--line);background:var(--panel);
-        display:flex;flex-direction:column;min-height:0;overflow-y:auto}
-  .panel{border-bottom:1px solid var(--line);padding:10px 14px}
+        display:flex;flex-direction:column;min-height:0}
+  .panel{border-bottom:1px solid var(--line);padding:9px 14px}
   .panel h2{font-size:10px;font-weight:500;letter-spacing:.24em;
-            color:var(--ink-faint);margin-bottom:7px}
-  .row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-  .big{font-size:21px;font-weight:600;font-variant-numeric:tabular-nums}
-  .delta{font-size:11px;font-variant-numeric:tabular-nums;color:var(--ink-dim)}
-  .delta.up{color:var(--green)} .delta.down{color:var(--red)}
-  canvas.spark{width:100%;height:34px;display:block;margin-top:5px}
-  .kv{display:flex;justify-content:space-between;font-size:11.5px;
-      color:var(--ink-dim);margin-top:2px}
-  .kv .num{color:var(--ink);font-variant-numeric:tabular-nums}
-  .bar{height:6px;background:var(--panel2);margin-top:6px;position:relative}
-  .bar i{position:absolute;inset:0 auto 0 0;background:var(--amber)}
+            color:var(--ink-faint);margin-bottom:6px;display:flex;
+            justify-content:space-between}
+  .live{color:var(--red);animation:blink 1.4s steps(2) infinite}
+  #wire{flex:1;min-height:120px;overflow-y:auto;padding:8px 14px;font-size:11.5px}
+  #wire p{margin-bottom:6px;color:var(--ink-dim)}
+  #wire p b{color:var(--ink);font-weight:500}
+  #wire .sev{color:var(--amber)} #wire .att{color:var(--red)}
+  #wire .op{color:var(--green)} #wire .stamp{color:var(--ink-faint)}
+  #wire .memo{color:var(--cyan)} #wire .news{color:var(--ink)}
+  .chip{background:var(--red);color:#140808;font-weight:600;padding:0 5px;
+        font-size:9px;letter-spacing:.12em;margin-right:5px}
 
-  /* attribution */
   #ladder{font-family:var(--sans);font-size:12.5px;color:var(--ink);
-          min-height:2.6em;border-left:2px solid var(--ink-faint);
+          min-height:2.5em;border-left:2px solid var(--ink-faint);
           padding-left:9px;margin:2px 0 6px}
   #ladder.hot{border-left-color:var(--red)}
   #sigmeter{display:flex;gap:3px;margin-bottom:4px}
   #sigmeter i{flex:1;height:5px;background:var(--panel2)}
   #sigmeter i.on{background:var(--red)}
+  #sigmeter.hunted i.on{animation:blink 1.6s steps(2) infinite}
   #dosnum{color:var(--ink-faint);font-size:10.5px;display:none}
+  .kv{display:flex;justify-content:space-between;font-size:11px;
+      color:var(--ink-dim);margin-top:2px}
+  .kv .num{color:var(--ink);font-variant-numeric:tabular-nums}
+  input[type=range]{width:100%;accent-color:var(--green);margin-top:4px}
 
-  /* commit */
-  select,input[type=text],input[type=range],button{
-    font-family:var(--mono);font-size:12px;color:var(--ink);
-    background:var(--panel2);border:1px solid var(--line);border-radius:0}
-  select{width:100%;padding:5px 6px;margin-top:3px}
-  select:focus,input:focus,button:focus{outline:1px solid var(--green);outline-offset:1px}
-  .oprow{margin-bottom:8px}
-  .oprow label{font-size:10px;letter-spacing:.18em;color:var(--ink-faint)}
-  .capinfo{font-size:10.5px;color:var(--ink-dim);margin-top:3px;min-height:1.3em}
-  #containment{width:100%;accent-color:var(--green);margin-top:4px}
-  #predict{width:100%;padding:5px 6px;margin-top:3px}
+  #inflight .fl{display:flex;justify-content:space-between;gap:8px;
+                font-size:10.5px;color:var(--ink-dim);margin-top:3px}
+  #inflight .fl b{color:var(--ink);font-weight:500}
+  #inflight .tmin{font-variant-numeric:tabular-nums;color:var(--amber);
+                  letter-spacing:.08em;white-space:nowrap}
+  #inflight .fl.t1 .tmin{color:var(--red);animation:blink .8s steps(2) infinite}
+  #inflight .fl.debt{opacity:.7}
+  #inflight .fl.debt .tmin{color:var(--ink-faint)}
+  #inflight .none{font-size:10.5px;color:var(--ink-faint)}
+  canvas.spark{width:100%;height:26px;display:block;margin-top:4px}
+
+  #predict{width:100%;padding:5px 6px;margin-top:2px;font-family:var(--mono);
+           font-size:11.5px;color:var(--ink);background:var(--panel2);
+           border:1px solid var(--line)}
   #predict::placeholder{color:var(--ink-faint)}
-  #resolve{width:100%;margin-top:10px;padding:9px 0;font-weight:600;
-           letter-spacing:.22em;background:#12251a;border-color:var(--green);
-           color:var(--green);cursor:pointer}
+  #resolve{width:100%;margin-top:8px;padding:10px 0;font-weight:600;
+           letter-spacing:.22em;background:#12251a;border:1px solid var(--green);
+           color:var(--green);cursor:pointer;font-family:var(--mono);font-size:13px}
   #resolve:hover{background:#173322}
   #resolve:disabled{opacity:.4;cursor:default}
-
-  /* wire */
-  #wire{flex:1;min-height:110px;overflow-y:auto;padding:8px 14px;font-size:11.5px}
-  #wire p{margin-bottom:5px;color:var(--ink-dim)}
-  #wire p b{color:var(--ink);font-weight:500}
-  #wire .sev{color:var(--amber)} #wire .att{color:var(--red)}
-  #wire .op{color:var(--green)} #wire .stamp{color:var(--ink-faint)}
+  select:focus,input:focus,button:focus{outline:1px solid var(--green);outline-offset:1px}
 
   footer{display:flex;justify-content:space-between;padding:5px 14px;
          border-top:1px solid var(--line);font-size:10px;color:var(--ink-faint);
          letter-spacing:.14em;background:var(--panel)}
   footer button{border:none;background:none;color:var(--ink-faint);cursor:pointer;
-                font-size:10px;letter-spacing:.14em;padding:0}
+                font-size:10px;letter-spacing:.14em;padding:0;font-family:var(--mono)}
   footer button:hover{color:var(--ink-dim)}
 
-  /* overlays */
   .overlay{position:fixed;inset:0;background:rgba(6,10,8,.9);z-index:10;
            display:flex;align-items:center;justify-content:center;padding:20px}
   .sheet{background:var(--panel);border:1px solid var(--line);max-width:620px;
@@ -114,27 +165,34 @@
             color:var(--ink);font-style:italic}
   .sheet button{padding:9px 26px;margin-top:8px;letter-spacing:.2em;
                 background:#12251a;border:1px solid var(--green);
-                color:var(--green);cursor:pointer;font-weight:600}
+                color:var(--green);cursor:pointer;font-weight:600;
+                font-family:var(--mono)}
   .sheet table{width:100%;border-collapse:collapse;font-size:11.5px;margin:8px 0}
   .sheet td,.sheet th{border-top:1px solid var(--line);padding:4px 6px;
                       text-align:left;font-variant-numeric:tabular-nums}
   .sheet th{color:var(--ink-faint);font-weight:500;letter-spacing:.1em;font-size:10px}
   .redact{background:var(--ink-faint);color:var(--ink-faint)}
 
-  @media (max-width:860px){
+  @media (max-width:900px){
     main{grid-template-columns:1fr}
-    #globe-wrap{height:46vh}
+    #globe-wrap{height:52vh}
     #rail{border-left:none;border-top:1px solid var(--line)}
     body{overflow:auto}
     #app{height:auto}
+    .tool{width:52px}
   }
-  @media (prefers-reduced-motion:reduce){ .anim{transition:none!important} }
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important}
+  }
 </style>
 
 <div id="app">
 <header>
   <h1>FORCE MAJEURE</h1>
-  <span class="sub">DIRECTORATE OF CIVIL RESILIENCE // OPS CONSOLE</span>
+  <span class="stat"><span class="lbl">FUNDS</span><span class="val" id="hFunds">$90.0M</span><span class="d" id="hFundsD"></span></span>
+  <span class="stat"><span class="lbl">FEAR</span></span><span id="hMandateWrap"><span id="hMandate" style="width:28%"></span></span>
+  <span class="stat"><span class="lbl">GRAIN</span><span class="val" id="hPrice">100.0</span><span class="d" id="hPriceD"></span></span>
+  <span class="stat"><span class="lbl">HARVEST</span><span class="val" id="hYield">—</span></span>
   <span id="phase">PHASE <b id="phasename">FORECAST</b></span>
   <span id="clock">1946 · WINTER</span>
 </header>
@@ -142,34 +200,21 @@
 <main>
   <div id="globe-wrap">
     <canvas id="globe"></canvas>
+    <div id="alerts"></div>
     <div id="hover"></div>
     <div id="banner"></div>
+    <div id="traywrap">
+      <div id="armed"></div>
+      <div id="toolinfo">Pick a tool. Aim it at the world.</div>
+      <div id="toolbar"></div>
+    </div>
   </div>
 
   <div id="rail">
-    <div class="panel">
-      <h2>TREASURY</h2>
-      <div class="row"><span class="big" id="treasury">90.0</span>
-        <span class="delta" id="tredelta"></span></div>
-      <canvas class="spark" id="tspark" aria-label="treasury by season"></canvas>
-      <div class="kv"><span>budget in</span><span class="num" id="budgetin">—</span></div>
-      <div class="kv"><span>ops + containment + overhead</span><span class="num" id="spend">—</span></div>
-    </div>
-
-    <div class="panel">
-      <h2>MANDATE — PERCEIVED THREAT</h2>
-      <div class="row"><span class="big" id="mandate" style="color:var(--amber)">28</span>
-        <span class="delta" id="sevnote">calm world</span></div>
-      <div class="bar"><i id="mbar" style="width:28%"></i></div>
-    </div>
-
-    <div class="panel">
-      <h2>GRAIN MARKET</h2>
-      <div class="row"><span class="big" id="price">100.0</span>
-        <span class="delta" id="pricedelta"></span></div>
-      <canvas class="spark" id="pspark" aria-label="grain price by season"></canvas>
-      <div class="kv"><span>homeland yield</span><span class="num" id="hyield">—</span></div>
-      <div class="kv"><span>farm revenue</span><span class="num" id="revenue">—</span></div>
+    <div class="panel" style="flex:1;display:flex;flex-direction:column;min-height:0;padding:0">
+      <h2 style="padding:9px 14px 0"><span>WORLD SERVICE — LIVE WIRE</span><span class="live">● LIVE</span></h2>
+      <div id="wire"><p><span class="stamp">1946·W</span> Directorate established.
+        Two tools, a stable climate, a small budget. <b>The timeline is the tutorial.</b></p></div>
     </div>
 
     <div class="panel">
@@ -183,20 +228,20 @@
     </div>
 
     <div class="panel">
-      <h2>COMMITMENT — SEALED ON RESOLVE</h2>
-      <div class="oprow"><label for="opA">OPERATION A</label>
-        <select id="opA"></select><select id="tgtA"></select>
-        <div class="capinfo" id="infoA"></div></div>
-      <div class="oprow"><label for="opB">OPERATION B</label>
-        <select id="opB"></select><select id="tgtB"></select>
-        <div class="capinfo" id="infoB"></div></div>
-      <label class="oprow" style="display:block"><span style="font-size:10px;letter-spacing:.18em;color:var(--ink-faint)">PREDICTION (what do you expect?)</span>
-        <input type="text" id="predict" placeholder="logged to the record, scored at end"></label>
-      <button id="resolve">RESOLVE SEASON ▸</button>
+      <h2>IN FLIGHT — CONSEQUENCES IN TRANSIT</h2>
+      <div id="inflight"><p class="none">Nothing in transit. The world is doing this to itself.</p></div>
     </div>
 
-    <div id="wire"><p><span class="stamp">1946·W</span> Directorate established.
-      Two tools, a stable climate, a small budget. <b>The timeline is the tutorial.</b></p></div>
+    <div class="panel">
+      <h2>LEDGER</h2>
+      <canvas class="spark" id="tspark" aria-label="funds by season"></canvas>
+      <canvas class="spark" id="pspark" aria-label="grain price by season"></canvas>
+    </div>
+
+    <div class="panel">
+      <input type="text" id="predict" placeholder="prediction — what happens next? (scored at end)">
+      <button id="resolve">RUN SEASON ▸</button>
+    </div>
   </div>
 </main>
 
@@ -205,6 +250,8 @@
   <button id="teltoggle">TELEMETRY: LADDER ONLY</button>
 </footer>
 </div>
+
+<div id="alarmflash"></div>
 
 <div class="overlay" id="intro">
   <div class="sheet">
@@ -216,18 +263,20 @@
       Homeland: the North American Plains — a wheat and maize exporter. A calm
       world defunds you. A frightening one earns your appropriation.</p>
     <ul>
-      <li><b>Commit</b> up to two operations and a containment budget, then
-        resolve the season. Most of what you order lands seasons later.</li>
-      <li><b>The ring around each region</b> is what nature could plausibly
-        do on its own. Stay inside it and you were never here. Break it and
+      <li><b>Pick a tool from the tray. Click a region to aim it.</b> Up to two
+        operations a season, then RUN SEASON. Most of what you order lands
+        seasons later — watch the countdown board.</li>
+      <li><b>The ring around each region</b> is what nature could plausibly do
+        on its own. Stay inside it and you were never here. Break it and
         somebody starts a file.</li>
       <li><b>Move the ocean, not the country.</b> Slower — but the failed
         harvest arrives looking like climate, two borders from your
         fingerprints.</li>
-      <li><b>Fire wants a drought first.</b> Build it, then wait for
-        lightning that was coming anyway.</li>
-      <li>Watch the money, the fear, the price of grain, and the ladder. At
-        the top of the ladder the record becomes public, and it is yours.</li>
+      <li><b>Fire wants a drought first.</b> Build it, then wait for lightning
+        that was coming anyway.</li>
+      <li>The world talks back through the news wire. Your analysts will tell
+        you which disasters were yours. The news never will — unless the
+        ladder reaches the top, the record goes public, and it is yours.</li>
     </ul>
     <p>One honest run, no undo. Write a prediction each season — the archive
       scores you against them at the end.</p>
@@ -247,61 +296,101 @@ __ENGINE__
 /* ---------------------------------------------------------------- setup */
 const eng = createEngine(MODEL);
 const REG = eng.regions, DRV = eng.drivers, CAPS = eng.capabilities;
+const ND = DRV.length;
 const REGPOS = { "North American Plains":[41.5,-100], "Black Sea Steppe":[48,34],
   "La Plata Basin":[-31,-60], "South Asia":[22,79], "Southeast Asia":[12,104],
   "Eastern Australia":[-29,147], "Sahel":[14,2], "Horn of Africa":[8,44] };
 const DRVPOS = { ENSO:[-3,-135], IOD:[-4,68], NATL:[44,-38] };
+const DATELINE = { "North American Plains":"OMAHA","Black Sea Steppe":"ODESSA",
+  "La Plata Basin":"BUENOS AIRES","South Asia":"DELHI","Southeast Asia":"BANGKOK",
+  "Eastern Australia":"SYDNEY","Sahel":"NIAMEY","Horn of Africa":"ADDIS ABABA" };
+const TOOLICON = { "Cloud Seeding":"☁","Watershed Interference":"⏚",
+  "Fire Enablement":"🔥","Adaptation Investment":"🛡","Ocean Thermal Forcing":"🌊",
+  "Stratospheric Aerosol Inj.":"✈","ENSO Forcing":"🌀","Ionospheric Coupling [T3]":"⚡" };
 const $ = (id) => document.getElementById(id);
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 let t = 0;                       // last resolved season
-let flash = [];                  // transient globe effects
+let flash = [];                  // travelling arcs
+let shocks = [];                 // expanding event shockwaves
+let effects = [];                // persistent spectacle: fire, smoke, storm...
 let running = true;
 let telemetry = false;
+let pendingTool = null;          // tool waiting for a globe click
+let slots = [];                  // armed ops, max 2: {cap, target}
+let sevStreak = REG.map(()=>0);  // consecutive severe seasons per region
 
-/* ------------------------------------------------------------- commit UI */
-function fillCaps(sel){ for (const c of CAPS){ const o=document.createElement("option");
-  o.textContent=c.name; sel.appendChild(o);} }
-function fillRegions(sel){ sel.innerHTML=""; for (const r of REG){
-  const o=document.createElement("option"); o.textContent=r.name; sel.appendChild(o);} }
-fillCaps($("opA")); fillCaps($("opB")); fillRegions($("tgtA")); fillRegions($("tgtB"));
+function fmt(n,d=1){ return n.toLocaleString("en-US",
+  {minimumFractionDigits:d,maximumFractionDigits:d}); }
+function lastRow(){ return eng.state.rows[t-1]; }
 
-function capInfo(name){
-  const c = CAPS.find(x=>x.name===name);
-  if(!c || c.type==="NONE") return "";
+/* ------------------------------------------------------------ tool tray */
+function capInfo(c){
   const bits=[`$${c.cost}M`,`lands in ${c.lag} season${c.lag===1?"":"s"}`,
-              c.sig>=20? "leaves a loud signature" : c.sig>=10? "leaves a signature" : c.sig>0? "quiet" : "invisible"];
+    c.sig>=20? "loud signature" : c.sig>=10? "leaves a signature" : c.sig>0? "quiet" : "invisible"];
   if(c.type==="DRIVER") bits.push(`works through the ${c.fixedTarget} system`);
-  if(typeof c.dispTo==="string") bits.push(`what you move surfaces elsewhere, later`);
+  if(typeof c.dispTo==="string") bits.push("what you move surfaces elsewhere, later");
   if(c.needsDrought) bits.push("wants the target already dry");
-  if(c.resil>0) bits.push("hardens the region, permanently");
+  if(c.resil>0) bits.push("hardens a region, permanently");
   return bits.join(" · ");
 }
-function syncOpRow(op,tgt,info){
-  const c = CAPS.find(x=>x.name===$(op).value);
-  const needsRegion = c && c.type==="REGION";
-  $(tgt).style.display = needsRegion ? "" : "none";
-  $(info).textContent = capInfo($(op).value);
+function buildTray(){
+  const bar=$("toolbar"); bar.innerHTML="";
+  for(const c of CAPS){
+    if(c.type==="NONE") continue;
+    const b=document.createElement("button");
+    b.className="tool"; b.dataset.cap=c.name;
+    b.innerHTML=`<span class="ic">${TOOLICON[c.name]||"◈"}</span>
+      <span class="nm">${c.name.replace(" [T3]","")}</span>
+      <span class="pr">$${c.cost}M</span>`;
+    b.addEventListener("click",()=>toolClick(c));
+    bar.appendChild(b);
+  }
 }
-for (const [op,tg,inf] of [["opA","tgtA","infoA"],["opB","tgtB","infoB"]]){
-  $(op).addEventListener("change",()=>syncOpRow(op,tg,inf)); syncOpRow(op,tg,inf);
+function toolClick(c){
+  if(!running || slots.length>=2){
+    $("toolinfo").textContent = slots.length>=2 ? "Two operations sealed per season. Run the season." : "";
+    return; }
+  if(c.type==="DRIVER"){                       // aims itself at the ocean
+    slots.push({cap:c.name, target:null});
+    pendingTool=null; renderTray();
+    $("toolinfo").textContent=`${c.name} armed — ${capInfo(c)}`;
+  } else {
+    pendingTool = pendingTool===c.name? null : c.name;
+    renderTray();
+    $("toolinfo").textContent = pendingTool?
+      `${c.name} — click a region on the globe · ${capInfo(c)}` :
+      "Pick a tool. Aim it at the world.";
+  }
 }
-$("containment").addEventListener("input",()=>$("contval").textContent=$("containment").value);
+function renderTray(){
+  $("globe").classList.toggle("aiming", !!pendingTool);
+  for(const b of $("toolbar").children){
+    b.classList.toggle("sel", b.dataset.cap===pendingTool);
+    b.classList.toggle("off", slots.length>=2 && b.dataset.cap!==pendingTool);
+  }
+  $("armed").innerHTML = slots.map((s,i)=>
+    `<span class="pill">${s.cap.toUpperCase()}${s.target? " · "+s.target:""}
+     <button data-i="${i}" aria-label="cancel">✕</button></span>`).join("");
+  for(const x of $("armed").querySelectorAll("button"))
+    x.addEventListener("click",()=>{ slots.splice(+x.dataset.i,1); renderTray(); });
+}
 
 /* ---------------------------------------------------------------- globe */
 const cv = $("globe"), cx = cv.getContext("2d");
-let W=0,H=0,CXp=0,CYp=0,Rp=0, rot = -30, tilt = -18, dragging=false, lastX=0;
+let W=0,H=0,CXp=0,CYp=0,Rp=0, rot = -30, tilt = -18, dragging=false, moved=0, lastX=0;
 function sizeGlobe(){
   const rect = cv.parentElement.getBoundingClientRect();
   const dpr = devicePixelRatio||1;
   cv.width = rect.width*dpr; cv.height = rect.height*dpr;
   cx.setTransform(dpr,0,0,dpr,0,0);
-  W=rect.width; H=rect.height; CXp=W/2; CYp=H/2; Rp=Math.min(W,H)*0.40;
+  W=rect.width; H=rect.height; CXp=W/2; CYp=H/2-14; Rp=Math.min(W,H)*0.40;
 }
 addEventListener("resize", sizeGlobe); sizeGlobe();
-cv.addEventListener("pointerdown",e=>{dragging=true;lastX=e.clientX;cv.setPointerCapture(e.pointerId)});
-cv.addEventListener("pointerup",()=>dragging=false);
-cv.addEventListener("pointermove",e=>{ if(dragging){rot+=(e.clientX-lastX)*0.35;lastX=e.clientX;}
+cv.addEventListener("pointerdown",e=>{dragging=true;moved=0;lastX=e.clientX;cv.setPointerCapture(e.pointerId)});
+cv.addEventListener("pointerup",e=>{ dragging=false; if(moved<5) globeClick(e); });
+cv.addEventListener("pointermove",e=>{
+  if(dragging){ const dx=e.clientX-lastX; moved+=Math.abs(dx); rot+=dx*0.35; lastX=e.clientX; }
   else hoverCheck(e); });
 cv.addEventListener("pointerleave",()=>$("hover").style.display="none");
 
@@ -312,51 +401,133 @@ function project(lat,lon){
   const y=y0*Math.cos(ti)-z0*Math.sin(ti), z=y0*Math.sin(ti)+z0*Math.cos(ti);
   return {x:CXp+Rp*x0, y:CYp-Rp*y, vis:z>0.02, z};
 }
+function nearestRegion(e){
+  const rect=cv.getBoundingClientRect(), mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  let best=null,bd=22;
+  for(let ri=0;ri<REG.length;ri++){
+    const p=project(...REGPOS[REG[ri].name]); if(!p.vis) continue;
+    const d=Math.hypot(p.x-mx,p.y-my); if(d<bd){bd=d;best=ri;}
+  }
+  return best;
+}
+function globeClick(e){
+  if(!pendingTool) return;
+  const ri=nearestRegion(e);
+  if(ri===null){ $("toolinfo").textContent="Click closer to a region marker."; return; }
+  slots.push({cap:pendingTool, target:REG[ri].name});
+  const c=CAPS.find(x=>x.name===pendingTool);
+  $("toolinfo").textContent=`${pendingTool} armed on ${REG[ri].name} — lands in ${c.lag} season${c.lag===1?"":"s"}.`;
+  pendingTool=null; renderTray();
+}
 function anomColor(a, alpha){
   if(a<0){ const k=Math.min(1,-a/2);
     return `rgba(${224+31*k|0},${164-112*k|0},${88-6*k|0},${alpha})`; }
   return `rgba(91,200,232,${alpha})`;
 }
-function lastRow(){ return eng.state.rows[t-1]; }
+
+/* persistent spectacle layer — fire you can see from orbit */
+function drawEffects(nowMs){
+  const k=Rp*0.055;
+  for(const e of effects){
+    const p=project(...e.pos); if(!p.vis) continue;
+    if(e.type==="scar"){
+      cx.fillStyle="rgba(45,32,26,.6)";
+      cx.beginPath(); cx.arc(p.x,p.y,k*0.6,0,7); cx.fill();
+    } else if(e.type==="fire"){
+      for(let i=0;i<5;i++){
+        const fx=p.x+Math.sin(i*2.1+nowMs/90)*k*0.5, fy=p.y+Math.cos(i*1.7+nowMs/110)*k*0.4;
+        const fl=0.55+0.45*Math.sin(nowMs/70+i*2.3);
+        const g=cx.createRadialGradient(fx,fy,0,fx,fy,k*0.55);
+        g.addColorStop(0,`rgba(255,190,90,${0.85*fl})`);
+        g.addColorStop(0.4,`rgba(224,90,52,${0.5*fl})`);
+        g.addColorStop(1,"rgba(224,90,52,0)");
+        cx.fillStyle=g; cx.beginPath(); cx.arc(fx,fy,k*0.55,0,7); cx.fill();
+      }
+      for(let i=0;i<7;i++){                       // smoke, drifting downwind
+        const ph=((nowMs/2600)+i/7)%1;
+        const sx=p.x+ph*k*3.4+i*2, sy=p.y-ph*k*1.2-Math.sin(i*1.3)*3;
+        cx.fillStyle=`rgba(150,150,150,${0.3*(1-ph)})`;
+        cx.beginPath(); cx.arc(sx,sy,2.5+ph*8,0,7); cx.fill();
+      }
+    } else if(e.type==="rain"){
+      cx.fillStyle="rgba(190,225,210,.22)";
+      cx.beginPath(); cx.arc(p.x,p.y-k*0.8,k*0.7,0,7); cx.fill();
+      for(let i=0;i<8;i++){
+        const ph=((nowMs/700)+i/8)%1;
+        const rx=p.x+((i%4)-1.5)*k*0.5, ry=p.y-k*0.6+ph*k*1.1;
+        cx.strokeStyle=`rgba(91,200,232,${0.7*(1-ph)})`;
+        cx.beginPath(); cx.moveTo(rx,ry); cx.lineTo(rx-1.5,ry+4); cx.stroke();
+      }
+    } else if(e.type==="storm"){                  // cyclone, from orbit
+      const rv=nowMs/900;
+      for(let arm=0;arm<3;arm++){
+        cx.strokeStyle="rgba(205,238,255,.8)"; cx.lineWidth=1.6;
+        cx.beginPath();
+        for(let s=0;s<16;s++){
+          const th=rv+arm*2.094+s*0.28, rr=k*0.12+s*k*0.09;
+          const px=p.x+Math.cos(th)*rr, py=p.y+Math.sin(th)*rr*0.85;
+          s?cx.lineTo(px,py):cx.moveTo(px,py);
+        }
+        cx.stroke();
+      }
+      cx.fillStyle="rgba(225,248,255,.95)";
+      cx.beginPath(); cx.arc(p.x,p.y,2,0,7); cx.fill(); cx.lineWidth=1;
+    } else if(e.type==="oceanheat"){
+      const pulse=0.5+0.5*Math.sin(nowMs/350);
+      const g=cx.createRadialGradient(p.x,p.y,0,p.x,p.y,k*1.7);
+      g.addColorStop(0,`rgba(224,120,70,${0.4*pulse})`);
+      g.addColorStop(1,"rgba(224,120,70,0)");
+      cx.fillStyle=g; cx.beginPath(); cx.arc(p.x,p.y,k*1.7,0,7); cx.fill();
+    }
+  }
+}
 
 function drawGlobe(now){
   if(!dragging && !reduced) rot += 0.022;
+  const nowMs=now||0;
   cx.clearRect(0,0,W,H);
-  // ocean disc + horizon glow
   const g = cx.createRadialGradient(CXp,CYp,Rp*0.1,CXp,CYp,Rp*1.06);
-  g.addColorStop(0,"#0d1a12"); g.addColorStop(0.94,"#0b150e"); g.addColorStop(1,"rgba(83,217,123,0)");
+  g.addColorStop(0,"#0d1a12"); g.addColorStop(0.94,"#0b150e");
+  g.addColorStop(1,"rgba(83,217,123,0)");
   cx.fillStyle=g; cx.beginPath(); cx.arc(CXp,CYp,Rp*1.06,0,7); cx.fill();
   cx.strokeStyle="rgba(83,217,123,.35)"; cx.lineWidth=1;
   cx.beginPath(); cx.arc(CXp,CYp,Rp,0,7); cx.stroke();
-  // graticule
   cx.strokeStyle="rgba(83,217,123,.08)";
   for(let la=-60;la<=60;la+=30) strokePath(pts(90,i=>[la,-180+i*4]));
   for(let lo=-180;lo<180;lo+=30) strokePath(pts(60,i=>[-88+i*3,lo]));
-  // coastlines
   cx.strokeStyle="rgba(140,220,165,.55)"; cx.lineWidth=1;
   for(const ring of LAND) strokePath(ring.map(([lo,la])=>[la,lo]));
+
   const row = lastRow();
-  // aerosol color grade: the sky changed and you intend to use it
+  // aerosol color grade + drifting stratospheric veil
   const glob = row ? row.driverTotals[3] : 0;
-  if(glob>0.05){ cx.fillStyle=`rgba(224,164,88,${Math.min(0.22,glob*0.16)})`;
+  if(glob>0.05){
+    cx.fillStyle=`rgba(224,164,88,${Math.min(0.22,glob*0.16)})`;
     cx.beginPath(); cx.arc(CXp,CYp,Rp,0,7); cx.fill();
+    for(const la of [22,0,-22]){
+      cx.strokeStyle=`rgba(224,164,88,${Math.min(0.3,glob*0.2)})`; cx.lineWidth=5;
+      strokePath(pts(90,i=>[la+3*Math.sin(i/7+nowMs/4200), -180+i*4]));
+    }
+    cx.lineWidth=1;
     cx.strokeStyle=`rgba(224,164,88,${Math.min(0.6,glob*0.4)})`;
-    cx.beginPath(); cx.arc(CXp,CYp,Rp*1.08,0,7); cx.stroke(); }
-  // driver glyphs
+    cx.beginPath(); cx.arc(CXp,CYp,Rp*1.05,0,7); cx.stroke();
+  }
+  drawEffects(nowMs);
+
   for(const [d,[la,lo]] of Object.entries(DRVPOS)){
     const p=project(la,lo); if(!p.vis) continue;
     const v = row ? row.driverTotals[DRV.indexOf(d)] : MODEL.climate[0].drivers[DRV.indexOf(d)];
-    cx.fillStyle="rgba(127,163,137,.9)"; cx.font="9px "+getComputedStyle(document.body).getPropertyValue("--mono");
+    cx.fillStyle="rgba(127,163,137,.9)";
+    cx.font="9px "+getComputedStyle(document.body).getPropertyValue("--mono");
     cx.fillText(d, p.x-10, p.y-8);
-    cx.strokeStyle = v>=0? "rgba(224,164,88,.8)":"rgba(91,200,232,.8)";
-    cx.strokeRect(p.x-9,p.y-3,18,4);
-    cx.fillStyle = v>=0? "rgba(224,164,88,.8)":"rgba(91,200,232,.8)";
+    const col = v>=0? "rgba(224,164,88,.8)":"rgba(91,200,232,.8)";
+    cx.strokeStyle=col; cx.strokeRect(p.x-9,p.y-3,18,4);
+    cx.fillStyle=col;
     const w=Math.min(9,Math.abs(v)*5);
     cx.fillRect(v>=0?p.x:p.x-w, p.y-3, w, 4);
   }
-  // regions: envelope ring + anomaly disc
   for(let ri=0;ri<REG.length;ri++){
-    const r=REG[ri], [la,lo]=REGPOS[r.name], p=project(la,lo);
+    const r=REG[ri], p=project(...REGPOS[r.name]);
     if(!p.vis) continue;
     const sig = row? row.sigmas[ri] : r.sigma, a = row? row.anomalies[ri] : 0;
     const k = Rp*0.055;
@@ -369,12 +540,12 @@ function drawGlobe(now){
         cx.beginPath(); cx.arc(p.x,p.y,k*Math.abs(a)+2,0,7); cx.stroke(); cx.lineWidth=1; }
     }
     cx.fillStyle = r.homeland? "#53d97b":"rgba(200,230,207,.85)";
-    cx.beginPath(); cx.arc(p.x,p.y,2.4,0,7); cx.fill();
+    cx.beginPath(); cx.arc(p.x,p.y,2.6,0,7); cx.fill();
     if(r.homeland){ cx.strokeStyle="rgba(83,217,123,.7)";
       cx.beginPath(); cx.arc(p.x,p.y,5,0,7); cx.stroke(); }
+    if(pendingTool){ cx.strokeStyle=`rgba(83,217,123,${0.4+0.3*Math.sin(nowMs/300)})`;
+      cx.beginPath(); cx.arc(p.x,p.y,8,0,7); cx.stroke(); }
   }
-  // transient landed-effect arcs
-  const nowMs = now||0;
   flash = flash.filter(f=>nowMs<f.until);
   for(const f of flash){
     const a=project(...f.from), b=project(...f.to);
@@ -391,6 +562,16 @@ function drawGlobe(now){
     cx.fillStyle="#c8f5d5"; cx.beginPath(); cx.arc(px,py,2.6,0,7); cx.fill();
     cx.lineWidth=1;
   }
+  shocks = shocks.filter(s=>nowMs<s.until);
+  for(const s of shocks){
+    const p=project(...s.pos); if(!p.vis) continue;
+    const ph=1-(s.until-nowMs)/s.dur;
+    for(const m of [ph, Math.max(0,ph-0.22)]){
+      cx.strokeStyle=`rgba(224,82,82,${(1-m)*0.85})`; cx.lineWidth=1.8;
+      cx.beginPath(); cx.arc(p.x,p.y,Rp*0.028+Rp*0.13*m,0,7); cx.stroke();
+    }
+    cx.lineWidth=1;
+  }
   requestAnimationFrame(drawGlobe);
 }
 function pts(n,f){ const out=[]; for(let i=0;i<=n;i++) out.push(f(i)); return out; }
@@ -401,14 +582,10 @@ function strokePath(arr){
   cx.stroke();
 }
 function hoverCheck(e){
-  const rect=cv.getBoundingClientRect(), mx=e.clientX-rect.left, my=e.clientY-rect.top;
-  let best=null,bd=18;
-  for(let ri=0;ri<REG.length;ri++){
-    const p=project(...REGPOS[REG[ri].name]); if(!p.vis) continue;
-    const d=Math.hypot(p.x-mx,p.y-my); if(d<bd){bd=d;best=ri;}
-  }
+  const best=nearestRegion(e);
   const h=$("hover");
   if(best===null){ h.style.display="none"; return; }
+  const rect=cv.getBoundingClientRect(), mx=e.clientX-rect.left, my=e.clientY-rect.top;
   const r=REG[best], row=lastRow();
   const a=row?row.anomalies[best]:0, s=row?row.sigmas[best]:r.sigma;
   const y=row?row.yields[best]:100, res=row?row.resil[best]:0;
@@ -420,55 +597,82 @@ function hoverCheck(e){
     · ${r.weight}% of world supply${res?` · hardened`:""}<br>
     <span style="color:var(--ink-faint)">anomaly ${a.toFixed(2)} vs natural range ±${s.toFixed(2)}${Math.abs(a)>s?" — outside":""}</span>`;
   h.style.display="block";
-  h.style.left=Math.min(mx+14,W-240)+"px"; h.style.top=(my+10)+"px";
+  h.style.left=Math.min(mx+14,W-250)+"px"; h.style.top=(my+10)+"px";
 }
 requestAnimationFrame(drawGlobe);
 
-/* ------------------------------------------------------------ HUD parts */
-function spark(canvas, series, color, floor){
+/* --------------------------------------------------------- feed & drama */
+function wire(html, cls){
+  const row=lastRow(); const p=document.createElement("p");
+  const stamp = row? `${row.year}·${row.qtr[0]}` : "1946·W";
+  p.innerHTML=`<span class="stamp">${stamp}</span> ${cls?`<span class="${cls}">${html}</span>`:html}`;
+  $("wire").prepend(p);
+}
+function news(dateline, headline, breaking){
+  wire(`${breaking?'<span class="chip">BREAKING</span>':""}<b>${dateline}</b> — ${headline}`,"news");
+}
+function alertStrip(msg){
+  const d=document.createElement("div"); d.className="alertstrip"; d.textContent=msg;
+  $("alerts").appendChild(d); setTimeout(()=>d.remove(), 3000);
+}
+function shakeNow(){ if(reduced) return;
+  const w=$("globe-wrap"); w.classList.remove("shake"); void w.offsetWidth;
+  w.classList.add("shake"); }
+function alarm(){ if(reduced) return;
+  const a=$("alarmflash"); a.classList.remove("on"); void a.offsetWidth;
+  a.classList.add("on"); }
+
+function spark(canvas, series, color){
   const c=canvas.getContext("2d"), dpr=devicePixelRatio||1;
   const w=canvas.clientWidth, h=canvas.clientHeight;
   canvas.width=w*dpr; canvas.height=h*dpr; c.setTransform(dpr,0,0,dpr,0,0);
   c.clearRect(0,0,w,h);
   if(series.length<1) return;
-  const lo=Math.min(floor??Infinity,...series), hi=Math.max(...series), span=(hi-lo)||1;
-  const X=i=>2+(w-4)*i/Math.max(1,eng.seasons-1), Y=v=>h-3-(h-8)*(v-lo)/span;
-  c.strokeStyle="rgba(200,230,207,.12)"; c.beginPath();
-  c.moveTo(0,Y(series[0])); c.lineTo(w,Y(series[0])); c.stroke();
+  const lo=Math.min(0,...series), hi=Math.max(...series), span=(hi-lo)||1;
+  const X=i=>2+(w-4)*i/Math.max(1,eng.seasons-1), Y=v=>h-2-(h-6)*(v-lo)/span;
   c.beginPath(); series.forEach((v,i)=>i?c.lineTo(X(i),Y(v)):c.moveTo(X(i),Y(v)));
-  c.strokeStyle=color; c.lineWidth=1.6; c.stroke();
-  c.lineTo(X(series.length-1),h); c.lineTo(2,h); c.closePath();
-  c.fillStyle=color.replace("rgb","rgba").replace(")",",.10)"); c.fill();
+  c.strokeStyle=color; c.lineWidth=1.5; c.stroke();
   const lx=X(series.length-1), ly=Y(series[series.length-1]);
-  c.fillStyle=color; c.beginPath(); c.arc(lx,ly,2.6,0,7); c.fill();
+  c.fillStyle=color; c.beginPath(); c.arc(lx,ly,2.2,0,7); c.fill();
 }
-function fmt(n,d=1){ return n.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d}); }
+
+function renderInflight(){
+  const items=[];
+  for(const o of eng.state.ops){
+    const rem=o.t+o.lag-t;
+    if(rem>0 && o.mag!==0) items.push({label:o.cap, tgt:o.target, rem, debt:false});
+    if(o.disp){ const dr=o.t+o.disp.lag-t;
+      if(dr>0) items.push({label:"LEDGER DEBT", tgt:o.disp.to, rem:dr, debt:true}); }
+  }
+  items.sort((a,b)=>a.rem-b.rem);
+  $("inflight").innerHTML = items.length? items.map(i=>
+    `<div class="fl${i.rem===1?" t1":""}${i.debt?" debt":""}">
+       <span><b>${i.label.toUpperCase()}</b> · ${i.tgt}</span>
+       <span class="tmin">T−${i.rem}${i.rem===1?" ⚠":""}</span></div>`).join("")
+    : '<p class="none">Nothing in transit. The world is doing this to itself.</p>';
+}
 
 function updateHUD(row, prev){
   $("clock").textContent = `${row.year} · ${row.qtr.toUpperCase()}  ·  S${row.t}/40`;
-  $("treasury").textContent = "$"+fmt(row.treasury)+"M";
+  $("hFunds").textContent = "$"+fmt(row.treasury)+"M";
   const dt = row.treasury-(prev?prev.treasury:eng.assumptions.startingTreasury);
-  $("tredelta").textContent=(dt>=0?"+$":"−$")+fmt(Math.abs(dt))+"M";
-  $("tredelta").className="delta "+(dt>=0?"up":"down");
-  $("budgetin").textContent="+$"+fmt(row.budgetIn)+"M";
-  $("spend").textContent="−$"+fmt(row.opsSpend+row.containment+eng.assumptions.overhead)+"M";
-  $("mandate").textContent=fmt(row.mandate,0);
-  $("mbar").style.width=row.mandate+"%";
-  $("sevnote").textContent= row.severity>0.4? "hearings are going well"
-    : row.severity>0.1? "the committee is uneasy" : "a calm world defunds you";
-  $("price").textContent=fmt(row.price);
+  $("hFundsD").textContent=(dt>=0?"+":"−")+"$"+fmt(Math.abs(dt))+"M";
+  $("hFundsD").className="d "+(dt>=0?"up":"down");
+  $("hMandate").style.width=row.mandate+"%";
+  $("hPrice").textContent=fmt(row.price);
   const dp=prev? row.price-prev.price:0;
-  $("pricedelta").textContent=(dp>=0?"+":"")+fmt(dp);
-  $("pricedelta").className="delta "+(dp>=0?"up":"down");
-  $("hyield").textContent=fmt(row.yields[REG.findIndex(r=>r.homeland)],0)+"%";
-  $("revenue").textContent="$"+fmt(row.revenue)+"M";
+  $("hPriceD").textContent=(dp>=0?"+":"")+fmt(dp);
+  $("hPriceD").className="d "+(dp>=0?"up":"down");
+  $("hYield").textContent=fmt(row.yields[REG.findIndex(r=>r.homeland)],0)+"%";
   $("ladder").textContent=row.ladderText;
   $("ladder").className = row.dossier>=80? "hot":"";
   const rung = eng.ladder.filter(l=>row.dossier>=l.threshold).length-1;
   [...$("sigmeter").children].forEach((el,i)=>el.className = i<rung? "on":"");
+  $("sigmeter").classList.toggle("hunted", rung>=4);
   $("dosnum").textContent = `dossier ${fmt(row.dossier)} / 200`;
-  spark($("tspark"), eng.state.rows.map(r=>r.treasury), "rgb(83,217,123)", 0);
+  spark($("tspark"), eng.state.rows.map(r=>r.treasury), "rgb(83,217,123)");
   spark($("pspark"), eng.state.rows.map(r=>r.price), "rgb(200,230,207)");
+  renderInflight();
   const b=$("banner");
   if(row.status==="obsolescence-warning"){
     b.style.display="block";
@@ -476,10 +680,47 @@ function updateHUD(row, prev){
   } else b.style.display="none";
 }
 
-function wire(html, cls){
-  const row=lastRow(); const p=document.createElement("p");
-  p.innerHTML=`<span class="stamp">${row.year}·${row.qtr[0]}</span> ${cls?`<span class="${cls}">${html}</span>`:html}`;
-  $("wire").prepend(p);
+/* whose disaster is this? — trace the player's share of an anomaly */
+function traceFor(ri, row){
+  const parts=[]; let contrib=0;
+  for(let di=0; di<ND; di++){
+    const lag=MODEL.lags[di][ri], ts=t-lag;
+    if(ts>=1){
+      const past=eng.state.rows[ts-1];
+      const inj=past.driverTotals[di]-past.driverNat[di];
+      const c=inj*MODEL.coeff[di][ri];
+      if(Math.abs(c)>0.02){
+        contrib+=c;
+        for(const o of eng.state.ops){
+          if(o.t+o.lag===ts && o.target===DRV[di]) parts.push(o.cap);
+          if(o.disp && o.t+o.disp.lag===ts && o.disp.to===DRV[di])
+            parts.push(o.cap+" (ledger debt)");
+        }
+      }
+    }
+  }
+  for(const e of row.landed)
+    if(e.kind==="region" && e.target===REG[ri].name){
+      contrib+=e.mag; if(!e.cap.includes("displacement")) parts.push(e.cap);
+    }
+  return {contrib, parts:[...new Set(parts)]};
+}
+
+function memos(row){
+  const out=[];
+  const nx=MODEL.climate[t];                       // next season's substrate
+  if(nx && Math.abs(nx.drivers[0])>=1.0)
+    out.push("Meteorology desk: a strong Pacific swing is building. Whatever you do next season will have cover.");
+  const dryRi=REG.findIndex((r,ri)=>row.anomalies[ri]<eng.assumptions.dryThreshold);
+  if(dryRi>=0)
+    out.push(`Ops desk: ${REG[dryRi].name} is dry as tinder. Conditions for enablement will not hold.`);
+  if(row.dossier>=25 && row.containment===0)
+    out.push("Legal office: we spend nothing on containment while questions accumulate.");
+  if(t>4 && row.mandate<=eng.assumptions.mandateBase+1)
+    out.push("Budget office: the committee sees a calm world. Calm worlds do not fund directorates.");
+  if(row.treasury>=0 && row.treasury<25)
+    out.push("Budget office: at current burn this programme fails within the year.");
+  for(const m of out.slice(0,2)) wire(`MEMO — ${m}`,"memo");
 }
 
 /* ------------------------------------------------------------- resolve */
@@ -491,12 +732,13 @@ $("resolve").addEventListener("click", async ()=>{
   if(!running) return;
   $("resolve").disabled=true;
   const prev=lastRow();
-  const cmd={ opA:$("opA").value, targetA:$("tgtA").value,
-              opB:$("opB").value, targetB:$("tgtB").value,
+  const cmd={ opA:slots[0]?.cap||"— none —", targetA:slots[0]?.target,
+              opB:slots[1]?.cap||"— none —", targetB:slots[1]?.target,
               containment:+$("containment").value,
               prediction:$("predict").value.trim() };
   t++;
   const row = eng.resolve(t, cmd);
+  effects = effects.filter(e=> t - e.bornT < e.life);
   await phaseShow(1);
   const seasonName=(ti)=>{ const c=MODEL.climate[ti-1];
     return c? `${c.qtr.toLowerCase()} ${c.year}` : "beyond the decade"; };
@@ -511,56 +753,99 @@ $("resolve").addEventListener("click", async ()=>{
   for(const e of row.landed){
     const toPos = e.kind==="region"? REGPOS[e.target] : DRVPOS[e.target];
     if(toPos && !reduced) flash.push({from:homePos, to:toPos, until:nowMs+1500, dur:1500});
-    if(e.cap.includes("displacement"))
+    if(e.cap.includes("displacement")){
       wire(`The energy you moved surfaces in the ${e.target} system. The ledger always settles.`,"op");
-    else if(e.kind==="driver")
+      if(DRVPOS[e.target]) effects.push({type:"oceanheat",pos:DRVPOS[e.target],bornT:t,life:1});
+    } else if(e.kind==="driver"){
       wire(`Your <b>${e.cap}</b> work takes hold in the ${e.target} system. The consequences are now in transit.`,"op");
-    else {
+      if(DRVPOS[e.target]) effects.push({type:"oceanheat",pos:DRVPOS[e.target],bornT:t,life:2});
+      if(e.target==="GLOBAL")
+        news("GENEVA","Sunsets have gone strange worldwide. Scientists point to stratospheric particulates.");
+    } else {
       const ri=REG.findIndex(r=>r.name===e.target);
+      const pos=REGPOS[e.target];
       const loud = ri>=0 && Math.abs(row.anomalies[ri])>row.sigmas[ri];
       wire(`Your <b>${e.cap}</b> work reaches ${e.target}. ${loud? "It is drawing eyes." : "Nothing in the papers."}`,"op");
+      if(e.cap==="Fire Enablement"&&pos){
+        effects.push({type:"fire",pos,bornT:t,life:2},{type:"scar",pos,bornT:t,life:8});
+        news(DATELINE[e.target],"Fires burning at a scale visible from orbit tonight.",true);
+        shakeNow();
+      }
+      if(e.cap==="Cloud Seeding"&&pos) effects.push({type:"rain",pos,bornT:t,life:1});
+      if(e.cap.startsWith("Ionospheric")&&pos){
+        effects.push({type:"fire",pos,bornT:t,life:1});
+        shocks.push({pos,until:performance.now()+1600,dur:1600});
+        alertStrip("UNEXPLAINED ATMOSPHERIC EVENT — "+e.target.toUpperCase());
+        news(DATELINE[e.target],"Unexplained atmospheric event. No meteorological cause identified.",true);
+      }
     }
-  }
-  // edge propagation pulses: driver → each strongly-coupled region
-  if(!reduced) for(const [d,[la,lo]] of Object.entries(DRVPOS)){
-    const di=DRV.indexOf(d);
-    for(let ri=0;ri<REG.length;ri++)
-      if(Math.abs(MODEL.coeff[di][ri])>=0.5 && Math.abs(row.driverTotals[di])>0.8)
-        flash.push({from:[la,lo], to:REGPOS[REG[ri].name], until:nowMs+1300, dur:1300});
   }
   await phaseShow(3);
+  let shaken=false;
   for(let ri=0;ri<REG.length;ri++){
     const a=row.anomalies[ri], s=row.sigmas[ri], r=REG[ri];
-    if(Math.abs(a)>s*eng.assumptions.severityThreshold && Math.abs(a)>0.6){
-      const pct=fmt(row.yields[ri],0);
-      wire(a<0
-        ? `${r.crop} fails across <b>${r.name}</b> — harvest at ${pct}%.`
-          +(Math.abs(a)>s? " Nothing in the record compares." : " A hard season, within nature's range.")
-        : `Floodwaters take the ${r.name} ${r.crop} crop — harvest at ${pct}%.`
-          +(Math.abs(a)>s? " Beyond anything on file." : ""),"sev");
+    const severe = Math.abs(a)>s*eng.assumptions.severityThreshold && Math.abs(a)>0.6;
+    sevStreak[ri] = severe? sevStreak[ri]+1 : 0;
+    if(!severe) continue;
+    const pct=fmt(row.yields[ri],0), outside=Math.abs(a)>s, pos=REGPOS[r.name];
+    if(a<0) news(DATELINE[r.name],
+      `${r.crop} harvest fails — down to ${pct}%.${outside?" Meteorologists find no precedent.":""}`, outside);
+    else {
+      news(DATELINE[r.name],
+        `Storm season beyond anything on file. ${r.crop} crop under water — harvest ${pct}%.`, outside);
+      if(outside) effects.push({type:"storm",pos,bornT:t,life:1});
     }
+    if(outside){
+      shocks.push({pos,until:performance.now()+1600,dur:1600});
+      alertStrip((a<0?"HARVEST COLLAPSE — ":"FLOOD EVENT — ")+r.name.toUpperCase());
+      if(!shaken){ shakeNow(); shaken=true; }
+    }
+    if(sevStreak[ri]>=2 && a<0)
+      news(DATELINE[r.name],"Food prices triple in the capital. Unrest spreading province by province.",true);
+    const tr=traceFor(ri,row);
+    if(tr.parts.length && Math.abs(a)>1e-9){
+      const pctYou=Math.max(0,Math.min(1,tr.contrib/a));
+      if(pctYou>0.2)
+        wire(`TRACE — ~${Math.round(pctYou*100)}% your signal: ${tr.parts.join(", ")}.`,"op");
+      else if(pctYou>0.05)
+        wire(`TRACE — trace contribution yours (${tr.parts.join(", ")}). Mostly the planet.`,"op");
+    } else if(severe)
+      wire(`TRACE — fully natural. Cover, if you want it.`,"op");
   }
   if(prev && Math.abs(row.price-prev.price)>6){
     const up=row.price>prev.price;
     const hy=row.yields[REG.findIndex(r=>r.homeland)];
-    wire(`Grain ${up?"spikes":"slides"} ${fmt(Math.abs(row.price-prev.price)/prev.price*100,0)}% on the season`
-      +(up&&hy>=95? " — your exporters prosper while others queue." : "."));
+    news("CHICAGO",`Grain ${up?"up":"down"} ${fmt(Math.abs(row.price-prev.price)/prev.price*100,0)}% on the season`
+      +(up&&hy>=95? " — exporters prosper while importers queue." : "."), Math.abs(row.price-prev.price)>15);
   }
   await phaseShow(4);
   const prevRung = prev? eng.ladder.filter(l=>prev.dossier>=l.threshold).length:1;
   const rung = eng.ladder.filter(l=>row.dossier>=l.threshold).length;
-  if(rung>prevRung) wire(`ATTRIBUTION — ${row.ladderText}`,"att");
+  if(rung>prevRung){
+    alarm();
+    const headlines=[null,null,
+      ["CAMPUS WIRE","Graduate thesis flags an odd residual in rainfall data. No one cites it.",false],
+      ["CAPITAL DESK","Journalist files formal inquiry with the ministry over weather anomalies.",true],
+      ["SCIENCE DESK","Academic consortium announces attribution study into recent extremes.",true],
+      ["INTERCEPT","A rival service names your programme in a classified brief.",true],
+      ["UNITED NATIONS","Formal international investigation opened. Inspectors requested.",true]];
+    const h=headlines[rung];
+    if(h) news(h[0],h[1],h[2]);
+    if(rung>=3) alertStrip("SOMEONE IS ASKING QUESTIONS");
+  }
   else if(row.landed.some(e=>e.sig>0))
     wire(`FILED — natural variability. No inquiry opened.`,"op");
+  memos(row);
   updateHUD(row, prev);
   $("phasename").textContent="FORECAST";
-  $("predict").value=""; $("opA").value="— none —"; $("opB").value="— none —";
-  syncOpRow("opA","tgtA","infoA"); syncOpRow("opB","tgtB","infoB");
+  $("predict").value=""; slots=[]; pendingTool=null; renderTray();
+  $("toolinfo").textContent="Pick a tool. Aim it at the world.";
   if(row.status==="exposed"||row.status==="insolvent"||row.status==="dissolved"||t>=eng.seasons){
     running=false; setTimeout(()=>showArchive(row), reduced?0:900);
   }
   $("resolve").disabled=!running;
 });
+$("containment").addEventListener("input",()=>$("contval").textContent=$("containment").value);
 
 /* -------------------------------------------------------------- archive */
 function showArchive(finalRow){
@@ -578,7 +863,7 @@ function showArchive(finalRow){
     <div class="cls">DECLASSIFIED ${finalRow.year+25} // REVIEW COPY</div>
     <p class="q">${cause}</p>
     <table><tr><th>tenure</th><th>operations</th><th>seasons outside envelope</th>
-    <th>peak dossier</th><th>final treasury</th></tr>
+    <th>peak dossier</th><th>final funds</th></tr>
     <tr><td>${rows.length} seasons</td><td>${opsDone}</td><td>${outside}</td>
     <td>${fmt(peakDos)}</td><td>$${fmt(finalRow.treasury)}M</td></tr></table>`;
   html += `<p>${ naturalOps
@@ -602,6 +887,7 @@ function showArchive(finalRow){
 }
 
 /* --------------------------------------------------------------- misc */
+buildTray(); renderTray();
 $("begin").addEventListener("click",()=>{ $("intro").style.display="none"; });
 $("teltoggle").addEventListener("click",()=>{
   telemetry=!telemetry;
