@@ -1,0 +1,1236 @@
+{
+ "drivers": [
+  "ENSO",
+  "IOD",
+  "NATL",
+  "GLOBAL"
+ ],
+ "climate": [
+  {
+   "t": 1,
+   "year": 1946,
+   "qtr": "Winter",
+   "drivers": [
+    1.297,
+    0.371,
+    0.215,
+    0
+   ],
+   "noise": [
+    0.2,
+    0.224,
+    0.153,
+    0.013,
+    0.338,
+    0.149,
+    -0.04,
+    -0.225
+   ]
+  },
+  {
+   "t": 2,
+   "year": 1946,
+   "qtr": "Spring",
+   "drivers": [
+    1.188,
+    0.084,
+    0.074,
+    0
+   ],
+   "noise": [
+    0.039,
+    0.012,
+    0.408,
+    0.272,
+    0.129,
+    -0.008,
+    -0.135,
+    -0.253
+   ]
+  },
+  {
+   "t": 3,
+   "year": 1946,
+   "qtr": "Summer",
+   "drivers": [
+    0.675,
+    -0.667,
+    0.024,
+    0
+   ],
+   "noise": [
+    0.311,
+    0.284,
+    0.237,
+    0.194,
+    0.165,
+    -0.351,
+    -0.354,
+    -0.348
+   ]
+  },
+  {
+   "t": 4,
+   "year": 1946,
+   "qtr": "Autumn",
+   "drivers": [
+    0.489,
+    -1.236,
+    0.309,
+    0
+   ],
+   "noise": [
+    0.091,
+    -0.198,
+    0.033,
+    -0.214,
+    0.055,
+    -0.163,
+    -0.372,
+    -0.074
+   ]
+  },
+  {
+   "t": 5,
+   "year": 1947,
+   "qtr": "Winter",
+   "drivers": [
+    0.702,
+    -0.658,
+    0.547,
+    0
+   ],
+   "noise": [
+    -0.329,
+    -0.241,
+    -0.129,
+    -0.001,
+    -0.362,
+    -0.217,
+    -0.068,
+    -0.417
+   ]
+  },
+  {
+   "t": 6,
+   "year": 1947,
+   "qtr": "Spring",
+   "drivers": [
+    0.229,
+    0.532,
+    0.941,
+    0
+   ],
+   "noise": [
+    -0.121,
+    -0.057,
+    0.015,
+    -0.409,
+    -0.331,
+    -0.252,
+    -0.174,
+    -0.096
+   ]
+  },
+  {
+   "t": 7,
+   "year": 1947,
+   "qtr": "Summer",
+   "drivers": [
+    0.048,
+    0.464,
+    0.385,
+    0
+   ],
+   "noise": [
+    0.057,
+    -0.119,
+    -0.298,
+    0.02,
+    -0.162,
+    -0.347,
+    -0.032,
+    -0.218
+   ]
+  },
+  {
+   "t": 8,
+   "year": 1947,
+   "qtr": "Autumn",
+   "drivers": [
+    -0.85,
+    0.368,
+    0.602,
+    0
+   ],
+   "noise": [
+    0.061,
+    -0.135,
+    0.168,
+    -0.028,
+    -0.224,
+    0.079,
+    -0.117,
+    0.187
+   ]
+  },
+  {
+   "t": 9,
+   "year": 1948,
+   "qtr": "Winter",
+   "drivers": [
+    -1.58,
+    0.727,
+    0.214,
+    0
+   ],
+   "noise": [
+    0.41,
+    -0.045,
+    0.002,
+    0.051,
+    0.101,
+    0.153,
+    0.206,
+    0.26
+   ]
+  },
+  {
+   "t": 10,
+   "year": 1948,
+   "qtr": "Spring",
+   "drivers": [
+    -1.107,
+    0.664,
+    0.327,
+    0
+   ],
+   "noise": [
+    0.43,
+    0.313,
+    0.189,
+    0.06,
+    0.429,
+    0.298,
+    0.167,
+    0.036
+   ]
+  },
+  {
+   "t": 11,
+   "year": 1948,
+   "qtr": "Summer",
+   "drivers": [
+    -0.472,
+    -0.06,
+    0.552,
+    0
+   ],
+   "noise": [
+    -0.127,
+    -0.034,
+    0.033,
+    0.085,
+    0.126,
+    0.161,
+    0.192,
+    0.22
+   ]
+  },
+  {
+   "t": 12,
+   "year": 1948,
+   "qtr": "Autumn",
+   "drivers": [
+    -0.054,
+    -0.885,
+    0.401,
+    0
+   ],
+   "noise": [
+    0.052,
+    -0.058,
+    0.312,
+    0.161,
+    -0.008,
+    0.311,
+    0.121,
+    0.424
+   ]
+  },
+  {
+   "t": 13,
+   "year": 1949,
+   "qtr": "Winter",
+   "drivers": [
+    -0.062,
+    -0.86,
+    0.1,
+    0
+   ],
+   "noise": [
+    -0.101,
+    -0.153,
+    -0.185,
+    -0.221,
+    0.229,
+    0.165,
+    0.09,
+    0.004
+   ]
+  },
+  {
+   "t": 14,
+   "year": 1949,
+   "qtr": "Spring",
+   "drivers": [
+    0.172,
+    -0.084,
+    -0.229,
+    0
+   ],
+   "noise": [
+    -0.225,
+    -0.176,
+    -0.049,
+    0.109,
+    -0.226,
+    -0.067,
+    0.083,
+    0.223
+   ]
+  },
+  {
+   "t": 15,
+   "year": 1949,
+   "qtr": "Summer",
+   "drivers": [
+    0.582,
+    -0.199,
+    -0.52,
+    0
+   ],
+   "noise": [
+    0.237,
+    -0.029,
+    -0.201,
+    -0.305,
+    -0.372,
+    0.073,
+    0.02,
+    -0.039
+   ]
+  },
+  {
+   "t": 16,
+   "year": 1949,
+   "qtr": "Autumn",
+   "drivers": [
+    1.207,
+    0.379,
+    -0.075,
+    0
+   ],
+   "noise": [
+    -0.023,
+    0.144,
+    -0.159,
+    -0.388,
+    -0.058,
+    -0.192,
+    -0.308,
+    0.081
+   ]
+  },
+  {
+   "t": 17,
+   "year": 1950,
+   "qtr": "Winter",
+   "drivers": [
+    1.255,
+    0.823,
+    -0.38,
+    0
+   ],
+   "noise": [
+    0.241,
+    0.294,
+    -0.25,
+    -0.267,
+    -0.226,
+    -0.134,
+    -0.008,
+    -0.362
+   ]
+  },
+  {
+   "t": 18,
+   "year": 1950,
+   "qtr": "Spring",
+   "drivers": [
+    0.667,
+    1.093,
+    -0.516,
+    0
+   ],
+   "noise": [
+    -0.036,
+    0.279,
+    0.39,
+    -0.061,
+    0.01,
+    -0.371,
+    -0.209,
+    -0.015
+   ]
+  },
+  {
+   "t": 19,
+   "year": 1950,
+   "qtr": "Summer",
+   "drivers": [
+    0.07,
+    0.099,
+    -0.384,
+    0
+   ],
+   "noise": [
+    -0.318,
+    0.008,
+    0.143,
+    0.13,
+    0.076,
+    0.04,
+    0.044,
+    -0.415
+   ]
+  },
+  {
+   "t": 20,
+   "year": 1950,
+   "qtr": "Autumn",
+   "drivers": [
+    -0.136,
+    -0.728,
+    -1.053,
+    0
+   ],
+   "noise": [
+    -0.012,
+    -0.247,
+    -0.006,
+    0.063,
+    0.023,
+    -0.045,
+    -0.097,
+    -0.116
+   ]
+  },
+  {
+   "t": 21,
+   "year": 1951,
+   "qtr": "Winter",
+   "drivers": [
+    -0.274,
+    -0.668,
+    -0.689,
+    0
+   ],
+   "noise": [
+    -0.138,
+    0.057,
+    -0.034,
+    0.279,
+    0.448,
+    0.036,
+    0.105,
+    -0.312
+   ]
+  },
+  {
+   "t": 22,
+   "year": 1951,
+   "qtr": "Spring",
+   "drivers": [
+    -0.525,
+    -0.446,
+    -0.706,
+    0
+   ],
+   "noise": [
+    -0.077,
+    -0.131,
+    -0.319,
+    0.052,
+    0.307,
+    -0.054,
+    0.024,
+    0.088
+   ]
+  },
+  {
+   "t": 23,
+   "year": 1951,
+   "qtr": "Summer",
+   "drivers": [
+    -1.461,
+    -0.593,
+    -0.391,
+    0
+   ],
+   "noise": [
+    0.314,
+    -0.18,
+    -0.381,
+    0.143,
+    0.142,
+    0.03,
+    0.324,
+    0.072
+   ]
+  },
+  {
+   "t": 24,
+   "year": 1951,
+   "qtr": "Autumn",
+   "drivers": [
+    -1.249,
+    -0.507,
+    -0.298,
+    0
+   ],
+   "noise": [
+    0.042,
+    -0.086,
+    -0.216,
+    -0.043,
+    0.235,
+    -0.05,
+    0.064,
+    0.104
+   ]
+  },
+  {
+   "t": 25,
+   "year": 1952,
+   "qtr": "Winter",
+   "drivers": [
+    -0.795,
+    0.68,
+    -0.345,
+    0
+   ],
+   "noise": [
+    -0.112,
+    0.071,
+    -0.103,
+    -0.048,
+    -0.278,
+    0.016,
+    0.235,
+    0.366
+   ]
+  },
+  {
+   "t": 26,
+   "year": 1952,
+   "qtr": "Spring",
+   "drivers": [
+    -0.054,
+    0.992,
+    -0.329,
+    0
+   ],
+   "noise": [
+    0.022,
+    0.337,
+    0.117,
+    -0.093,
+    -0.05,
+    0.116,
+    0.261,
+    0.329
+   ]
+  },
+  {
+   "t": 27,
+   "year": 1952,
+   "qtr": "Summer",
+   "drivers": [
+    0.497,
+    0.785,
+    -0.092,
+    0
+   ],
+   "noise": [
+    0.011,
+    0.012,
+    0.13,
+    -0.01,
+    -0.466,
+    -0.227,
+    0.067,
+    0.318
+   ]
+  },
+  {
+   "t": 28,
+   "year": 1952,
+   "qtr": "Autumn",
+   "drivers": [
+    0.22,
+    0.125,
+    -0.015,
+    0
+   ],
+   "noise": [
+    -0.084,
+    -0.023,
+    0.082,
+    -0.247,
+    -0.058,
+    -0.16,
+    -0.134,
+    -0.098
+   ]
+  },
+  {
+   "t": 29,
+   "year": 1953,
+   "qtr": "Winter",
+   "drivers": [
+    0.547,
+    -0.384,
+    0.552,
+    0
+   ],
+   "noise": [
+    -0.103,
+    -0.391,
+    0.324,
+    0.131,
+    -0.249,
+    0.018,
+    -0.039,
+    -0.025
+   ]
+  },
+  {
+   "t": 30,
+   "year": 1953,
+   "qtr": "Spring",
+   "drivers": [
+    1.004,
+    -0.15,
+    0.446,
+    0
+   ],
+   "noise": [
+    -0.054,
+    -0.239,
+    0.264,
+    0.105,
+    0.103,
+    -0.38,
+    -0.188,
+    0.13
+   ]
+  },
+  {
+   "t": 31,
+   "year": 1953,
+   "qtr": "Summer",
+   "drivers": [
+    1.415,
+    -0.731,
+    0.447,
+    0
+   ],
+   "noise": [
+    0.221,
+    -0.364,
+    0,
+    0.069,
+    0.263,
+    -0.181,
+    -0.005,
+    -0.174
+   ]
+  },
+  {
+   "t": 32,
+   "year": 1953,
+   "qtr": "Autumn",
+   "drivers": [
+    1.032,
+    -0.779,
+    0.34,
+    0
+   ],
+   "noise": [
+    0.148,
+    -0.205,
+    -0.154,
+    -0.091,
+    0.222,
+    -0.236,
+    -0.174,
+    0.035
+   ]
+  },
+  {
+   "t": 33,
+   "year": 1954,
+   "qtr": "Winter",
+   "drivers": [
+    0.35,
+    0.111,
+    0.442,
+    0
+   ],
+   "noise": [
+    -0.146,
+    0.12,
+    -0.237,
+    -0.005,
+    0.228,
+    0.135,
+    -0.062,
+    -0.159
+   ]
+  },
+  {
+   "t": 34,
+   "year": 1954,
+   "qtr": "Spring",
+   "drivers": [
+    -0.609,
+    0.531,
+    0.839,
+    0
+   ],
+   "noise": [
+    -0.273,
+    0.317,
+    -0.389,
+    -0.222,
+    0.229,
+    0.408,
+    -0.127,
+    -0.144
+   ]
+  },
+  {
+   "t": 35,
+   "year": 1954,
+   "qtr": "Summer",
+   "drivers": [
+    -0.288,
+    0.933,
+    0.597,
+    0
+   ],
+   "noise": [
+    -0.408,
+    0.278,
+    -0.02,
+    -0.371,
+    0.258,
+    0.274,
+    0.014,
+    -0.325
+   ]
+  },
+  {
+   "t": 36,
+   "year": 1954,
+   "qtr": "Autumn",
+   "drivers": [
+    -0.276,
+    0.076,
+    0.633,
+    0
+   ],
+   "noise": [
+    -0.187,
+    0.029,
+    0.386,
+    -0.248,
+    0.115,
+    0.084,
+    0.291,
+    -0.174
+   ]
+  },
+  {
+   "t": 37,
+   "year": 1955,
+   "qtr": "Winter",
+   "drivers": [
+    -0.692,
+    0.05,
+    0.453,
+    0
+   ],
+   "noise": [
+    0.318,
+    -0.08,
+    0.221,
+    -0.196,
+    -0.303,
+    -0.098,
+    0.44,
+    0.246
+   ]
+  },
+  {
+   "t": 38,
+   "year": 1955,
+   "qtr": "Spring",
+   "drivers": [
+    -1.486,
+    0.112,
+    -0.137,
+    0
+   ],
+   "noise": [
+    0.052,
+    -0.238,
+    0.317,
+    -0.229,
+    -0.302,
+    0.06,
+    0.41,
+    0.021
+   ]
+  },
+  {
+   "t": 39,
+   "year": 1955,
+   "qtr": "Summer",
+   "drivers": [
+    -1.346,
+    -0.598,
+    0.041,
+    0
+   ],
+   "noise": [
+    0.326,
+    -0.275,
+    0.106,
+    0.309,
+    -0.37,
+    -0.13,
+    0.275,
+    -0.007
+   ]
+  },
+  {
+   "t": 40,
+   "year": 1955,
+   "qtr": "Autumn",
+   "drivers": [
+    -0.249,
+    -1.197,
+    -0.122,
+    0
+   ],
+   "noise": [
+    0.116,
+    -0.25,
+    -0.287,
+    0.036,
+    -0.254,
+    -0.287,
+    -0.006,
+    0.194
+   ]
+  }
+ ],
+ "regions": [
+  {
+   "name": "North American Plains",
+   "crop": "Wheat / Maize",
+   "weight": 20,
+   "sens": 1,
+   "sigma": 0.8,
+   "homeland": true
+  },
+  {
+   "name": "Black Sea Steppe",
+   "crop": "Wheat",
+   "weight": 16,
+   "sens": 1.1,
+   "sigma": 0.9,
+   "homeland": false
+  },
+  {
+   "name": "La Plata Basin",
+   "crop": "Soy / Maize",
+   "weight": 15,
+   "sens": 1,
+   "sigma": 0.9,
+   "homeland": false
+  },
+  {
+   "name": "South Asia",
+   "crop": "Rice / Wheat",
+   "weight": 18,
+   "sens": 1.2,
+   "sigma": 0.7,
+   "homeland": false
+  },
+  {
+   "name": "Southeast Asia",
+   "crop": "Rice",
+   "weight": 12,
+   "sens": 1.1,
+   "sigma": 0.7,
+   "homeland": false
+  },
+  {
+   "name": "Eastern Australia",
+   "crop": "Wheat",
+   "weight": 7,
+   "sens": 1.3,
+   "sigma": 1.1,
+   "homeland": false
+  },
+  {
+   "name": "Sahel",
+   "crop": "Millet",
+   "weight": 6,
+   "sens": 1.4,
+   "sigma": 1.2,
+   "homeland": false
+  },
+  {
+   "name": "Horn of Africa",
+   "crop": "Maize",
+   "weight": 6,
+   "sens": 1.4,
+   "sigma": 1.2,
+   "homeland": false
+  }
+ ],
+ "coeff": [
+  [
+   0.2,
+   -0.1,
+   0.5,
+   -0.5,
+   -0.7,
+   -0.9,
+   -0.3,
+   0.6
+  ],
+  [
+   0,
+   0,
+   0,
+   0.3,
+   -0.2,
+   -0.6,
+   0.1,
+   0.8
+  ],
+  [
+   -0.3,
+   -0.2,
+   0,
+   0.2,
+   0,
+   0,
+   0.7,
+   0.2
+  ],
+  [
+   -0.45,
+   -0.4,
+   -0.35,
+   -0.5,
+   -0.4,
+   -0.3,
+   -0.55,
+   -0.5
+  ]
+ ],
+ "lags": [
+  [
+   2,
+   3,
+   2,
+   1,
+   1,
+   1,
+   2,
+   2
+  ],
+  [
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   2,
+   1
+  ],
+  [
+   2,
+   3,
+   1,
+   2,
+   1,
+   1,
+   2,
+   3
+  ],
+  [
+   3,
+   3,
+   3,
+   4,
+   3,
+   3,
+   4,
+   4
+  ]
+ ],
+ "capabilities": [
+  {
+   "name": "\u2014 none \u2014",
+   "type": "NONE",
+   "fixedTarget": null,
+   "mag": 0,
+   "lag": 0,
+   "sig": 0,
+   "cost": 0,
+   "dispTo": null,
+   "dispFactor": 0,
+   "dispExtraLag": 0,
+   "needsDrought": false,
+   "resil": 0
+  },
+  {
+   "name": "Cloud Seeding",
+   "type": "REGION",
+   "fixedTarget": null,
+   "mag": 0.7,
+   "lag": 1,
+   "sig": 2,
+   "cost": 6,
+   "dispTo": null,
+   "dispFactor": 0,
+   "dispExtraLag": 0,
+   "needsDrought": false,
+   "resil": 0
+  },
+  {
+   "name": "Watershed Interference",
+   "type": "REGION",
+   "fixedTarget": null,
+   "mag": -0.9,
+   "lag": 2,
+   "sig": 4,
+   "cost": 14,
+   "dispTo": null,
+   "dispFactor": 0,
+   "dispExtraLag": 0,
+   "needsDrought": false,
+   "resil": 0
+  },
+  {
+   "name": "Fire Enablement",
+   "type": "REGION",
+   "fixedTarget": null,
+   "mag": -1.2,
+   "lag": 1,
+   "sig": 2,
+   "cost": 9,
+   "dispTo": null,
+   "dispFactor": 0,
+   "dispExtraLag": 0,
+   "needsDrought": true,
+   "resil": 0
+  },
+  {
+   "name": "Adaptation Investment",
+   "type": "REGION",
+   "fixedTarget": null,
+   "mag": 0,
+   "lag": 0,
+   "sig": 0,
+   "cost": 18,
+   "dispTo": null,
+   "dispFactor": 0,
+   "dispExtraLag": 0,
+   "needsDrought": false,
+   "resil": 12
+  },
+  {
+   "name": "Ocean Thermal Forcing",
+   "type": "DRIVER",
+   "fixedTarget": "NATL",
+   "mag": 1.1,
+   "lag": 4,
+   "sig": 7,
+   "cost": 26,
+   "dispTo": "IOD",
+   "dispFactor": -0.4,
+   "dispExtraLag": 4,
+   "needsDrought": false,
+   "resil": 0
+  },
+  {
+   "name": "Stratospheric Aerosol Inj.",
+   "type": "DRIVER",
+   "fixedTarget": "GLOBAL",
+   "mag": 1.3,
+   "lag": 3,
+   "sig": 9,
+   "cost": 32,
+   "dispTo": "NATL",
+   "dispFactor": -0.5,
+   "dispExtraLag": 4,
+   "needsDrought": false,
+   "resil": 0
+  },
+  {
+   "name": "ENSO Forcing",
+   "type": "DRIVER",
+   "fixedTarget": "ENSO",
+   "mag": 1.6,
+   "lag": 6,
+   "sig": 12,
+   "cost": 45,
+   "dispTo": "NATL",
+   "dispFactor": -0.6,
+   "dispExtraLag": 5,
+   "needsDrought": false,
+   "resil": 0
+  },
+  {
+   "name": "Ionospheric Coupling [T3]",
+   "type": "REGION",
+   "fixedTarget": null,
+   "mag": -2.5,
+   "lag": 1,
+   "sig": 30,
+   "cost": 60,
+   "dispTo": null,
+   "dispFactor": 0,
+   "dispExtraLag": 0,
+   "needsDrought": false,
+   "resil": 0
+  }
+ ],
+ "assumptions": {
+  "B7": {
+   "name": "Drought yield penalty per unit anomaly",
+   "value": 14
+  },
+  "B8": {
+   "name": "Flood yield penalty per unit anomaly",
+   "value": 8
+  },
+  "B9": {
+   "name": "Flood threshold",
+   "value": 1.2
+  },
+  "B10": {
+   "name": "Price elasticity exponent",
+   "value": 1.8
+  },
+  "B11": {
+   "name": "Homeland revenue scale",
+   "value": 0.85
+  },
+  "B12": {
+   "name": "Mandate base",
+   "value": 28
+  },
+  "B13": {
+   "name": "Mandate per unit global severity",
+   "value": 42
+  },
+  "B14": {
+   "name": "Mandate cap",
+   "value": 100
+  },
+  "B15": {
+   "name": "Budget from revenue",
+   "value": 0.12
+  },
+  "B16": {
+   "name": "Budget from mandate",
+   "value": 0.9
+  },
+  "B17": {
+   "name": "Containment efficiency",
+   "value": 0.9
+  },
+  "B18": {
+   "name": "Dossier decay per season",
+   "value": 0.04
+  },
+  "B19": {
+   "name": "Envelope widening per season",
+   "value": 0.006
+  },
+  "B20": {
+   "name": "Dry precondition threshold",
+   "value": -0.5
+  },
+  "B21": {
+   "name": "Dry precondition penalty",
+   "value": 0.25
+  },
+  "B22": {
+   "name": "Envelope multiplier weight",
+   "value": 0.8
+  },
+  "B23": {
+   "name": "Programme overhead per season",
+   "value": 32
+  },
+  "B24": {
+   "name": "Severity threshold (x sigma)",
+   "value": 0.75
+  },
+  "B25": {
+   "name": "Starting treasury",
+   "value": 90
+  }
+ },
+ "ladder": [
+  {
+   "threshold": 0,
+   "text": "Nothing. No one is looking."
+  },
+  {
+   "threshold": 25,
+   "text": "A graduate student publishes an odd residual. Nobody cites it."
+  },
+  {
+   "threshold": 50,
+   "text": "A wire journalist files an inquiry with the ministry."
+  },
+  {
+   "threshold": 80,
+   "text": "An academic consortium announces an attribution study."
+  },
+  {
+   "threshold": 115,
+   "text": "A rival service names your programme in a classified brief."
+  },
+  {
+   "threshold": 155,
+   "text": "Formal international investigation. Inspectors requested."
+  },
+  {
+   "threshold": 200,
+   "text": "EXPOSED \u2014 the record is public and it is yours."
+  }
+ ]
+}

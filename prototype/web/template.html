@@ -1,0 +1,585 @@
+<title>Force Majeure Console</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+  /* Single-theme by design: a phosphor ops console commits to one world.
+     Every surface and ink is painted explicitly; no host theme leaks. */
+  :root{
+    --ground:#0a0f0c; --panel:#0f1712; --panel2:#121c15; --line:#1d2b22;
+    --ink:#c8e6cf; --ink-dim:#7fa389; --ink-faint:#48604f;
+    --green:#53d97b; --amber:#e0a458; --red:#e05252; --cyan:#5bc8e8;
+    --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+    --sans:"IBM Plex Sans",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0}
+  html,body{height:100%}
+  body{background:var(--ground);color:var(--ink);font-family:var(--mono);
+       font-size:13px;line-height:1.45;overflow:hidden}
+  #app{display:grid;grid-template-rows:auto 1fr auto;height:100%}
+
+  /* header */
+  header{display:flex;align-items:baseline;gap:14px;padding:8px 14px 6px;
+         border-bottom:1px solid var(--line);background:var(--panel)}
+  header h1{font-size:15px;font-weight:600;letter-spacing:.22em}
+  header .sub{color:var(--ink-dim);font-size:11px;letter-spacing:.08em}
+  #phase{margin-left:auto;font-size:11px;letter-spacing:.18em;color:var(--ink-dim)}
+  #phase b{color:var(--green);font-weight:500}
+  #clock{font-size:15px;font-weight:600;color:var(--ink);min-width:9.5em;text-align:right}
+
+  main{display:grid;grid-template-columns:1fr 380px;min-height:0}
+  #globe-wrap{position:relative;min-width:0}
+  #globe{display:block;width:100%;height:100%;cursor:grab}
+  #globe:active{cursor:grabbing}
+  #hover{position:absolute;pointer-events:none;background:rgba(10,15,12,.92);
+         border:1px solid var(--line);padding:7px 10px;font-size:11.5px;
+         display:none;max-width:230px;z-index:5}
+  #hover b{color:var(--green);letter-spacing:.06em}
+  #hover .num{font-variant-numeric:tabular-nums}
+  #banner{position:absolute;left:14px;bottom:12px;font-size:11px;
+          color:var(--amber);letter-spacing:.1em;display:none}
+
+  /* right rail */
+  #rail{border-left:1px solid var(--line);background:var(--panel);
+        display:flex;flex-direction:column;min-height:0;overflow-y:auto}
+  .panel{border-bottom:1px solid var(--line);padding:10px 14px}
+  .panel h2{font-size:10px;font-weight:500;letter-spacing:.24em;
+            color:var(--ink-faint);margin-bottom:7px}
+  .row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .big{font-size:21px;font-weight:600;font-variant-numeric:tabular-nums}
+  .delta{font-size:11px;font-variant-numeric:tabular-nums;color:var(--ink-dim)}
+  .delta.up{color:var(--green)} .delta.down{color:var(--red)}
+  canvas.spark{width:100%;height:34px;display:block;margin-top:5px}
+  .kv{display:flex;justify-content:space-between;font-size:11.5px;
+      color:var(--ink-dim);margin-top:2px}
+  .kv .num{color:var(--ink);font-variant-numeric:tabular-nums}
+  .bar{height:6px;background:var(--panel2);margin-top:6px;position:relative}
+  .bar i{position:absolute;inset:0 auto 0 0;background:var(--amber)}
+
+  /* attribution */
+  #ladder{font-family:var(--sans);font-size:12.5px;color:var(--ink);
+          min-height:2.6em;border-left:2px solid var(--ink-faint);
+          padding-left:9px;margin:2px 0 6px}
+  #ladder.hot{border-left-color:var(--red)}
+  #sigmeter{display:flex;gap:3px;margin-bottom:4px}
+  #sigmeter i{flex:1;height:5px;background:var(--panel2)}
+  #sigmeter i.on{background:var(--red)}
+  #dosnum{color:var(--ink-faint);font-size:10.5px;display:none}
+
+  /* commit */
+  select,input[type=text],input[type=range],button{
+    font-family:var(--mono);font-size:12px;color:var(--ink);
+    background:var(--panel2);border:1px solid var(--line);border-radius:0}
+  select{width:100%;padding:5px 6px;margin-top:3px}
+  select:focus,input:focus,button:focus{outline:1px solid var(--green);outline-offset:1px}
+  .oprow{margin-bottom:8px}
+  .oprow label{font-size:10px;letter-spacing:.18em;color:var(--ink-faint)}
+  .capinfo{font-size:10.5px;color:var(--ink-dim);margin-top:3px;min-height:1.3em}
+  #containment{width:100%;accent-color:var(--green);margin-top:4px}
+  #predict{width:100%;padding:5px 6px;margin-top:3px}
+  #predict::placeholder{color:var(--ink-faint)}
+  #resolve{width:100%;margin-top:10px;padding:9px 0;font-weight:600;
+           letter-spacing:.22em;background:#12251a;border-color:var(--green);
+           color:var(--green);cursor:pointer}
+  #resolve:hover{background:#173322}
+  #resolve:disabled{opacity:.4;cursor:default}
+
+  /* wire */
+  #wire{flex:1;min-height:110px;overflow-y:auto;padding:8px 14px;font-size:11.5px}
+  #wire p{margin-bottom:5px;color:var(--ink-dim)}
+  #wire p b{color:var(--ink);font-weight:500}
+  #wire .sev{color:var(--amber)} #wire .att{color:var(--red)}
+  #wire .op{color:var(--green)} #wire .stamp{color:var(--ink-faint)}
+
+  footer{display:flex;justify-content:space-between;padding:5px 14px;
+         border-top:1px solid var(--line);font-size:10px;color:var(--ink-faint);
+         letter-spacing:.14em;background:var(--panel)}
+  footer button{border:none;background:none;color:var(--ink-faint);cursor:pointer;
+                font-size:10px;letter-spacing:.14em;padding:0}
+  footer button:hover{color:var(--ink-dim)}
+
+  /* overlays */
+  .overlay{position:fixed;inset:0;background:rgba(6,10,8,.9);z-index:10;
+           display:flex;align-items:center;justify-content:center;padding:20px}
+  .sheet{background:var(--panel);border:1px solid var(--line);max-width:620px;
+         max-height:88vh;overflow-y:auto;padding:26px 30px}
+  .sheet h2{font-size:13px;letter-spacing:.24em;font-weight:600;margin-bottom:4px}
+  .sheet .cls{font-size:10px;color:var(--red);letter-spacing:.3em;margin-bottom:14px}
+  .sheet p,.sheet li{font-family:var(--sans);font-size:13.5px;color:var(--ink);
+                     margin-bottom:9px;max-width:62ch}
+  .sheet li{margin-bottom:5px}
+  .sheet ul{padding-left:18px;margin-bottom:10px}
+  .sheet .q{border-left:2px solid var(--green);padding-left:11px;
+            color:var(--ink);font-style:italic}
+  .sheet button{padding:9px 26px;margin-top:8px;letter-spacing:.2em;
+                background:#12251a;border:1px solid var(--green);
+                color:var(--green);cursor:pointer;font-weight:600}
+  .sheet table{width:100%;border-collapse:collapse;font-size:11.5px;margin:8px 0}
+  .sheet td,.sheet th{border-top:1px solid var(--line);padding:4px 6px;
+                      text-align:left;font-variant-numeric:tabular-nums}
+  .sheet th{color:var(--ink-faint);font-weight:500;letter-spacing:.1em;font-size:10px}
+  .redact{background:var(--ink-faint);color:var(--ink-faint)}
+
+  @media (max-width:860px){
+    main{grid-template-columns:1fr}
+    #globe-wrap{height:46vh}
+    #rail{border-left:none;border-top:1px solid var(--line)}
+    body{overflow:auto}
+    #app{height:auto}
+  }
+  @media (prefers-reduced-motion:reduce){ .anim{transition:none!important} }
+</style>
+
+<div id="app">
+<header>
+  <h1>FORCE MAJEURE</h1>
+  <span class="sub">DIRECTORATE OF CIVIL RESILIENCE // OPS CONSOLE</span>
+  <span id="phase">PHASE <b id="phasename">FORECAST</b></span>
+  <span id="clock">1946 · WINTER</span>
+</header>
+
+<main>
+  <div id="globe-wrap">
+    <canvas id="globe"></canvas>
+    <div id="hover"></div>
+    <div id="banner"></div>
+  </div>
+
+  <div id="rail">
+    <div class="panel">
+      <h2>TREASURY</h2>
+      <div class="row"><span class="big" id="treasury">90.0</span>
+        <span class="delta" id="tredelta"></span></div>
+      <canvas class="spark" id="tspark" aria-label="treasury by season"></canvas>
+      <div class="kv"><span>budget in</span><span class="num" id="budgetin">—</span></div>
+      <div class="kv"><span>ops + containment + overhead</span><span class="num" id="spend">—</span></div>
+    </div>
+
+    <div class="panel">
+      <h2>MANDATE — PERCEIVED THREAT</h2>
+      <div class="row"><span class="big" id="mandate" style="color:var(--amber)">28</span>
+        <span class="delta" id="sevnote">calm world</span></div>
+      <div class="bar"><i id="mbar" style="width:28%"></i></div>
+    </div>
+
+    <div class="panel">
+      <h2>GRAIN MARKET</h2>
+      <div class="row"><span class="big" id="price">100.0</span>
+        <span class="delta" id="pricedelta"></span></div>
+      <canvas class="spark" id="pspark" aria-label="grain price by season"></canvas>
+      <div class="kv"><span>homeland yield</span><span class="num" id="hyield">—</span></div>
+      <div class="kv"><span>farm revenue</span><span class="num" id="revenue">—</span></div>
+    </div>
+
+    <div class="panel">
+      <h2>ATTRIBUTION</h2>
+      <div id="sigmeter"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div id="ladder">Nothing. No one is looking.</div>
+      <span id="dosnum"></span>
+      <label class="kv" for="containment"><span>containment budget</span>
+        <span class="num" id="contval">0</span></label>
+      <input type="range" id="containment" min="0" max="40" value="0" step="1">
+    </div>
+
+    <div class="panel">
+      <h2>COMMITMENT — SEALED ON RESOLVE</h2>
+      <div class="oprow"><label for="opA">OPERATION A</label>
+        <select id="opA"></select><select id="tgtA"></select>
+        <div class="capinfo" id="infoA"></div></div>
+      <div class="oprow"><label for="opB">OPERATION B</label>
+        <select id="opB"></select><select id="tgtB"></select>
+        <div class="capinfo" id="infoB"></div></div>
+      <label class="oprow" style="display:block"><span style="font-size:10px;letter-spacing:.18em;color:var(--ink-faint)">PREDICTION (what do you expect?)</span>
+        <input type="text" id="predict" placeholder="logged to the record, scored at end"></label>
+      <button id="resolve">RESOLVE SEASON ▸</button>
+    </div>
+
+    <div id="wire"><p><span class="stamp">1946·W</span> Directorate established.
+      Two tools, a stable climate, a small budget. <b>The timeline is the tutorial.</b></p></div>
+  </div>
+</main>
+
+<footer>
+  <span>EYES ONLY // NOFORN // 40-SEASON CORE-LOOP INSTRUMENT</span>
+  <button id="teltoggle">TELEMETRY: LADDER ONLY</button>
+</footer>
+</div>
+
+<div class="overlay" id="intro">
+  <div class="sheet">
+    <h2>OPERATING BRIEF — READ BEFORE FIRST COMMIT</h2>
+    <div class="cls">CLASSIFICATION: DIRECTOR EYES ONLY</div>
+    <p class="q">Is it fun to nudge an invisible system and watch consequences
+      arrive four to eight seasons later, in a country you did not target?</p>
+    <p>You direct a national environmental warfare programme, 1946–1955.
+      Homeland: the North American Plains — a wheat and maize exporter. A calm
+      world defunds you. A frightening one earns your appropriation.</p>
+    <ul>
+      <li><b>Commit</b> up to two operations and a containment budget, then
+        resolve the season. Most of what you order lands seasons later.</li>
+      <li><b>The rings on the globe</b> are each region's natural variance
+        envelope. Anomalies that stay inside read as weather. Anomalies that
+        break the ring read as <i>evidence</i>.</li>
+      <li><b>Move the driver, not the region.</b> Slower, but the anomaly
+        arrives looking like climate. Acting into a real ENSO swing hides
+        your signature inside the noise.</li>
+      <li><b>Fire wants a drought first.</b> Build it, then ignite.</li>
+      <li>Watch treasury, mandate, price, and the attribution ladder. At the
+        top of the ladder the record becomes public, and it is yours.</li>
+    </ul>
+    <p>One honest run, no undo. Write a prediction each season — the archive
+      scores you against them at the end.</p>
+    <button id="begin">ASSUME DIRECTION ▸</button>
+  </div>
+</div>
+
+<div class="overlay" id="archive" style="display:none">
+  <div class="sheet" id="archivebody"></div>
+</div>
+
+<script>
+const MODEL = __MODEL__;
+const LAND = __LAND__;
+__ENGINE__
+
+/* ---------------------------------------------------------------- setup */
+const eng = createEngine(MODEL);
+const REG = eng.regions, DRV = eng.drivers, CAPS = eng.capabilities;
+const REGPOS = { "North American Plains":[41.5,-100], "Black Sea Steppe":[48,34],
+  "La Plata Basin":[-31,-60], "South Asia":[22,79], "Southeast Asia":[12,104],
+  "Eastern Australia":[-29,147], "Sahel":[14,2], "Horn of Africa":[8,44] };
+const DRVPOS = { ENSO:[-3,-135], IOD:[-4,68], NATL:[44,-38] };
+const $ = (id) => document.getElementById(id);
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+let t = 0;                       // last resolved season
+let flash = [];                  // transient globe effects
+let running = true;
+let telemetry = false;
+
+/* ------------------------------------------------------------- commit UI */
+function fillCaps(sel){ for (const c of CAPS){ const o=document.createElement("option");
+  o.textContent=c.name; sel.appendChild(o);} }
+function fillRegions(sel){ sel.innerHTML=""; for (const r of REG){
+  const o=document.createElement("option"); o.textContent=r.name; sel.appendChild(o);} }
+fillCaps($("opA")); fillCaps($("opB")); fillRegions($("tgtA")); fillRegions($("tgtB"));
+
+function capInfo(name){
+  const c = CAPS.find(x=>x.name===name);
+  if(!c || c.type==="NONE") return "";
+  const bits=[`cost ${c.cost}`,`lag ${c.lag} season${c.lag===1?"":"s"}`,`signature ${c.sig}`];
+  if(c.type==="DRIVER") bits.push(`target: ${c.fixedTarget} (fixed)`);
+  if(typeof c.dispTo==="string") bits.push(`displaces → ${c.dispTo} later`);
+  if(c.needsDrought) bits.push("needs prior-season drought");
+  if(c.resil>0) bits.push(`resilience +${c.resil}`);
+  return bits.join(" · ");
+}
+function syncOpRow(op,tgt,info){
+  const c = CAPS.find(x=>x.name===$(op).value);
+  const needsRegion = c && c.type==="REGION";
+  $(tgt).style.display = needsRegion ? "" : "none";
+  $(info).textContent = capInfo($(op).value);
+}
+for (const [op,tg,inf] of [["opA","tgtA","infoA"],["opB","tgtB","infoB"]]){
+  $(op).addEventListener("change",()=>syncOpRow(op,tg,inf)); syncOpRow(op,tg,inf);
+}
+$("containment").addEventListener("input",()=>$("contval").textContent=$("containment").value);
+
+/* ---------------------------------------------------------------- globe */
+const cv = $("globe"), cx = cv.getContext("2d");
+let W=0,H=0,CXp=0,CYp=0,Rp=0, rot = -30, tilt = -18, dragging=false, lastX=0;
+function sizeGlobe(){
+  const rect = cv.parentElement.getBoundingClientRect();
+  const dpr = devicePixelRatio||1;
+  cv.width = rect.width*dpr; cv.height = rect.height*dpr;
+  cx.setTransform(dpr,0,0,dpr,0,0);
+  W=rect.width; H=rect.height; CXp=W/2; CYp=H/2; Rp=Math.min(W,H)*0.40;
+}
+addEventListener("resize", sizeGlobe); sizeGlobe();
+cv.addEventListener("pointerdown",e=>{dragging=true;lastX=e.clientX;cv.setPointerCapture(e.pointerId)});
+cv.addEventListener("pointerup",()=>dragging=false);
+cv.addEventListener("pointermove",e=>{ if(dragging){rot+=(e.clientX-lastX)*0.35;lastX=e.clientX;}
+  else hoverCheck(e); });
+cv.addEventListener("pointerleave",()=>$("hover").style.display="none");
+
+const D2R = Math.PI/180;
+function project(lat,lon){
+  const la=lat*D2R, lo=(lon+rot)*D2R, ti=tilt*D2R;
+  const x0=Math.cos(la)*Math.sin(lo), y0=Math.sin(la), z0=Math.cos(la)*Math.cos(lo);
+  const y=y0*Math.cos(ti)-z0*Math.sin(ti), z=y0*Math.sin(ti)+z0*Math.cos(ti);
+  return {x:CXp+Rp*x0, y:CYp-Rp*y, vis:z>0.02, z};
+}
+function anomColor(a, alpha){
+  if(a<0){ const k=Math.min(1,-a/2);
+    return `rgba(${224+31*k|0},${164-112*k|0},${88-6*k|0},${alpha})`; }
+  return `rgba(91,200,232,${alpha})`;
+}
+function lastRow(){ return eng.state.rows[t-1]; }
+
+function drawGlobe(now){
+  if(!dragging && !reduced) rot += 0.022;
+  cx.clearRect(0,0,W,H);
+  // ocean disc + horizon glow
+  const g = cx.createRadialGradient(CXp,CYp,Rp*0.1,CXp,CYp,Rp*1.06);
+  g.addColorStop(0,"#0d1a12"); g.addColorStop(0.94,"#0b150e"); g.addColorStop(1,"rgba(83,217,123,0)");
+  cx.fillStyle=g; cx.beginPath(); cx.arc(CXp,CYp,Rp*1.06,0,7); cx.fill();
+  cx.strokeStyle="rgba(83,217,123,.35)"; cx.lineWidth=1;
+  cx.beginPath(); cx.arc(CXp,CYp,Rp,0,7); cx.stroke();
+  // graticule
+  cx.strokeStyle="rgba(83,217,123,.08)";
+  for(let la=-60;la<=60;la+=30) strokePath(pts(90,i=>[la,-180+i*4]));
+  for(let lo=-180;lo<180;lo+=30) strokePath(pts(60,i=>[-88+i*3,lo]));
+  // coastlines
+  cx.strokeStyle="rgba(140,220,165,.55)"; cx.lineWidth=1;
+  for(const ring of LAND) strokePath(ring.map(([lo,la])=>[la,lo]));
+  const row = lastRow();
+  // aerosol color grade: the sky changed and you intend to use it
+  const glob = row ? row.driverTotals[3] : 0;
+  if(glob>0.05){ cx.fillStyle=`rgba(224,164,88,${Math.min(0.22,glob*0.16)})`;
+    cx.beginPath(); cx.arc(CXp,CYp,Rp,0,7); cx.fill();
+    cx.strokeStyle=`rgba(224,164,88,${Math.min(0.6,glob*0.4)})`;
+    cx.beginPath(); cx.arc(CXp,CYp,Rp*1.08,0,7); cx.stroke(); }
+  // driver glyphs
+  for(const [d,[la,lo]] of Object.entries(DRVPOS)){
+    const p=project(la,lo); if(!p.vis) continue;
+    const v = row ? row.driverTotals[DRV.indexOf(d)] : MODEL.climate[0].drivers[DRV.indexOf(d)];
+    cx.fillStyle="rgba(127,163,137,.9)"; cx.font="9px "+getComputedStyle(document.body).getPropertyValue("--mono");
+    cx.fillText(d, p.x-10, p.y-8);
+    cx.strokeStyle = v>=0? "rgba(224,164,88,.8)":"rgba(91,200,232,.8)";
+    cx.strokeRect(p.x-9,p.y-3,18,4);
+    cx.fillStyle = v>=0? "rgba(224,164,88,.8)":"rgba(91,200,232,.8)";
+    const w=Math.min(9,Math.abs(v)*5);
+    cx.fillRect(v>=0?p.x:p.x-w, p.y-3, w, 4);
+  }
+  // regions: envelope ring + anomaly disc
+  for(let ri=0;ri<REG.length;ri++){
+    const r=REG[ri], [la,lo]=REGPOS[r.name], p=project(la,lo);
+    if(!p.vis) continue;
+    const sig = row? row.sigmas[ri] : r.sigma, a = row? row.anomalies[ri] : 0;
+    const k = Rp*0.055;
+    cx.strokeStyle="rgba(200,230,207,.4)"; cx.setLineDash([3,3]);
+    cx.beginPath(); cx.arc(p.x,p.y,k*sig,0,7); cx.stroke(); cx.setLineDash([]);
+    if(Math.abs(a)>0.03){
+      cx.fillStyle=anomColor(a,0.34); cx.beginPath(); cx.arc(p.x,p.y,k*Math.abs(a),0,7); cx.fill();
+      cx.strokeStyle=anomColor(a,0.9); cx.beginPath(); cx.arc(p.x,p.y,k*Math.abs(a),0,7); cx.stroke();
+      if(Math.abs(a)>sig){ cx.strokeStyle="rgba(255,244,230,.9)"; cx.lineWidth=1.6;
+        cx.beginPath(); cx.arc(p.x,p.y,k*Math.abs(a)+2,0,7); cx.stroke(); cx.lineWidth=1; }
+    }
+    cx.fillStyle = r.homeland? "#53d97b":"rgba(200,230,207,.85)";
+    cx.beginPath(); cx.arc(p.x,p.y,2.4,0,7); cx.fill();
+    if(r.homeland){ cx.strokeStyle="rgba(83,217,123,.7)";
+      cx.beginPath(); cx.arc(p.x,p.y,5,0,7); cx.stroke(); }
+  }
+  // transient landed-effect arcs
+  const nowMs = now||0;
+  flash = flash.filter(f=>nowMs<f.until);
+  for(const f of flash){
+    const a=project(...f.from), b=project(...f.to);
+    if(!a.vis||!b.vis) continue;
+    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2, dx=b.x-a.x, dy=b.y-a.y;
+    const nx=CXp-mx, ny=CYp-my, nl=Math.hypot(nx,ny)||1;
+    const cxp=mx-(nx/nl)*Math.hypot(dx,dy)*0.35, cyp=my-(ny/nl)*Math.hypot(dx,dy)*0.35;
+    const phase=1-(f.until-nowMs)/f.dur;
+    cx.strokeStyle=`rgba(83,217,123,${0.85*(1-phase*0.6)})`; cx.lineWidth=1.4;
+    cx.beginPath(); cx.moveTo(a.x,a.y); cx.quadraticCurveTo(cxp,cyp,b.x,b.y); cx.stroke();
+    const tt=Math.min(1,phase*1.4);
+    const px=(1-tt)*(1-tt)*a.x+2*(1-tt)*tt*cxp+tt*tt*b.x;
+    const py=(1-tt)*(1-tt)*a.y+2*(1-tt)*tt*cyp+tt*tt*b.y;
+    cx.fillStyle="#c8f5d5"; cx.beginPath(); cx.arc(px,py,2.6,0,7); cx.fill();
+    cx.lineWidth=1;
+  }
+  requestAnimationFrame(drawGlobe);
+}
+function pts(n,f){ const out=[]; for(let i=0;i<=n;i++) out.push(f(i)); return out; }
+function strokePath(arr){
+  cx.beginPath(); let pen=false;
+  for(const [la,lo] of arr){ const p=project(la,lo);
+    if(p.vis){ pen? cx.lineTo(p.x,p.y): cx.moveTo(p.x,p.y); pen=true; } else pen=false; }
+  cx.stroke();
+}
+function hoverCheck(e){
+  const rect=cv.getBoundingClientRect(), mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  let best=null,bd=18;
+  for(let ri=0;ri<REG.length;ri++){
+    const p=project(...REGPOS[REG[ri].name]); if(!p.vis) continue;
+    const d=Math.hypot(p.x-mx,p.y-my); if(d<bd){bd=d;best=ri;}
+  }
+  const h=$("hover");
+  if(best===null){ h.style.display="none"; return; }
+  const r=REG[best], row=lastRow();
+  const a=row?row.anomalies[best]:0, s=row?row.sigmas[best]:r.sigma;
+  const y=row?row.yields[best]:100, res=row?row.resil[best]:0;
+  h.innerHTML=`<b>${r.name.toUpperCase()}</b>${r.homeland?" · HOMELAND":""}<br>
+    ${r.crop} · ${r.weight}% of world supply<br>
+    anomaly <span class="num">${a.toFixed(2)}</span> / envelope ±<span class="num">${s.toFixed(2)}</span>
+    ${Math.abs(a)>s?' <span style="color:var(--red)">OUTSIDE</span>':""}<br>
+    yield <span class="num">${y.toFixed(1)}</span>${res?` · resilience ${res}`:""}`;
+  h.style.display="block";
+  h.style.left=Math.min(mx+14,W-240)+"px"; h.style.top=(my+10)+"px";
+}
+requestAnimationFrame(drawGlobe);
+
+/* ------------------------------------------------------------ HUD parts */
+function spark(canvas, series, color, floor){
+  const c=canvas.getContext("2d"), dpr=devicePixelRatio||1;
+  const w=canvas.clientWidth, h=canvas.clientHeight;
+  canvas.width=w*dpr; canvas.height=h*dpr; c.setTransform(dpr,0,0,dpr,0,0);
+  c.clearRect(0,0,w,h);
+  if(series.length<1) return;
+  const lo=Math.min(floor??Infinity,...series), hi=Math.max(...series), span=(hi-lo)||1;
+  const X=i=>2+(w-4)*i/Math.max(1,eng.seasons-1), Y=v=>h-3-(h-8)*(v-lo)/span;
+  c.strokeStyle="rgba(200,230,207,.12)"; c.beginPath();
+  c.moveTo(0,Y(series[0])); c.lineTo(w,Y(series[0])); c.stroke();
+  c.beginPath(); series.forEach((v,i)=>i?c.lineTo(X(i),Y(v)):c.moveTo(X(i),Y(v)));
+  c.strokeStyle=color; c.lineWidth=1.6; c.stroke();
+  c.lineTo(X(series.length-1),h); c.lineTo(2,h); c.closePath();
+  c.fillStyle=color.replace("rgb","rgba").replace(")",",.10)"); c.fill();
+  const lx=X(series.length-1), ly=Y(series[series.length-1]);
+  c.fillStyle=color; c.beginPath(); c.arc(lx,ly,2.6,0,7); c.fill();
+}
+function fmt(n,d=1){ return n.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d}); }
+
+function updateHUD(row, prev){
+  $("clock").textContent = `${row.year} · ${row.qtr.toUpperCase()}  ·  S${row.t}/40`;
+  $("treasury").textContent = fmt(row.treasury);
+  const dt = row.treasury-(prev?prev.treasury:eng.assumptions.startingTreasury);
+  $("tredelta").textContent=(dt>=0?"+":"")+fmt(dt);
+  $("tredelta").className="delta "+(dt>=0?"up":"down");
+  $("budgetin").textContent="+"+fmt(row.budgetIn);
+  $("spend").textContent="−"+fmt(row.opsSpend+row.containment+eng.assumptions.overhead);
+  $("mandate").textContent=fmt(row.mandate,0);
+  $("mbar").style.width=row.mandate+"%";
+  $("sevnote").textContent= row.severity>0.4? "the world looks dangerous"
+    : row.severity>0.1? "elevated variance" : "calm world";
+  $("price").textContent=fmt(row.price);
+  const dp=prev? row.price-prev.price:0;
+  $("pricedelta").textContent=(dp>=0?"+":"")+fmt(dp);
+  $("pricedelta").className="delta "+(dp>=0?"up":"down");
+  $("hyield").textContent=fmt(row.yields[REG.findIndex(r=>r.homeland)]);
+  $("revenue").textContent=fmt(row.revenue);
+  $("ladder").textContent=row.ladderText;
+  $("ladder").className = row.dossier>=80? "hot":"";
+  const rung = eng.ladder.filter(l=>row.dossier>=l.threshold).length-1;
+  [...$("sigmeter").children].forEach((el,i)=>el.className = i<rung? "on":"");
+  $("dosnum").textContent = `dossier ${fmt(row.dossier)} / 200`;
+  spark($("tspark"), eng.state.rows.map(r=>r.treasury), "rgb(83,217,123)", 0);
+  spark($("pspark"), eng.state.rows.map(r=>r.price), "rgb(200,230,207)");
+  const b=$("banner");
+  if(row.status==="obsolescence-warning"){
+    b.style.display="block";
+    b.textContent=`▲ COMMITTEE IS ASKING WHAT YOU ARE FOR (${row.obsStreak}/4 quiet reviews to dissolution)`;
+  } else b.style.display="none";
+}
+
+function wire(html, cls){
+  const row=lastRow(); const p=document.createElement("p");
+  p.innerHTML=`<span class="stamp">${row.year}·${row.qtr[0]}</span> ${cls?`<span class="${cls}">${html}</span>`:html}`;
+  $("wire").prepend(p);
+}
+
+/* ------------------------------------------------------------- resolve */
+const PHASES=["FORECAST","COMMITMENT","RESOLUTION","CONSEQUENCES","ATTRIBUTION"];
+async function phaseShow(i){ $("phasename").textContent=PHASES[i];
+  if(!reduced) await new Promise(r=>setTimeout(r,i===0?60:360)); }
+
+$("resolve").addEventListener("click", async ()=>{
+  if(!running) return;
+  $("resolve").disabled=true;
+  const prev=lastRow();
+  const cmd={ opA:$("opA").value, targetA:$("tgtA").value,
+              opB:$("opB").value, targetB:$("tgtB").value,
+              containment:+$("containment").value,
+              prediction:$("predict").value.trim() };
+  t++;
+  const row = eng.resolve(t, cmd);
+  await phaseShow(1);
+  for(const op of row.committed)
+    wire(`SEALED — <b>${op.cap}</b> → ${op.target}${op.mag&&op.cap!=="Adaptation Investment"?` (magnitude ${fmt(op.mag,2)}, lands S${op.t+op.lag})`:""}`,"op");
+  if(cmd.prediction) wire(`PREDICTION LOGGED — “${cmd.prediction}”`);
+  await phaseShow(2);
+  const nowMs=performance.now();
+  const homePos = REGPOS[REG.find(r=>r.homeland).name];
+  for(const e of row.landed){
+    const toPos = e.kind==="region"? REGPOS[e.target] : DRVPOS[e.target];
+    if(toPos && !reduced) flash.push({from:homePos, to:toPos, until:nowMs+1500, dur:1500});
+    wire(`LANDED — <b>${e.cap}</b> reaches ${e.target} (${e.mag>0?"+":""}${fmt(e.mag,2)})`,"op");
+  }
+  // edge propagation pulses: driver → each strongly-coupled region
+  if(!reduced) for(const [d,[la,lo]] of Object.entries(DRVPOS)){
+    const di=DRV.indexOf(d);
+    for(let ri=0;ri<REG.length;ri++)
+      if(Math.abs(MODEL.coeff[di][ri])>=0.5 && Math.abs(row.driverTotals[di])>0.8)
+        flash.push({from:[la,lo], to:REGPOS[REG[ri].name], until:nowMs+1300, dur:1300});
+  }
+  await phaseShow(3);
+  for(let ri=0;ri<REG.length;ri++){
+    const a=row.anomalies[ri], s=row.sigmas[ri], r=REG[ri];
+    if(Math.abs(a)>s*eng.assumptions.severityThreshold && Math.abs(a)>0.6)
+      wire(`SEVERE — ${r.name}: ${a<0?"drought":"flood-excess"} anomaly ${fmt(a,2)} `
+           +`(envelope ±${fmt(s,2)})${Math.abs(a)>s?" — <b>outside natural range</b>":""}`,"sev");
+  }
+  if(prev && Math.abs(row.price-prev.price)>6)
+    wire(`MARKET — grain ${row.price>prev.price?"spikes":"slides"} to ${fmt(row.price)}; `
+         +`homeland revenue ${fmt(row.revenue)}`);
+  await phaseShow(4);
+  const prevRung = prev? eng.ladder.filter(l=>prev.dossier>=l.threshold).length:1;
+  const rung = eng.ladder.filter(l=>row.dossier>=l.threshold).length;
+  if(rung>prevRung) wire(`ATTRIBUTION — ${row.ladderText}`,"att");
+  updateHUD(row, prev);
+  $("phasename").textContent="FORECAST";
+  $("predict").value=""; $("opA").value="— none —"; $("opB").value="— none —";
+  syncOpRow("opA","tgtA","infoA"); syncOpRow("opB","tgtB","infoB");
+  if(row.status==="exposed"||row.status==="insolvent"||row.status==="dissolved"||t>=eng.seasons){
+    running=false; setTimeout(()=>showArchive(row), reduced?0:900);
+  }
+  $("resolve").disabled=!running;
+});
+
+/* -------------------------------------------------------------- archive */
+function showArchive(finalRow){
+  const rows=eng.state.rows;
+  const cause={ exposed:"EXPOSED — the record is public and it is yours.",
+    insolvent:"INSOLVENT — the programme could not meet its obligations.",
+    dissolved:"DISSOLVED — the committee concluded you were for nothing.",
+  }[finalRow.status] || "TENURE COMPLETE — 1955. The programme continues without you.";
+  const opsDone=eng.state.ops.length;
+  const outside=rows.reduce((n,r)=>n+r.anomalies.filter((a,i)=>Math.abs(a)>r.sigmas[i]).length,0);
+  const peakDos=Math.max(...rows.map(r=>r.dossier));
+  const preds=rows.filter(r=>r.prediction);
+  const naturalOps = eng.state.ops.filter(o=>o.sig>0).length && peakDos<25;
+  let html=`<h2>THE ARCHIVE OPENS — TWENTY-FIVE YEARS LATER</h2>
+    <div class="cls">DECLASSIFIED ${finalRow.year+25} // REVIEW COPY</div>
+    <p class="q">${cause}</p>
+    <table><tr><th>tenure</th><th>operations</th><th>seasons outside envelope</th>
+    <th>peak dossier</th><th>final treasury</th></tr>
+    <tr><td>${rows.length} seasons</td><td>${opsDone}</td><td>${outside}</td>
+    <td>${fmt(peakDos)}</td><td>${fmt(finalRow.treasury)}</td></tr></table>`;
+  html += `<p>${ naturalOps
+    ? "Every operation you ran is still filed as natural variability. No one will ever know. Whether that is victory is not a question this office answers."
+    : peakDos>=115 ? "History concluded a programme existed. Several events you did not cause are attributed to you; several you did cause are not."
+    : "A graduate student's residual paper was cited twice, then forgotten. The record holds."}</p>`;
+  if(preds.length){
+    html+=`<h2 style="margin-top:14px">PREDICTIONS VS RECORD</h2>`;
+    for(const r of preds.slice(0,12))
+      html+=`<p style="margin-bottom:4px"><span style="color:var(--ink-faint)">S${r.t} ${r.year}·${r.qtr[0]}</span>
+        — “${r.prediction}” <span style="color:var(--ink-dim)">· worst hit that season:
+        ${REG[r.anomalies.reduce((m,a,i,ar)=>Math.abs(a)>Math.abs(ar[m])?i:m,0)].name}</span></p>`;
+    html+=`<p style="color:var(--ink-dim)">Count the matches yourself. Near zero: the model is noise.
+      Near forty: no tension. The game lives in between.</p>`;
+  }
+  html+=`<p style="margin-top:10px">Which season was the most fun, and why?
+    <span class="redact">That answer gates everything.</span> (Select to reveal.)</p>
+    <button onclick="location.reload()">RUN IT BACK ▸</button>`;
+  $("archivebody").innerHTML=html;
+  $("archive").style.display="flex";
+}
+
+/* --------------------------------------------------------------- misc */
+$("begin").addEventListener("click",()=>{ $("intro").style.display="none"; });
+$("teltoggle").addEventListener("click",()=>{
+  telemetry=!telemetry;
+  $("dosnum").style.display=telemetry?"inline":"none";
+  $("teltoggle").textContent="TELEMETRY: "+(telemetry?"FULL (playtest)":"LADDER ONLY");
+});
+</script>
