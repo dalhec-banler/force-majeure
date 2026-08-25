@@ -266,7 +266,8 @@
       world defunds you. A frightening one earns your appropriation.</p>
     <ul>
       <li><b>Pick a tool from the tray. Click a region to aim it.</b> Up to two
-        operations a season, then RUN SEASON. Most of what you order lands
+        operations a season. <b>The clock runs</b> — seasons close on their
+        own; RUN SEASON jumps you forward. Most of what you order lands
         seasons later — watch the countdown board.</li>
       <li><b>The ring around each region</b> is what nature could plausibly do
         on its own. Stay inside it and you were never here. Break it and
@@ -966,8 +967,11 @@ const PHASES=["FORECAST","COMMITMENT","RESOLUTION","CONSEQUENCES","ATTRIBUTION"]
 async function phaseShow(i){ $("phasename").textContent=PHASES[i];
   if(!reduced) await new Promise(r=>setTimeout(r,i===0?60:360)); }
 
-$("resolve").addEventListener("click", async ()=>{
-  if(!running) return;
+const SEASON_MS=45000;          // time does not stop; RUN SEASON jumps ahead
+let seasonDeadline=null, resolving=false;
+async function runSeason(auto){
+  if(!running || resolving) return;
+  resolving=true; seasonDeadline=null;
   $("resolve").disabled=true;
   const prev=lastRow();
   const cmd={ opA:slots[0]?.cap||"— none —", targetA:slots[0]?.target,
@@ -1112,8 +1116,22 @@ $("resolve").addEventListener("click", async ()=>{
   if(row.status==="exposed"||row.status==="insolvent"||row.status==="dissolved"||t>=eng.seasons){
     running=false; setTimeout(()=>showArchive(row), reduced?0:900);
   }
+  if(auto && row.committed.length===0)
+    wire(`The season closed while the directorate deliberated.`);
   $("resolve").disabled=!running;
-});
+  resolving=false;
+  if(running) seasonDeadline=performance.now()+SEASON_MS;
+}
+$("resolve").addEventListener("click",()=>runSeason(false));
+setInterval(()=>{
+  const el=$("szclock");
+  if(!running || seasonDeadline===null){ el.textContent="—"; el.style.color=""; return; }
+  const left=Math.max(0, seasonDeadline-performance.now());
+  const sec=Math.ceil(left/1000);
+  el.textContent="0:"+String(sec).padStart(2,"0");
+  el.style.color = sec<=10? "var(--red)" : "";
+  if(left<=0 && !resolving) runSeason(true);
+},250);
 $("containment").addEventListener("input",()=>$("contval").textContent=$("containment").value);
 
 /* -------------------------------------------------------------- archive */
@@ -1157,7 +1175,8 @@ function showArchive(finalRow){
 
 /* --------------------------------------------------------------- misc */
 buildTray(); renderTray();
-$("begin").addEventListener("click",()=>{ $("intro").style.display="none"; });
+$("begin").addEventListener("click",()=>{ $("intro").style.display="none";
+  seasonDeadline=performance.now()+SEASON_MS; });
 $("teltoggle").addEventListener("click",()=>{
   telemetry=!telemetry;
   $("dosnum").style.display=telemetry?"inline":"none";
