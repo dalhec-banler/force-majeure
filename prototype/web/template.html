@@ -181,6 +181,34 @@
                       text-align:left;font-variant-numeric:tabular-nums}
   .sheet th{color:var(--ink-faint);font-weight:500;letter-spacing:.1em;font-size:10px}
   .redact{background:var(--ink-faint);color:var(--ink-faint)}
+  /* boot sequence — CRT power-on */
+  #boot{position:fixed;inset:0;background:#020403;z-index:20;display:flex;
+        align-items:center;justify-content:center;cursor:pointer}
+  #boot::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 1px,transparent 1px 3px)}
+  #bootin{text-align:center;animation:bootflicker 2.2s steps(12)}
+  #bootin h1{font-size:22px;letter-spacing:.4em;color:var(--green);margin-bottom:10px}
+  #bootin .cls{color:var(--red);font-size:11px;letter-spacing:.34em;margin-bottom:22px}
+  #bootin p{color:var(--ink-faint);font-size:11px;letter-spacing:.2em;margin-bottom:4px}
+  @keyframes bootflicker{0%{opacity:0}8%{opacity:.9}12%{opacity:.2}18%{opacity:1}
+    26%{opacity:.5}34%{opacity:1}100%{opacity:1}}
+  /* media voices */
+  #wire .ad{color:#d9c79c;font-family:var(--sans);font-style:italic}
+  #wire .cast{color:#9fd8b7}
+  .tag{font-size:8.5px;font-weight:600;letter-spacing:.14em;padding:0 4px;
+       margin-right:5px;border:1px solid}
+  .tagd{color:var(--green);border-color:var(--green)}
+  .taga{color:var(--amber);border-color:var(--amber)}
+  .tagr{color:var(--red);border-color:var(--red)}
+  /* briefing package card */
+  #briefcard{position:absolute;right:14px;bottom:12px;width:250px;z-index:6;
+    background:var(--panel);border:1px solid var(--line);display:none}
+  #briefcard .bc-cls{background:#2a1010;color:var(--red);font-size:9px;
+    letter-spacing:.3em;padding:3px 8px}
+  #briefcard img{width:100%;height:120px;object-fit:cover;display:block;
+    background:#06131f}
+  #briefcard .bc-body{padding:7px 10px;font-size:10.5px;color:var(--ink-dim)}
+  #briefcard .bc-body b{color:var(--ink);font-size:11px;letter-spacing:.08em}
 
   @media (max-width:900px){
     main{grid-template-columns:1fr}
@@ -216,6 +244,11 @@
     <div id="alerts"></div>
     <div id="hover"></div>
     <div id="banner"></div>
+    <div id="briefcard">
+      <div class="bc-cls">SECRET // BRIEFING PACKAGE</div>
+      <img id="bc-img" alt="">
+      <div class="bc-body"><b id="bc-title"></b><br><span id="bc-text"></span></div>
+    </div>
     <div id="legend">
       <span><i style="background:#53d97b"></i>thriving</span>
       <span><i style="background:#e0a458"></i>strained</span>
@@ -272,6 +305,13 @@
 </div>
 
 <div id="alarmflash"></div>
+<div id="boot"><div id="bootin">
+  <h1>FORCE MAJEURE</h1>
+  <div class="cls">SECRET // NOFORN // DIRECTOR EYES ONLY</div>
+  <p>DIRECTORATE OF CIVIL RESILIENCE</p>
+  <p>OPERATIONS CONSOLE — TERMINAL 04</p>
+  <p style="margin-top:14px">■ ESTABLISHING SECURE LINK…</p>
+</div></div>
 <div id="flashbang"></div>
 
 <div class="overlay" id="intro">
@@ -985,6 +1025,32 @@ function newsFrom(pool,seed,dateline,vars,breaking,suffix){
   for(const k in vars) h=h.split("{"+k+"}").join(vars[k]);
   news(dateline,h+(suffix||""),breaking);
 }
+/* The precedent tree (brief §18): first use of a capability cites prior
+   art, tagged like the codex — DECLASSIFIED / ALLEGED / [REDACTED]. */
+const PRECEDENT={
+ "Cloud Seeding":["tagd","DECLASSIFIED","Schaefer, General Electric, Nov 1946 — dry ice over Massachusetts. Legal signs off: prior art."],
+ "Watershed Interference":["taga","ALLEGED","Internal assessment: the 1938 Yellow River breach demonstrates the principle. We do not cite it aloud."],
+ "Fire Enablement":["taga","ALLEGED","Assessment of rumored wartime incendiary-forestry trials. Filed as rumor. Useful rumor."],
+ "Adaptation Investment":["tagd","DECLASSIFIED","Civilian conservation precedent, 1935. The one line item nobody questions."],
+ "Ocean Thermal Forcing":["taga","ALLEGED","Fleet weather logs suggest current-shifting trials, 1944. Unconfirmed. Promising."],
+ "Stratospheric Aerosol Inj.":["tagd","DECLASSIFIED","Volcanic analogue: Tambora 1815, the year without a summer. Nature published the proof of concept."],
+ "ENSO Forcing":["tagr","[REDACTED]","Annex C is not available at your clearance. Proceed."],
+ "Ionospheric Coupling [T3]":["tagr","[REDACTED]","There is no prior art. You are the prior art."],
+ "Polar Destabilization":["tagr","[REDACTED]","Feasibility study withdrawn from circulation, all copies. Including this one."],
+};
+const usedCaps=new Set();
+let filedCount=0, punctureFired=false, briefSeason=0;
+
+function showBriefing(title, text, img){
+  if(briefSeason===t) return; briefSeason=t;
+  $("bc-title").textContent=title;
+  $("bc-text").textContent=text;
+  $("bc-img").src=img;
+  const c=$("briefcard"); c.style.display="block";
+  clearTimeout(showBriefing._h);
+  showBriefing._h=setTimeout(()=>c.style.display="none", 9000);
+}
+
 function news(dateline, headline, breaking){
   wire(`${breaking?'<span class="chip">BREAKING</span>':""}<b>${dateline}</b> — ${headline}`,"news");
   if(breaking) sfxTeletype();
@@ -1071,31 +1137,34 @@ function updateHUD(row, prev){
 }
 
 /* whose disaster is this? — trace the player's share of an anomaly */
+/* whose disaster is this? — split an anomaly into player / rival / nature */
 function traceFor(ri, row){
-  const parts=[]; let contrib=0;
+  const parts=[]; let mine=0, theirs=0;
   for(let di=0; di<ND; di++){
-    const lag=MODEL.lags[di][ri], ts=t-lag;
+    const ts=t-MODEL.lags[di][ri];
     if(ts>=1){
-      const past=eng.state.rows[ts-1];
-      const inj=past.driverTotals[di]-past.driverNat[di];
-      const c=inj*MODEL.coeff[di][ri];
-      if(Math.abs(c)>0.02){
-        contrib+=c;
-        for(const o of eng.state.ops){
-          if(o.t+o.lag===ts && o.target===DRV[di]) parts.push(o.cap);
-          if(o.disp && o.t+o.disp.lag===ts && o.disp.to===DRV[di])
-            parts.push(o.cap+" (ledger debt)");
-        }
+      for(const o of eng.state.ops){
+        const start=o.t+o.lag, dur=o.dur||1;
+        let hit=0;
+        if(o.target===DRV[di] && ts>=start && ts<start+dur && o.mag!==0)
+          hit=o.mag*Math.pow(o.decay===undefined?1:o.decay, ts-start);
+        if(o.disp && o.t+o.disp.lag===ts && o.disp.to===DRV[di]) hit+=o.disp.mag;
+        if(!hit) continue;
+        const c=hit*MODEL.coeff[di][ri];
+        if(o.owner==="player"){ mine+=c; parts.push(o.cap); } else theirs+=c;
       }
     }
   }
   for(const e of row.landed)
     if(e.kind==="region" && e.target===REG[ri].name){
-      contrib+=e.mag; if(!e.cap.includes("displacement")) parts.push(e.cap);
+      if(e.owner==="player"){ mine+=e.mag;
+        if(!e.cap.includes("displacement")) parts.push(e.cap); }
+      else theirs+=e.mag;
     }
-  return {contrib, parts:[...new Set(parts)]};
+  return {mine, theirs, parts:[...new Set(parts)]};
 }
 
+function s2f(x){ return x.toFixed(2); }
 function memos(row){
   const out=[];
   if(row.trimmed)
@@ -1114,6 +1183,8 @@ function memos(row){
     out.push("Budget office: the committee sees a calm world. Calm worlds do not fund directorates.");
   if(row.treasury>=0 && row.treasury<25)
     out.push("Budget office: at current burn this programme fails within the year.");
+  if(t%9===5)
+    out.push("██████ ██ ███████ cleared through legal. Do not discuss on this channel.");
   for(const m of out.slice(0,2)) wire(`MEMO — ${m}`,"memo");
 }
 
@@ -1179,6 +1250,11 @@ async function runSeason(auto){
   const PLANES=["Cloud Seeding","Stratospheric Aerosol Inj.","Fire Enablement"];
   const SHIPS=["Ocean Thermal Forcing","ENSO Forcing"];
   for(const op of row.committed){
+    if(!usedCaps.has(op.cap) && PRECEDENT[op.cap]){
+      usedCaps.add(op.cap);
+      const [cls,tag,txt]=PRECEDENT[op.cap];
+      wire(`<span class="tag ${cls}">${tag}</span>${txt}`);
+    }
     wire(`SEALED — <b>${op.cap.toUpperCase()}</b> · ${op.target}`+
       (op.resil>0? " · takes effect at once"
        : ` · lands ${seasonName(op.t+op.lag)}`),"op");
@@ -1272,14 +1348,30 @@ async function runSeason(auto){
     }
     if(sevStreak[ri]>=2 && a<0)
       news(DATELINE[r.name], pick("unrest", t*3+ri), true);
+    if(outside){
+      showBriefing(
+        (a<0? "EVENT: HARVEST COLLAPSE":"EVENT: FLOOD / STORM")+"",
+        `${r.name} · anomaly ${a.toFixed(2)} vs ±${s2f(row.sigmas[ri])} · ${r.kind?"output":"harvest"} ${pct}%`,
+        a<0? SMOKE_SRC : STORM_SRC);
+    }
     const tr=traceFor(ri,row);
-    if(tr.parts.length && Math.abs(a)>1e-9){
-      const pctYou=Math.max(0,Math.min(1,tr.contrib/a));
-      if(pctYou>0.2)
-        wire(`TRACE — ~${Math.round(pctYou*100)}% your signal: ${tr.parts.join(", ")}.`,"op");
-      else if(pctYou>0.05)
-        wire(`TRACE — trace contribution yours (${tr.parts.join(", ")}). Mostly the planet.`,"op");
-    } else if(severe)
+    const pctYou=Math.abs(a)>1e-9? Math.max(0,Math.min(1,tr.mine/a)):0;
+    const pctThem=Math.abs(a)>1e-9? Math.max(0,Math.min(1,tr.theirs/a)):0;
+    if(tr.parts.length && pctYou>0.2){
+      wire(`TRACE — ~${Math.round(pctYou*100)}% your signal: ${tr.parts.join(", ")}.`,"op");
+      if(a<0 && !r.kind && (t+ri)%2===0)
+        wire(`ADVERTISEMENT — Halvorsen Yield Assurance: “Weather shouldn't decide a family's future.” Drought-tolerant cultivars, now available across ${r.name}.`,"ad");
+    }
+    else if(pctThem>0.25){
+      wire(`TRACE — not ours. The pattern is too clean to be weather. <b>Someone is operating.</b>`,"att");
+      alarm();
+      alertStrip("SUSPECTED HOSTILE OPERATION — "+r.name.toUpperCase());
+      if(REG[ri].homeland)
+        wire(`MEMO — Counterintelligence: someone is working our watershed. Recommend we return the favor.`,"memo");
+    }
+    else if(tr.parts.length && pctYou>0.05)
+      wire(`TRACE — trace contribution yours (${tr.parts.join(", ")}). Mostly the planet.`,"op");
+    else if(severe)
       wire(`TRACE — fully natural. Cover, if you want it.`,"op");
   }
   {
@@ -1305,6 +1397,11 @@ async function runSeason(auto){
          Math.max(0,trD.mine/row.anomalies[ri])>0.25) cumDeadYours+=d;
     }
   }
+  if(!punctureFired && cumDeadYours>500000){
+    punctureFired=true;
+    const pr=REG.reduce((m,x,i)=>row.yields[i]<row.yields[m]?i:m,0);
+    wire(`In ${REG[pr].name}, a schoolteacher kept a rain diary for thirty-one years. The last entry is one word.`);
+  }
   if(prev && Math.abs(row.price-prev.price)>6){
     const up=row.price>prev.price;
     const hy=row.yields[REG.findIndex(r=>r.homeland)];
@@ -1317,6 +1414,8 @@ async function runSeason(auto){
   await phaseShow(4);
   const prevRung = prev? eng.ladder.filter(l=>prev.dossier>=l.threshold).length:1;
   const rung = eng.ladder.filter(l=>row.dossier>=l.threshold).length;
+  if(rung<prevRung)
+    news("LONG READ","“The New Climate” concludes a decade of extremes is natural variability, citing ministry-supplied data. Careful work. Wrong.",false);
   if(rung>prevRung){
     alarm();
     const headlines=[null,null,
@@ -1329,8 +1428,17 @@ async function runSeason(auto){
     if(h) news(h[0],h[1],h[2]);
     if(rung>=3) alertStrip("SOMEONE IS ASKING QUESTIONS");
   }
-  else if(row.landed.some(e=>e.sig>0 && e.owner==="player"))
+  else if(row.landed.some(e=>e.sig>0 && e.owner==="player")){
     wire(pick("filed", t),"op");
+    filedCount++;
+    if(filedCount%3===0){
+      const rants=[
+        "SHORTWAVE 6.925 MHz — “They are MOVING the rain, people. Look at the procurement records. Nobody looks at the procurement records.”",
+        "SHORTWAVE 6.925 MHz — “Ask yourself who benefits when it doesn't rain. Then ask who owns the planes. I'll wait.”",
+        "SHORTWAVE 6.925 MHz — “The weather has a budget line. I've SEEN it. You people never call in.”"];
+      wire(rants[Math.floor(filedCount/3-1)%rants.length],"cast");
+    }
+  }
   memos(row);
   updateHUD(row, prev);
   $("phasename").textContent="FORECAST";
@@ -1405,6 +1513,11 @@ buildTray(); renderTray();
 $("begin").addEventListener("click",()=>{ $("intro").style.display="none";
   audioInit(); sfxClick();
   seasonDeadline=performance.now()+SEASON_MS; });
+$("intro").style.display="none";
+const bootT=setTimeout(()=>{ $("boot").style.display="none";
+  $("intro").style.display="flex"; }, 2600);
+$("boot").addEventListener("click",()=>{ clearTimeout(bootT);
+  $("boot").style.display="none"; $("intro").style.display="flex"; });
 $("sndtoggle").addEventListener("click",()=>{
   sndMuted=!sndMuted;
   $("sndtoggle").textContent="SOUND: "+(sndMuted?"OFF":"ON");
