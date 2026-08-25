@@ -944,6 +944,8 @@ function traceFor(ri, row){
 
 function memos(row){
   const out=[];
+  if(row.trimmed)
+    out.push("Budget office: appropriation trimmed. The committee funds programmes that do things.");
   const nx=MODEL.climate[t];                       // next season's substrate
   if(nx && Math.abs(nx.drivers[0])>=1.0)
     out.push("Meteorology desk: a strong Pacific swing is building. Whatever you do next season will have cover.");

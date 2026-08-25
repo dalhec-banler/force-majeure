@@ -11,6 +11,10 @@
 
 function createEngine(MODEL, opts) {
   const rivalsOn = !!(opts && opts.rivals);
+  // idle appropriation trim: with no player op in the last 4 seasons the
+  // committee pays the mandate appropriation at this fraction. Default 1
+  // (sheet behavior) keeps the conformance baseline exact.
+  const idleTrim = (opts && opts.idleTrim !== undefined) ? opts.idleTrim : 1;
   const A = {};
   for (const [cell, o] of Object.entries(MODEL.assumptions)) A[cell] = o.value;
   // Named views of the ASSUMPTIONS cells the sheet references.
@@ -179,8 +183,12 @@ function createEngine(MODEL, opts) {
     const mandate = Math.min(P.mandateCap,
                              P.mandateBase + severity * P.mandatePerSeverity);
     const opsSpend = committed.reduce((s, o) => s + o.cost, 0);
+    // the committee funds programmes that do things
+    const recentOp = state.ops.some(
+      (o) => o.owner === "player" && o.t > t - 4);
+    const trimmed = t > 4 && !recentOp && idleTrim < 1;
     const budgetIn = revenue * P.budgetFromRevenue
-                   + mandate * P.budgetFromMandate;
+                   + mandate * P.budgetFromMandate * (trimmed ? idleTrim : 1);
     const prevTreasury = prev ? prev.treasury : P.startingTreasury;
     const treasury = prevTreasury + budgetIn - opsSpend - containment
                    - P.overhead;
@@ -209,7 +217,8 @@ function createEngine(MODEL, opts) {
     // house rule serving handoff constraint 3 (a turtle must be able to
     // lose); playtest-tuned 2026-08-24 after "way too easy to get defunded".
     let status = "running";
-    const recentOp = state.ops.some((o) => o.t > t - 4);
+    // (recentOp computed above counts PLAYER ops only — rival activity must
+    // never shield the player from the committee)
     const obsolescent = t > 8 && mandate <= P.mandateBase + 1 && !recentOp;
     const obsStreak = obsolescent ? ((prev ? prev.obsStreak : 0) + 1) : 0;
     if (dossier >= 200) status = "exposed";
@@ -220,7 +229,7 @@ function createEngine(MODEL, opts) {
     const row = { t, year: clim.year, qtr: clim.qtr, driverNat: clim.drivers,
                   driverTotals, sigmas, anomalies, resil, yields, supply,
                   price, revenue, severity, mandate, opsSpend, containment,
-                  budgetIn, treasury, attribution, dossier, ladderText,
+                  budgetIn, trimmed, treasury, attribution, dossier, ladderText,
                   status, obsStreak, landed, committed,
                   prediction: cmd.prediction || "" };
     state.rows.push(row);
