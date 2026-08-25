@@ -436,7 +436,7 @@ const DESC={
   "Polar Destabilization":"breaks the polar ice — the melt feeds the planet's fever, and everyone pays",
 };
 function capInfo(c){
-  const bits=[DESC[c.name]||"", `$${c.cost}M`,`lands in ${c.lag} season${c.lag===1?"":"s"}`,
+  const bits=[DESC[c.name]||"", `$${c.cost}M`,c.lag===0? "acts this season" : `lands in ${c.lag} season${c.lag===1?"":"s"}`,
     c.sig>=20? "loud signature" : c.sig>=10? "leaves a signature" : c.sig>0? "quiet" : "invisible"];
   if(c.type==="DRIVER") bits.push(`works through the ${c.fixedTarget} system`);
   if(typeof c.dispTo==="string") bits.push("what you move surfaces elsewhere, later");
@@ -707,7 +707,7 @@ function globeClick(e){
   if(ri===null){ $("toolinfo").textContent="Click closer to a region marker."; return; }
   slots.push({cap:pendingTool, target:REG[ri].name});
   const c=CAPS.find(x=>x.name===pendingTool);
-  $("toolinfo").textContent=`${pendingTool} armed on ${REG[ri].name} — lands in ${c.lag} season${c.lag===1?"":"s"}.`;
+  $("toolinfo").textContent=`${pendingTool} armed on ${REG[ri].name} — ${c.lag===0?"acts this season":`lands in ${c.lag} season${c.lag===1?"":"s"}`}.`;
   pendingTool=null; renderTray();
 }
 function anomColor(a, alpha){
@@ -929,15 +929,19 @@ function drawGlobe(now){
   // aerosol color grade + drifting stratospheric veil
   const glob = row ? row.driverTotals[3] : 0;
   if(glob>0.05){
-    cx.fillStyle=`rgba(224,164,88,${Math.min(0.22,glob*0.16)})`;
-    cx.beginPath(); cx.arc(CXp,CYp,Rp,0,7); cx.fill();
+    if(!FLAT){
+      cx.fillStyle=`rgba(224,164,88,${Math.min(0.22,glob*0.16)})`;
+      cx.beginPath(); cx.arc(CXp,CYp,Rp,0,7); cx.fill();
+    }
     for(const la of [22,0,-22]){
       cx.strokeStyle=`rgba(224,164,88,${Math.min(0.3,glob*0.2)})`; cx.lineWidth=5;
       strokePath(pts(90,i=>[la+3*Math.sin(i/7+nowMs/4200), -180+i*4]));
     }
     cx.lineWidth=1;
-    cx.strokeStyle=`rgba(224,164,88,${Math.min(0.6,glob*0.4)})`;
-    cx.beginPath(); cx.arc(CXp,CYp,Rp*1.05,0,7); cx.stroke();
+    if(!FLAT){
+      cx.strokeStyle=`rgba(224,164,88,${Math.min(0.6,glob*0.4)})`;
+      cx.beginPath(); cx.arc(CXp,CYp,Rp*1.05,0,7); cx.stroke();
+    }
   }
   const DEVG=devastation();
   if(DEVG>0.4 && smokeReady){                    // the world smolders
@@ -1311,8 +1315,6 @@ function memos(row){
   const out=[];
   if(row.trimmed)
     out.push("Budget office: appropriation trimmed. The committee funds programmes that do things.");
-  if(row.trimmed)
-    out.push("Budget office: appropriation trimmed. The committee funds programmes that do things.");
   const nx=MODEL.climate[t];                       // next season's substrate
   if(nx && Math.abs(nx.drivers[0])>=1.0)
     out.push("Meteorology desk: a strong Pacific swing is building. Whatever you do next season will have cover.");
@@ -1468,7 +1470,6 @@ async function runSeason(auto){
       }
       continue;
     }
-    if(!e.first) continue;             // burn-down continuations stay quiet
     if(!e.first) continue;             // burn-down continuations stay quiet
     const toPos = e.kind==="region"? REGPOS[e.target] : DRVPOS[e.target];
     if(toPos && !reduced) flash.push({from:homePos, to:toPos, until:nowMs+1500, dur:1500});
@@ -1690,11 +1691,11 @@ function showArchive(finalRow){
     insolvent:"INSOLVENT — the programme could not meet its obligations.",
     dissolved:"DISSOLVED — the committee concluded you were for nothing.",
   }[finalRow.status] || "TENURE COMPLETE — 1955. The programme continues without you.";
-  const opsDone=eng.state.ops.length;
+  const opsDone=eng.state.ops.filter(o=>o.owner==="player").length;
   const outside=rows.reduce((n,r)=>n+r.anomalies.filter((a,i)=>Math.abs(a)>r.sigmas[i]).length,0);
   const peakDos=Math.max(...rows.map(r=>r.dossier));
   const preds=rows.filter(r=>r.prediction);
-  const naturalOps = eng.state.ops.filter(o=>o.sig>0).length && peakDos<25;
+  const naturalOps = eng.state.ops.filter(o=>o.owner==="player"&&o.sig>0).length && peakDos<25;
   let html=`<h2>THE ARCHIVE OPENS — TWENTY-FIVE YEARS LATER</h2>
     <div class="cls">DECLASSIFIED ${finalRow.year+25} // REVIEW COPY</div>
     <p class="q">${cause}</p>
@@ -1722,6 +1723,13 @@ function showArchive(finalRow){
         ${REG[r.anomalies.reduce((m,a,i,ar)=>Math.abs(a)>Math.abs(ar[m])?i:m,0)].name}</span></p>`;
     html+=`<p style="color:var(--ink-dim)">Count the matches yourself. Near zero: the model is noise.
       Near forty: no tension. The game lives in between.</p>`;
+  }
+  const rivalOps=eng.state.ops.filter(o=>o.owner==="rival");
+  if(rivalOps.length){
+    html+=`<h2 style="margin-top:14px">DECLASSIFIED — THE EASTERN PROGRAM</h2>
+      <p>You were never alone in the sky. Their file, opened after ${finalRow.year+25}:</p>`;
+    for(const o of rivalOps.slice(0,10))
+      html+=`<p style="margin-bottom:3px;color:var(--ink-dim)">S${o.t} — ${o.cap} · ${o.target}</p>`;
   }
   html+=`<p style="margin-top:10px">Which season was the most fun, and why?
     <span class="redact">That answer gates everything.</span> (Select to reveal.)</p>
