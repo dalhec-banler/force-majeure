@@ -19,6 +19,12 @@ function createEngine(MODEL, opts) {
   // for 3 seasons, throwing deterministic meanders across all regions >=40N.
   // Gated (default off) so the sheet-conformance baseline is untouched.
   const jetOn = !!(opts && opts.jetstream);
+  // forensic attribution (playtest fix, night audit 2026-08-24): repeat
+  // strikes on the same target compound the signature (a pattern is the
+  // most damning evidence), and region-targeted signatures amplify by the
+  // TARGET's envelope stress rather than the 16-region global average
+  // (which diluted the sheet's 8-region amplifier). Default off.
+  const forensics = !!(opts && opts.forensics);
   const A = {};
   for (const [cell, o] of Object.entries(MODEL.assumptions)) A[cell] = o.value;
   // Named views of the ASSUMPTIONS cells the sheet references.
@@ -209,7 +215,10 @@ function createEngine(MODEL, opts) {
     const opsSpend = committed.reduce((s, o) => s + o.cost, 0);
     // the committee funds programmes that do things
     const recentOp = state.ops.some(
-      (o) => o.owner === "player" && o.t > t - 4);
+      (o) => o.owner === "player"
+        && (o.t > t - 4                                   // committed recently
+            || (o.mag !== 0 && t < o.t + o.lag + (o.dur || 1))));  // or still burning
+
     const trimmed = t > 4 && !recentOp && idleTrim < 1;
     const budgetIn = revenue * P.budgetFromRevenue
                    + mandate * P.budgetFromMandate * (trimmed ? idleTrim : 1)
@@ -223,13 +232,41 @@ function createEngine(MODEL, opts) {
     const envelopeStress = REGIONS.reduce((s, r, ri) =>
       s + Math.max(0, Math.abs(anomalies[ri]) / sigmas[ri] - 1), 0) / NR;
     // only the player's signatures feed the player's dossier
-    const landedSig = landed.reduce(
-      (s, e) => s + (e.owner === "player" ? e.sig : 0), 0);
-    const attribution = landedSig
-      * (1 + P.envelopeMultWeight * envelopeStress);
+    let attribution = 0;
+    for (const e of landed) {
+      if (e.owner !== "player" || !e.sig) continue;
+      let sig = e.sig;
+      if (forensics) {
+        // pattern evidence: same-target player landings in the last 8 seasons
+        let repeats = 0;
+        for (const o of state.ops)
+          if (o.owner === "player" && o.sig > 0 && o.target === e.target
+              && o.t + o.lag < t && o.t + o.lag >= t - 8) repeats++;
+        sig *= 1 + 0.4 * Math.min(4, repeats);
+        // the TARGET's own envelope stress, not the world average
+        const ri = regionIndex[e.target];
+        const stress = ri !== undefined
+          ? Math.max(0, Math.abs(anomalies[ri]) / sigmas[ri] - 1)
+          : envelopeStress;
+        sig *= 1 + P.envelopeMultWeight * stress;
+      } else {
+        sig *= 1 + P.envelopeMultWeight * envelopeStress;
+      }
+      attribution += sig;
+    }
     const prevDossier = prev ? prev.dossier : 0;
-    const dossier = Math.max(0, prevDossier * (1 - P.dossierDecay)
-      + attribution - containment * P.containmentEff);
+    // forensics: hush money buys less once questions circulate — containment
+    // efficiency falls as the standing dossier grows (sheet behavior when off)
+    const contEff = forensics
+      ? P.containmentEff / (1 + prevDossier / 60)
+      : P.containmentEff;
+    // once a rival service has named you (rung 5, dossier 115+), the file
+    // grows on its own: investigators are working it. Institutional
+    // forgetting no longer applies above that line. (forensics only)
+    const investigators = forensics && prevDossier >= 115 ? 3 : 0;
+    const decayEff = investigators ? 0 : P.dossierDecay;
+    const dossier = Math.max(0, prevDossier * (1 - decayEff)
+      + attribution + investigators - containment * contEff);
 
     let ladderText = MODEL.ladder[0].text;
     for (const rung of MODEL.ladder)

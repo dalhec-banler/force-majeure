@@ -368,7 +368,7 @@ const LAND = __LAND__;
 __ENGINE__
 
 /* ---------------------------------------------------------------- setup */
-const eng = createEngine(MODEL, {rivals:true, idleTrim:0.6, jetstream:true});
+const eng = createEngine(MODEL, {rivals:true, idleTrim:0.6, jetstream:true, forensics:true});
 const REG = eng.regions, DRV = eng.drivers, CAPS = eng.capabilities;
 const ND = DRV.length;
 const REGPOS = { "North American Plains":[41.5,-100], "Black Sea Steppe":[48,34],
@@ -847,8 +847,6 @@ const VOLCANOES=[
    line:"Kilauea pours new land into the sea. Crowds gather at dusk to watch."},
 ];
 const volcanoActive=(i,ts)=> ((ts + i*3) % 9) < 2;
-/* a hurricane as it looks from orbit / on radar: filled spiral rainbands,
-   dense core, and a real eye (erased through to the earth below) */
 const STORM_SRC="__STORM__";
 const VOLCANO_SRC="__VOLCANO__"; const SMOKE_SRC="__SMOKE__";
 const volcImg=new Image(); let volcReady=false;
@@ -1534,7 +1532,9 @@ async function runSeason(auto){
     else if(r.kind==="hub"){
       if(a<0) newsFrom("hubDry", t*7+ri*13, DATELINE[r.name], {NAME:r.name,PCT:pct}, outside);
       else {
-        newsFrom("hubFlood", t*7+ri*13, DATELINE[r.name], {NAME:r.name,PCT:pct}, outside);
+        if(row.yields[ri]>=92)
+          news(DATELINE[r.name], `Storm surge tests the defenses at ${r.name}. Operations continue.`, outside);
+        else newsFrom("hubFlood", t*7+ri*13, DATELINE[r.name], {NAME:r.name,PCT:pct}, outside);
         if(outside) effects.push({type:"storm",pos,bornT:t,life:1});
       }
     }
@@ -1542,7 +1542,9 @@ async function runSeason(auto){
       {CROP:r.crop,PCT:pct}, outside,
       outside? pick("droughtOut", t*5+ri*3):"");
     else {
-      newsFrom("floodCrop", t*7+ri*13, DATELINE[r.name], {CROP:r.crop,PCT:pct}, outside);
+      if(row.yields[ri]>=92)
+        news(DATELINE[r.name], `Storm cells beyond anything on file sweep the ${r.name}. The ${r.crop} crop, remarkably, stands.`, outside);
+      else newsFrom("floodCrop", t*7+ri*13, DATELINE[r.name], {CROP:r.crop,PCT:pct}, outside);
       if(outside){
         if(["North American Plains","Black Sea Steppe","La Plata Basin"].includes(r.name)){
           effects.push({type:"tornado",pos,bornT:t,life:1});
@@ -1557,7 +1559,7 @@ async function runSeason(auto){
       if(a<0)                              // deep drought sparks wildfire
         effects.push({type:"fire",pos,bornT:t,life:1,scale:0.55});
     }
-    if(sevStreak[ri]>=2 && a<0)
+    if(sevStreak[ri]>=2 && a<0 && row.yields[ri]<78)
       news(DATELINE[r.name], pick("unrest", t*3+ri), true);
     if(outside){
       showBriefing(
