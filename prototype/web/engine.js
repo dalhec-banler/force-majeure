@@ -212,7 +212,8 @@ function createEngine(MODEL, opts) {
       (o) => o.owner === "player" && o.t > t - 4);
     const trimmed = t > 4 && !recentOp && idleTrim < 1;
     const budgetIn = revenue * P.budgetFromRevenue
-                   + mandate * P.budgetFromMandate * (trimmed ? idleTrim : 1);
+                   + mandate * P.budgetFromMandate * (trimmed ? idleTrim : 1)
+                   + Math.max(0, cmd.grant || 0);   // directive appropriations
     const prevTreasury = prev ? prev.treasury : P.startingTreasury;
     const treasury = prevTreasury + budgetIn - opsSpend - containment
                    - P.overhead;
