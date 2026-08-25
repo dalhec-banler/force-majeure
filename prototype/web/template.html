@@ -200,6 +200,8 @@
   .tagd{color:var(--green);border-color:var(--green)}
   .taga{color:var(--amber);border-color:var(--amber)}
   .tagr{color:var(--red);border-color:var(--red)}
+  #hDead.tick{animation:deadtick .6s ease-out}
+  @keyframes deadtick{0%{transform:scale(1.35);text-shadow:0 0 12px var(--red)}100%{transform:scale(1)}}
   /* briefing package card */
   #briefcard{position:absolute;right:14px;bottom:12px;width:250px;z-index:6;
     background:var(--panel);border:1px solid var(--line);display:none}
@@ -1015,7 +1017,9 @@ function drawGlobe(now){
     const nx=CXp-mx, ny=CYp-my, nl=Math.hypot(nx,ny)||1;
     const cxp=mx-(nx/nl)*Math.hypot(dx,dy)*0.35, cyp=my-(ny/nl)*Math.hypot(dx,dy)*0.35;
     const phase=1-(f.until-nowMs)/f.dur;
-    cx.strokeStyle=`rgba(83,217,123,${0.85*(1-phase*0.6)})`; cx.lineWidth=1.4;
+    cx.strokeStyle=f.red? `rgba(224,82,82,${0.9*(1-phase*0.5)})`
+                        : `rgba(83,217,123,${0.85*(1-phase*0.6)})`;
+    cx.lineWidth=f.red?2:1.4;
     cx.beginPath(); cx.moveTo(a.x,a.y); cx.quadraticCurveTo(cxp,cyp,b.x,b.y); cx.stroke();
     const tt=Math.min(1,phase*1.4);
     const px=(1-tt)*(1-tt)*a.x+2*(1-tt)*tt*cxp+tt*tt*b.x;
@@ -1246,7 +1250,10 @@ function updateHUD(row, prev){
   $("hPriceD").textContent=(dp>=0?"+":"")+fmt(dp);
   $("hPriceD").className="d "+(dp>=0?"up":"down");
   $("hYield").textContent=fmt(row.yields[REG.findIndex(r=>r.homeland)],0)+"%";
-  $("hDead").textContent=fmtDead(cumDead);
+  const hd=$("hDead"), newDead=fmtDead(cumDead);
+  if(hd.textContent!==newDead && cumDead>0){
+    hd.classList.remove("tick"); void hd.offsetWidth; hd.classList.add("tick"); }
+  hd.textContent=newDead;
   const profit=eng.state.rows.reduce((s2,r2)=>s2+r2.revenue-85,0);
   $("hProfit").textContent=(profit>=0?"+$":"−$")+fmt(Math.abs(profit))+"M";
   $("hProfit").style.color=profit>=0?"var(--green)":"var(--red)";
@@ -1403,7 +1410,16 @@ async function runSeason(auto){
   await phaseShow(2);
   const nowMs=performance.now();
   for(const e of row.landed){
-    if(e.owner!=="player") continue;   // rival work is covert — anomalies only
+    if(e.owner!=="player"){
+      // covert — except when it lands on YOU: a red streak with no origin
+      if(e.first && e.kind==="region" && e.target===REG.find(r=>r.homeland).name && !reduced){
+        const tgt=REGPOS[e.target];
+        flash.push({from:[72, tgt[1]+130], to:tgt, until:nowMs+1900, dur:1900, red:true});
+        shocks.push({pos:tgt, until:performance.now()+1400, dur:1400});
+      }
+      continue;
+    }
+    if(!e.first) continue;             // burn-down continuations stay quiet
     if(!e.first) continue;             // burn-down continuations stay quiet
     const toPos = e.kind==="region"? REGPOS[e.target] : DRVPOS[e.target];
     if(toPos && !reduced) flash.push({from:homePos, to:toPos, until:nowMs+1500, dur:1500});
@@ -1632,6 +1648,10 @@ function showArchive(finalRow){
     <p>Estimated excess mortality, 1946–${finalRow.year}: <b style="color:var(--red)">${fmtDead(cumDead)}</b>
     — of which attributable to your operations: <b>${fmtDead(cumDeadYours)}</b>.
     Both figures appear in no report.</p>
+    <p>The world you left behind: <b>${Math.round(devastation()*100)}% devastated</b>${
+      devastation()>0.55? " — from orbit, the night side glows." :
+      devastation()>0.25? " — the burn scars will outlive the programme." :
+      " — largely intact. History may call that restraint."}</p>
     <p>Profit above baseline, lifetime: <b>${(()=>{const pr=rows.reduce((s2,r2)=>s2+r2.revenue-85,0);return (pr>=0?"+$":"−$")+fmt(Math.abs(pr))+"M";})()}</b>.</p>`;
   html += `<p>${ naturalOps
     ? "Every operation you ran is still filed as natural variability. No one will ever know. Whether that is victory is not a question this office answers."
