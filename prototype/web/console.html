@@ -276,6 +276,9 @@
         fingerprints.</li>
       <li><b>Fire wants a drought first.</b> Build it, then wait for lightning
         that was coming anyway.</li>
+      <li><b>You are not alone in the sky.</b> Watch for patterns too clean
+        to be weather — and remember: your best targets are not your enemies.
+        They are your competitors in the wheat market.</li>
       <li>The world talks back through the news wire. Your analysts will tell
         you which disasters were yours. The news never will — unless the
         ladder reaches the top, the record goes public, and it is yours.</li>
@@ -1298,6 +1301,19 @@ $("resolve").addEventListener("click", async ()=>{
         wire(`TRACE — trace contribution yours (${tr.parts.join(", ")}). Mostly the planet.`,"op");
     } else if(severe)
       wire(`TRACE — fully natural. Cover, if you want it.`,"op");
+  }
+  {
+    const hIdx=REG.findIndex(r=>r.homeland);
+    const hTr=traceFor(hIdx,row), hA=row.anomalies[hIdx];
+    const hSevere=Math.abs(hA)>row.sigmas[hIdx]*eng.assumptions.severityThreshold&&Math.abs(hA)>0.6;
+    if(!hSevere && Math.abs(hA)>0.15){
+      const share=Math.max(0,Math.min(1,hTr.theirs/hA));
+      if(share>0.3){
+        alarm();
+        alertStrip("SUSPECTED HOSTILE OPERATION — HOMELAND");
+        wire(`COUNTERINTELLIGENCE — foreign signal in our own weather (~${Math.round(share*100)}% of the anomaly). <b>This was an attack.</b>`,"att");
+      }
+    }
   }
   if(prev && Math.abs(row.price-prev.price)>6){
     const up=row.price>prev.price;
