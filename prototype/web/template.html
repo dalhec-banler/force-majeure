@@ -300,19 +300,28 @@ const LAND = __LAND__;
 __ENGINE__
 
 /* ---------------------------------------------------------------- setup */
-const eng = createEngine(MODEL);
+const eng = createEngine(MODEL, {rivals:true, idleTrim:0.6});
 const REG = eng.regions, DRV = eng.drivers, CAPS = eng.capabilities;
 const ND = DRV.length;
 const REGPOS = { "North American Plains":[41.5,-100], "Black Sea Steppe":[48,34],
   "La Plata Basin":[-31,-60], "South Asia":[22,79], "Southeast Asia":[12,104],
-  "Eastern Australia":[-29,147], "Sahel":[14,2], "Horn of Africa":[8,44] };
+  "Eastern Australia":[-29,147], "Sahel":[14,2], "Horn of Africa":[8,44],
+  "Taiwan Strait Industrial":[24,121], "Persian Gulf Terminals":[26.5,52],
+  "Andean Copper Belt":[-24,-69], "Congo Cobalt Belt":[-11,26],
+  "North Sea Energy Shelf":[57,3], "Ganges Delta Ports":[22.5,90],
+  "Siberian Gas Fields":[62,75], "Arctic Shelf":[76,20] };
 const DRVPOS = { ENSO:[-3,-135], IOD:[-4,68], NATL:[44,-38] };
 const DATELINE = { "North American Plains":"OMAHA","Black Sea Steppe":"ODESSA",
   "La Plata Basin":"BUENOS AIRES","South Asia":"DELHI","Southeast Asia":"BANGKOK",
-  "Eastern Australia":"SYDNEY","Sahel":"NIAMEY","Horn of Africa":"ADDIS ABABA" };
+  "Eastern Australia":"SYDNEY","Sahel":"NIAMEY","Horn of Africa":"ADDIS ABABA",
+  "Taiwan Strait Industrial":"TAIPEI","Persian Gulf Terminals":"DUBAI",
+  "Andean Copper Belt":"ANTOFAGASTA","Congo Cobalt Belt":"LUBUMBASHI",
+  "North Sea Energy Shelf":"ABERDEEN","Ganges Delta Ports":"DHAKA",
+  "Siberian Gas Fields":"NOVOSIBIRSK","Arctic Shelf":"LONGYEARBYEN" };
 const TOOLICON = { "Cloud Seeding":"☁","Watershed Interference":"⏚",
   "Fire Enablement":"🔥","Adaptation Investment":"🛡","Ocean Thermal Forcing":"🌊",
-  "Stratospheric Aerosol Inj.":"✈","ENSO Forcing":"🌀","Ionospheric Coupling [T3]":"⚡" };
+  "Stratospheric Aerosol Inj.":"✈","ENSO Forcing":"🌀","Ionospheric Coupling [T3]":"⚡",
+  "Polar Destabilization":"🧊" };
 const $ = (id) => document.getElementById(id);
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -326,6 +335,7 @@ let telemetry = false;
 let pendingTool = null;          // tool waiting for a globe click
 let slots = [];                  // armed ops, max 2: {cap, target}
 let sevStreak = REG.map(()=>0);  // consecutive severe seasons per region
+let iceMelt = 0;                 // 0..1, cumulative Arctic melt (visual + news)
 
 function fmt(n,d=1){ return n.toLocaleString("en-US",
   {minimumFractionDigits:d,maximumFractionDigits:d}); }
@@ -340,7 +350,8 @@ const DESC={
   "Ocean Thermal Forcing":"ships stir warm water into the Atlantic conveyor",
   "Stratospheric Aerosol Inj.":"high-altitude flights veil the sky; the planet cools",
   "ENSO Forcing":"tips the Pacific into an artificial El Niño — the world's weather leans with it",
-  "Ionospheric Coupling [T3]":"the directed-energy option. It works. It cannot be denied",
+  "Ionospheric Coupling [T3]":"the directed-energy option — seismic coupling, no meteorological cause. It cannot be denied",
+  "Polar Destabilization":"breaks the polar ice — the melt feeds the planet's fever, and everyone pays",
 };
 function capInfo(c){
   const bits=[DESC[c.name]||"", `$${c.cost}M`,`lands in ${c.lag} season${c.lag===1?"":"s"}`,
@@ -442,7 +453,7 @@ function initEarth(){
   const fs=`precision mediump float;
     uniform sampler2D uT,uCl;uniform vec2 uC;
     uniform float uR,uRot,uTilt,uClOff,uHasCl;
-    uniform vec3 uRV[8];uniform float uRD[8];
+    uniform vec3 uRV[16];uniform float uRD[16];uniform float uIceEdge;
     void main(){
       vec2 p=(gl_FragCoord.xy-uC)/uR;
       float r2=dot(p,p);
@@ -461,12 +472,16 @@ function initEarth(){
       // drought browns the land itself — green space disappearing
       vec3 ve=vec3(cos(lat)*sin(lon),sin(lat),cos(lat)*cos(lon));
       float dry=0.0;
-      for(int i=0;i<8;i++){
+      for(int i=0;i<16;i++){
         float dd=acos(clamp(dot(ve,uRV[i]),-1.,1.));
         dry+=uRD[i]*smoothstep(0.34,0.08,dd);
       }
       dry=clamp(dry,0.,1.);
       col=mix(col, vec3(dot(col,vec3(.33)))*vec3(1.18,0.92,0.55), dry*0.8);
+      if(lat>uIceEdge){
+        float f=smoothstep(uIceEdge,uIceEdge+0.06,lat);
+        col=mix(col, vec3(0.93,0.96,0.99), f*0.92);
+      }
       if(uHasCl>0.5){
         float c=texture2D(uCl,vec2(fract(uv.x+uClOff),uv.y)).r;
         col=mix(col,vec3(1.0),c*0.5);
@@ -494,8 +509,9 @@ function initEarth(){
         Rot:gl.getUniformLocation(pr,"uRot"), Tilt:gl.getUniformLocation(pr,"uTilt"),
         ClOff:gl.getUniformLocation(pr,"uClOff"), HasCl:gl.getUniformLocation(pr,"uHasCl"),
         T:gl.getUniformLocation(pr,"uT"), Cl:gl.getUniformLocation(pr,"uCl"),
-        RV:gl.getUniformLocation(pr,"uRV[0]"), RD:gl.getUniformLocation(pr,"uRD[0]") };
-  const rv=new Float32Array(24);
+        RV:gl.getUniformLocation(pr,"uRV[0]"), RD:gl.getUniformLocation(pr,"uRD[0]"),
+        IceEdge:gl.getUniformLocation(pr,"uIceEdge") };
+  const rv=new Float32Array(48);
   REG.forEach((r,i)=>{ const [la,lo]=REGPOS[r.name].map(x=>x*Math.PI/180);
     rv[i*3]=Math.cos(la)*Math.sin(lo); rv[i*3+1]=Math.sin(la);
     rv[i*3+2]=Math.cos(la)*Math.cos(lo); });
@@ -527,12 +543,14 @@ function drawEarth(nowMs){
   gl.uniform1f(glU.R, Rp*dpr);
   gl.uniform1f(glU.Rot, rot*D2R);
   gl.uniform1f(glU.Tilt, tilt*D2R);
-  gl.uniform1f(glU.ClOff, (nowMs*0.0000115)%1);
+  gl.uniform1f(glU.ClOff, (nowMs*0.000004)%1);
   gl.uniform1f(glU.HasCl, (texReady&2)?1:0);
   gl.uniform1i(glU.T,0); gl.uniform1i(glU.Cl,1);
-  const row=lastRow(), dry=new Float32Array(8);
-  if(row) for(let i=0;i<8;i++) dry[i]=Math.max(0,Math.min(1,-row.anomalies[i]/1.6));
+  const row=lastRow(), dry=new Float32Array(16);
+  if(row) for(let i=0;i<Math.min(16,REG.length);i++)
+    dry[i]=Math.max(0,Math.min(1,-row.anomalies[i]/1.6));
   gl.uniform1fv(glU.RD, dry);
+  gl.uniform1f(glU.IceEdge, (66+18*iceMelt)*Math.PI/180);
   gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
   return true;
 }
@@ -596,7 +614,7 @@ function drawEffects(nowMs){
         cx.beginPath(); cx.moveTo(rx,ry); cx.lineTo(rx-1.5,ry+4); cx.stroke();
       }
     } else if(e.type==="storm"){                  // hurricane, radar-painted
-      drawCyclone(p, 1.45, nowMs, true);
+      drawCyclone(p, 0.30, nowMs, {variant:Math.abs(e.pos[0]|0)%3, lat:e.pos[0]});
     } else if(e.type==="oceanheat"){
       const pulse=0.5+0.5*Math.sin(nowMs/350);
       const g=cx.createRadialGradient(p.x,p.y,0,p.x,p.y,k*1.7);
@@ -621,28 +639,21 @@ const VOLCANOES=[
 const volcanoActive=(i,ts)=> ((ts + i*3) % 9) < 2;
 /* a hurricane as it looks from orbit / on radar: filled spiral rainbands,
    dense core, and a real eye (erased through to the earth below) */
-function drawCyclone(p, scale, nowMs, radar){
-  const k=Rp*0.055*scale;
-  const ang=nowMs/3800;
-  cx.save();
-  for(let arm=0;arm<3;arm++){
-    for(let s=23;s>=0;s--){
-      const th=ang+arm*2.094+s*0.235;
-      const rr=k*(0.18+s*0.075);
-      const bx=p.x+Math.cos(th)*rr, by=p.y+Math.sin(th)*rr*0.9;
-      const br=Math.max(1.2, k*(0.27-s*0.006));
-      cx.fillStyle = radar
-        ? (s<7? "rgba(226,70,50,.62)" : s<14? "rgba(232,196,60,.5)"
-                                      : "rgba(90,205,95,.4)")
-        : `rgba(245,248,252,${0.55-s*0.014})`;
-      cx.beginPath(); cx.arc(bx,by,br,0,7); cx.fill();
-    }
-  }
-  cx.fillStyle = radar? "rgba(232,96,62,.8)" : "rgba(250,252,255,.9)";
-  cx.beginPath(); cx.arc(p.x,p.y,k*0.32,0,7); cx.fill();
-  cx.globalCompositeOperation="destination-out";
-  cx.fillStyle="rgba(0,0,0,1)";
-  cx.beginPath(); cx.arc(p.x,p.y,k*0.1,0,7); cx.fill();
+const STORM_SRC="__STORM__";
+/* A real hurricane (Isabel, NASA MODIS 2003, public domain), cut out of its
+   ocean and rotated at a creep — the way storms actually turn from orbit. */
+const stormImg=new Image(); let stormReady=false;
+stormImg.onload=()=>{stormReady=true;}; stormImg.src=STORM_SRC;
+function drawCyclone(p, diaFrac, nowMs, opts){
+  if(!stormReady) return;
+  const o=opts||{};
+  const size=Rp*diaFrac*(o.scale||1);
+  const sh=(o.lat!==undefined && o.lat<0);
+  cx.save(); cx.translate(p.x,p.y);
+  cx.rotate((sh?1:-1)*nowMs/60000 + (o.variant||0)*2.1);
+  if(sh) cx.scale(-1,1);
+  cx.globalAlpha=o.alpha!==undefined?o.alpha:1;
+  cx.drawImage(stormImg,-size/2,-size/2,size,size);
   cx.restore();
 }
 function drawAmbient(nowMs){
@@ -650,10 +661,10 @@ function drawAmbient(nowMs){
   // slow roaming cyclones, one per basin, drifting west
   const basins=[[15,-52],[13,138],[-13,72]];
   for(let i=0;i<3;i++){
-    const lat=basins[i][0]+4*Math.sin(t*1.3+i*2.1);
-    const lon=basins[i][1]-((t*11+i*43)%55)-(nowMs*0.00045*(1+i*0.3))%360;
+    const lat=basins[i][0]+3*Math.sin(t*1.3+i*2.1);
+    const lon=basins[i][1]-10-8*Math.sin(t*0.9+i*1.7)-6*Math.sin(nowMs*0.00002+i*2.4);
     const p=project(lat,lon); if(!p.vis) continue;
-    drawCyclone(p, 0.8+i*0.12, nowMs+i*900, false);
+    drawCyclone(p, 0.17+i*0.02, nowMs+i*900, {alpha:0.9, lat, variant:i});
   }
   // volcanoes: vent glow + large slow smoke plume when active
   for(let i=0;i<VOLCANOES.length;i++){
@@ -830,7 +841,7 @@ function hoverCheck(e){
     : a<-0.5? "Drought building" : a>s? "Flooding beyond the record"
     : a>0.7? "Unusually wet season" : "Seasonal norms";
   h.innerHTML=`<b>${r.name.toUpperCase()}</b>${r.homeland?" · HOMELAND":""}<br>
-    ${read}. ${r.crop} harvest at <span class="num">${y.toFixed(0)}%</span>
+    ${read}. ${r.crop} ${r.kind?"output":"harvest"} at <span class="num">${y.toFixed(0)}%</span>
     · ${r.weight}% of world supply${res?` · hardened`:""}<br>
     <span style="color:var(--ink-faint)">anomaly ${a.toFixed(2)} vs natural range ±${s.toFixed(2)}${Math.abs(a)>s?" — outside":""}</span>`;
   h.style.display="block";
@@ -947,10 +958,12 @@ function memos(row){
   const out=[];
   if(row.trimmed)
     out.push("Budget office: appropriation trimmed. The committee funds programmes that do things.");
+  if(row.trimmed)
+    out.push("Budget office: appropriation trimmed. The committee funds programmes that do things.");
   const nx=MODEL.climate[t];                       // next season's substrate
   if(nx && Math.abs(nx.drivers[0])>=1.0)
     out.push("Meteorology desk: a strong Pacific swing is building. Whatever you do next season will have cover.");
-  const dryRi=REG.findIndex((r,ri)=>row.anomalies[ri]<eng.assumptions.dryThreshold);
+  const dryRi=REG.findIndex((r,ri)=>!r.kind && row.anomalies[ri]<eng.assumptions.dryThreshold);
   if(dryRi>=0)
     out.push(`Ops desk: ${REG[dryRi].name} is dry as tinder. Conditions for enablement will not hold.`);
   if(row.dossier>=25 && row.containment===0)
@@ -984,6 +997,18 @@ async function runSeason(auto){
   for(let i=0;i<VOLCANOES.length;i++)
     if(volcanoActive(i,t) && !volcanoActive(i,t-1))
       news(VOLCANOES[i].dl, VOLCANOES[i].line);
+  {
+    const ai=REG.findIndex(r=>r.kind==="ice");
+    if(ai>=0){
+      const prevIce=iceMelt;
+      iceMelt=Math.min(1, iceMelt + Math.max(0, row.anomalies[ai]-0.3)*0.15);
+      const MELT=[[0.2,"The ice is thinner every year. Captains talk about routes that did not used to exist."],
+                  [0.5,"The Northwest Passage is open water in September. First cargo transits."],
+                  [0.8,"The pole is blue. Nobody alive has seen this before."]];
+      for(const [th,line] of MELT)
+        if(prevIce<th && iceMelt>=th) news("LONGYEARBYEN", line, th>=0.5);
+    }
+  }
   await phaseShow(1);
   const seasonName=(ti)=>{ const c=MODEL.climate[ti-1];
     return c? `${c.qtr.toLowerCase()} ${c.year}` : "beyond the decade"; };
@@ -1046,7 +1071,20 @@ async function runSeason(auto){
     sevStreak[ri] = severe? sevStreak[ri]+1 : 0;
     if(!severe) continue;
     const pct=fmt(row.yields[ri],0), outside=Math.abs(a)>s, pos=REGPOS[r.name];
-    if(a<0) news(DATELINE[r.name],
+    if(r.kind==="ice")
+      news(DATELINE[r.name], a>0
+        ? `Record melt across the ${r.name}. Ice loss without precedent.`
+        : `Hard freeze locks the ${r.name}. Sea lanes close.`, outside);
+    else if(r.kind==="hub"){
+      if(a<0) news(DATELINE[r.name],
+        `Water and power fail across ${r.name} — output at ${pct}%.${outside?" No relief in the forecast.":""}`, outside);
+      else {
+        news(DATELINE[r.name],
+          `Flooding shuts ${r.name} — output at ${pct}%. Shipments missed worldwide.`, outside);
+        if(outside) effects.push({type:"storm",pos,bornT:t,life:1});
+      }
+    }
+    else if(a<0) news(DATELINE[r.name],
       `${r.crop} harvest fails — down to ${pct}%.${outside?" Meteorologists find no precedent.":""}`, outside);
     else {
       news(DATELINE[r.name],
