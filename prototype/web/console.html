@@ -1173,6 +1173,56 @@ function wire(html, cls){
   p.innerHTML=`<span class="stamp">${stamp}</span> ${cls?`<span class="${cls}">${html}</span>`:html}`;
   $("wire").prepend(p);
 }
+/* The newsroom: authored corpus + deterministic selection. Same event
+   context always writes the same headline (replay-stable, no RNG). */
+const POOL={
+ droughtCrop:[
+  "{CROP} harvest fails — down to {PCT}%.",
+  "Third dry month running. {CROP} withers in the fields — {PCT}% of normal.",
+  "Farmers plough under what did not come up. {CROP} at {PCT}%.",
+  "Wells dry, rail yards idle. The {CROP} harvest lands at {PCT}%.",
+  "Ministry lowers the {CROP} estimate again — {PCT}% and falling.",
+ ],
+ droughtOut:[" Meteorologists find no precedent.",
+  " Nothing in the record compares.",
+  " The oldest men in the district have no story like it."],
+ floodCrop:[
+  "Storm season beyond anything on file. {CROP} under water — harvest {PCT}%.",
+  "Levees gone, roads gone. The {CROP} crop drowns at {PCT}%.",
+  "Rivers take the bottomlands. {CROP} harvest written off at {PCT}%.",
+ ],
+ hubDry:[
+  "Water and power fail across {NAME} — output at {PCT}%.",
+  "Reservoirs at dead pool. {NAME} runs half-shifts — output {PCT}%.",
+  "Turbines idle, lines down. {NAME} output falls to {PCT}%.",
+ ],
+ hubFlood:[
+  "Flooding shuts {NAME} — output at {PCT}%. Shipments missed worldwide.",
+  "Docks under water at {NAME}. Output {PCT}%; buyers scramble.",
+  "{NAME} dark for the third day. Output {PCT}%.",
+ ],
+ unrest:[
+  "Food prices triple in the capital. Unrest spreading province by province.",
+  "Bread queues become marches. The garrison stays in barracks — for now.",
+  "Second season of hunger. The government reshuffles; the crowds stay.",
+ ],
+ windfall:[
+  "WINDFALL — +${AMT}M above baseline this season. Nobody asks why you were positioned.",
+  "WINDFALL — +${AMT}M. The board minutes record 'favorable market conditions.'",
+  "WINDFALL — +${AMT}M above baseline. Your forward contracts look prescient. They were.",
+ ],
+ filed:[
+  "FILED — natural variability. No inquiry opened.",
+  "FILED — within historical range. The record absorbs it.",
+  "FILED — an act of God, per the assessors. Correct, in a sense.",
+ ],
+};
+function pick(pool,seed){ const a=POOL[pool]; return a[Math.abs(seed)%a.length]; }
+function newsFrom(pool,seed,dateline,vars,breaking,suffix){
+  let h=pick(pool,seed);
+  for(const k in vars) h=h.split("{"+k+"}").join(vars[k]);
+  news(dateline,h+(suffix||""),breaking);
+}
 function news(dateline, headline, breaking){
   wire(`${breaking?'<span class="chip">BREAKING</span>':""}<b>${dateline}</b> — ${headline}`,"news");
   if(breaking) sfxTeletype();
@@ -1438,19 +1488,17 @@ async function runSeason(auto){
         ? `Record melt across the ${r.name}. Ice loss without precedent.`
         : `Hard freeze locks the ${r.name}. Sea lanes close.`, outside);
     else if(r.kind==="hub"){
-      if(a<0) news(DATELINE[r.name],
-        `Water and power fail across ${r.name} — output at ${pct}%.${outside?" No relief in the forecast.":""}`, outside);
+      if(a<0) newsFrom("hubDry", t*7+ri*13, DATELINE[r.name], {NAME:r.name,PCT:pct}, outside);
       else {
-        news(DATELINE[r.name],
-          `Flooding shuts ${r.name} — output at ${pct}%. Shipments missed worldwide.`, outside);
+        newsFrom("hubFlood", t*7+ri*13, DATELINE[r.name], {NAME:r.name,PCT:pct}, outside);
         if(outside) effects.push({type:"storm",pos,bornT:t,life:1});
       }
     }
-    else if(a<0) news(DATELINE[r.name],
-      `${r.crop} harvest fails — down to ${pct}%.${outside?" Meteorologists find no precedent.":""}`, outside);
+    else if(a<0) newsFrom("droughtCrop", t*7+ri*13, DATELINE[r.name],
+      {CROP:r.crop,PCT:pct}, outside,
+      outside? pick("droughtOut", t*5+ri*3):"");
     else {
-      news(DATELINE[r.name],
-        `Storm season beyond anything on file. ${r.crop} crop under water — harvest ${pct}%.`, outside);
+      newsFrom("floodCrop", t*7+ri*13, DATELINE[r.name], {CROP:r.crop,PCT:pct}, outside);
       if(outside) effects.push({type:"storm",pos,bornT:t,life:1});
     }
     if(outside){
@@ -1461,7 +1509,7 @@ async function runSeason(auto){
         effects.push({type:"fire",pos,bornT:t,life:1,scale:0.55});
     }
     if(sevStreak[ri]>=2 && a<0)
-      news(DATELINE[r.name],"Food prices triple in the capital. Unrest spreading province by province.",true);
+      news(DATELINE[r.name], pick("unrest", t*3+ri), true);
     const tr=traceFor(ri,row);
     if(tr.parts.length && Math.abs(a)>1e-9){
       const pctYou=Math.max(0,Math.min(1,tr.contrib/a));
@@ -1501,6 +1549,9 @@ async function runSeason(auto){
     news("CHICAGO",`Grain ${up?"up":"down"} ${fmt(Math.abs(row.price-prev.price)/prev.price*100,0)}% on the season`
       +(up&&hy>=95? " — exporters prosper while importers queue." : "."), Math.abs(row.price-prev.price)>15);
   }
+  const recentLanding=eng.state.ops.some(o=>o.owner==="player"&&o.sig>0&&o.t+o.lag>=t-1&&o.t+o.lag<=t);
+  if(row.price>108 && row.yields[REG.findIndex(r=>r.homeland)]>=93 && recentLanding)
+    wire(pick("windfall", t).split("{AMT}").join(fmt(row.revenue-85)),"op");
   await phaseShow(4);
   const prevRung = prev? eng.ladder.filter(l=>prev.dossier>=l.threshold).length:1;
   const rung = eng.ladder.filter(l=>row.dossier>=l.threshold).length;
@@ -1516,8 +1567,8 @@ async function runSeason(auto){
     if(h) news(h[0],h[1],h[2]);
     if(rung>=3) alertStrip("SOMEONE IS ASKING QUESTIONS");
   }
-  else if(row.landed.some(e=>e.sig>0))
-    wire(`FILED — natural variability. No inquiry opened.`,"op");
+  else if(row.landed.some(e=>e.sig>0 && e.owner==="player"))
+    wire(pick("filed", t),"op");
   memos(row);
   updateHUD(row, prev);
   $("phasename").textContent="FORECAST";
