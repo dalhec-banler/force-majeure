@@ -1673,6 +1673,8 @@ async function runSeason(auto){
   await phaseShow(2);
   const nowMs=performance.now();
   for(const e of row.landed){
+    if(e.owner!=="player") continue;   // rival work is covert — anomalies only
+    if(!e.first) continue;             // burn-down continuations stay quiet
     const toPos = e.kind==="region"? REGPOS[e.target] : DRVPOS[e.target];
     if(toPos && !reduced) flash.push({from:homePos, to:toPos, until:nowMs+1500, dur:1500});
     if(e.cap.includes("displacement")){
