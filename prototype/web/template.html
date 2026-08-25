@@ -49,6 +49,11 @@
   #hover .num{font-variant-numeric:tabular-nums}
   #banner{position:absolute;left:14px;bottom:96px;font-size:11px;
           color:var(--amber);letter-spacing:.1em;display:none;z-index:4}
+  #legend{position:absolute;left:14px;top:10px;z-index:4;display:flex;gap:12px;
+          font-size:10px;letter-spacing:.08em;color:var(--ink-dim);
+          background:rgba(10,15,12,.7);padding:4px 10px;border:1px solid var(--line)}
+  #legend i{display:inline-block;width:8px;height:8px;transform:rotate(45deg);
+            margin-right:5px;vertical-align:-1px}
 
   /* alerts — breaking-news chyrons over the globe */
   #alerts{position:absolute;top:10px;left:50%;transform:translateX(-50%);
@@ -211,6 +216,12 @@
     <div id="alerts"></div>
     <div id="hover"></div>
     <div id="banner"></div>
+    <div id="legend">
+      <span><i style="background:#53d97b"></i>thriving</span>
+      <span><i style="background:#e0a458"></i>strained</span>
+      <span><i style="background:#e05252"></i>failing</span>
+      <span style="color:var(--ink-faint)">⚠ famine · ring = natural envelope</span>
+    </div>
     <div id="traywrap">
       <div id="armed"></div>
       <div id="toolinfo">Pick a tool. Aim it at the world. Scroll to zoom.</div>
@@ -791,10 +802,31 @@ function drawGlobe(now){
       if(Math.abs(a)>sig){ cx.strokeStyle="rgba(255,244,230,.9)"; cx.lineWidth=1.6;
         cx.beginPath(); cx.arc(p.x,p.y,k*Math.abs(a)+2,0,7); cx.stroke(); cx.lineWidth=1; }
     }
-    cx.fillStyle = r.homeland? "#53d97b":"rgba(200,230,207,.85)";
-    cx.beginPath(); cx.arc(p.x,p.y,2.6,0,7); cx.fill();
-    if(r.homeland){ cx.strokeStyle="rgba(83,217,123,.7)";
-      cx.beginPath(); cx.arc(p.x,p.y,5,0,7); cx.stroke(); }
+    // condition-coded target marker on a dark halo — visible on any terrain
+    const yv = row? row.yields[ri] : 100;
+    const cond = yv>=90? "#53d97b" : yv>=60? "#e0a458" : "#e05252";
+    cx.fillStyle="rgba(3,7,5,.6)";
+    cx.beginPath(); cx.arc(p.x,p.y,7.5,0,7); cx.fill();
+    cx.save(); cx.translate(p.x,p.y); cx.rotate(Math.PI/4);
+    cx.fillStyle=cond; cx.fillRect(-3.4,-3.4,6.8,6.8);
+    cx.strokeStyle="rgba(3,7,5,.9)"; cx.lineWidth=1; cx.strokeRect(-3.4,-3.4,6.8,6.8);
+    cx.restore();
+    if(yv<60){                              // failing: pulsing distress ring
+      const ph=(nowMs/900)%1;
+      cx.strokeStyle=`rgba(224,82,82,${0.7*(1-ph)})`;
+      cx.beginPath(); cx.arc(p.x,p.y,7+ph*9,0,7); cx.stroke();
+    }
+    if(r.homeland){ cx.strokeStyle="rgba(83,217,123,.9)"; cx.lineWidth=1.4;
+      cx.beginPath(); cx.arc(p.x,p.y,10,0,7); cx.stroke(); cx.lineWidth=1; }
+    if(zoom>=1.5){                          // zoomed in: name the target
+      const label=r.name.length>18? r.name.slice(0,17)+"…" : r.name;
+      cx.font="9px "+getComputedStyle(document.body).getPropertyValue("--mono");
+      const tw=cx.measureText(label.toUpperCase()).width;
+      cx.fillStyle="rgba(3,7,5,.65)";
+      cx.fillRect(p.x-tw/2-3,p.y+11,tw+6,12);
+      cx.fillStyle="rgba(220,240,225,.95)";
+      cx.fillText(label.toUpperCase(),p.x-tw/2,p.y+20);
+    }
     if(row && row.yields[ri]<60){       // famine indicator, pulsing
       const grave = row.yields[ri]<40;
       cx.font="11px "+getComputedStyle(document.body).getPropertyValue("--mono");
