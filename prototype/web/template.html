@@ -267,8 +267,9 @@
     <ul>
       <li><b>Pick a tool from the tray. Click a region to aim it.</b> Up to two
         operations a season. <b>The clock runs</b> — seasons close on their
-        own; RUN SEASON jumps you forward. Most of what you order lands
-        seasons later — watch the countdown board.</li>
+        own; RUN SEASON jumps you forward. Tools act by next season; the
+        knock-on consequences take longer and land somewhere else — watch
+        the countdown board.</li>
       <li><b>The ring around each region</b> is what nature could plausibly do
         on its own. Stay inside it and you were never here. Break it and
         somebody starts a file.</li>
@@ -300,7 +301,7 @@ const LAND = __LAND__;
 __ENGINE__
 
 /* ---------------------------------------------------------------- setup */
-const eng = createEngine(MODEL, {rivals:true, idleTrim:0.6});
+const eng = createEngine(MODEL, {rivals:true, idleTrim:0.6, jetstream:true});
 const REG = eng.regions, DRV = eng.drivers, CAPS = eng.capabilities;
 const ND = DRV.length;
 const REGPOS = { "North American Plains":[41.5,-100], "Black Sea Steppe":[48,34],
@@ -318,7 +319,7 @@ const DATELINE = { "North American Plains":"OMAHA","Black Sea Steppe":"ODESSA",
   "Andean Copper Belt":"ANTOFAGASTA","Congo Cobalt Belt":"LUBUMBASHI",
   "North Sea Energy Shelf":"ABERDEEN","Ganges Delta Ports":"DHAKA",
   "Siberian Gas Fields":"NOVOSIBIRSK","Arctic Shelf":"LONGYEARBYEN" };
-const TOOLICON = { "Cloud Seeding":"☁","Watershed Interference":"⏚",
+const TOOLICON = { "Cloud Seeding":"☁","Watershed Interference":"🚱",
   "Fire Enablement":"🔥","Adaptation Investment":"🛡","Ocean Thermal Forcing":"🌊",
   "Stratospheric Aerosol Inj.":"✈","ENSO Forcing":"🌀","Ionospheric Coupling [T3]":"⚡",
   "Polar Destabilization":"🧊" };
@@ -1063,6 +1064,13 @@ async function runSeason(auto){
       }
     }
   }
+  if(row.jetTriggered){
+    alarm(); shakeNow();
+    alertStrip("JET STREAM DISRUPTED — NORTHERN HEMISPHERE");
+    news("REYKJAVIK","The polar jet has buckled. Forecasters describe weather without precedent across the northern hemisphere.",true);
+    wire(`MEMO — Meteorology desk: the circulation is broken. Everything above 40°N is a coin flip for three seasons — including us.`,"memo");
+  } else if(prev && prev.jetActive && !row.jetActive)
+    news("REYKJAVIK","The polar jet settles into a new pattern. Forecasters exhale.");
   await phaseShow(3);
   let shaken=false;
   for(let ri=0;ri<REG.length;ri++){

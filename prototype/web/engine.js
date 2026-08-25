@@ -15,6 +15,10 @@ function createEngine(MODEL, opts) {
   // committee pays the mandate appropriation at this fraction. Default 1
   // (sheet behavior) keeps the conformance baseline exact.
   const idleTrim = (opts && opts.idleTrim !== undefined) ? opts.idleTrim : 1;
+  // jet stream disruption: heavy ops landing at >=55N buckle the polar jet
+  // for 3 seasons, throwing deterministic meanders across all regions >=40N.
+  // Gated (default off) so the sheet-conformance baseline is untouched.
+  const jetOn = !!(opts && opts.jetstream);
   const A = {};
   for (const [cell, o] of Object.entries(MODEL.assumptions)) A[cell] = o.value;
   // Named views of the ASSUMPTIONS cells the sheet references.
@@ -47,7 +51,7 @@ function createEngine(MODEL, opts) {
   const capByName = Object.fromEntries(
     MODEL.capabilities.map((c) => [c.name, c]));
 
-  const state = { ops: [], rows: [] };            // rows[t-1] = season t
+  const state = { ops: [], rows: [], jetUntil: 0 };  // rows[t-1] = season t
 
   function makeOp(t, capName, targetRegion, prevAnomalies, owner) {
     const cap = capByName[capName];
@@ -124,6 +128,18 @@ function createEngine(MODEL, opts) {
                       sig: 0, owner: op.owner });
     }
 
+    // jet stream check: did a heavy op just land in the high north?
+    let jetTriggered = false;
+    if (jetOn) for (const e of landed) {
+      if (e.kind !== "region") continue;
+      const reg = REGIONS[regionIndex[e.target]];
+      if (reg && (reg.lat || 0) >= 55 && Math.abs(e.mag) >= 1.0) {
+        state.jetUntil = Math.max(state.jetUntil, t + 3);
+        jetTriggered = true;
+      }
+    }
+    const jetActive = jetOn && t <= state.jetUntil;
+
     // R3 — driver totals: natural + landed driver injections.
     const driverTotals = DRIVERS.map((d, di) => {
       let v = clim.drivers[di];
@@ -147,6 +163,8 @@ function createEngine(MODEL, opts) {
       }
       for (const e of landed)
         if (e.kind === "region" && e.target === r.name) v += e.mag;
+      if (jetActive && (r.lat || 0) >= 40)
+        v += 0.6 * Math.sin(t * 2.399 + ri * 1.73);   // the broken jet meanders
       return v;
     });
     // Edge reads of season t itself never occur (all lags >= 1) — but the
@@ -229,7 +247,8 @@ function createEngine(MODEL, opts) {
     const row = { t, year: clim.year, qtr: clim.qtr, driverNat: clim.drivers,
                   driverTotals, sigmas, anomalies, resil, yields, supply,
                   price, revenue, severity, mandate, opsSpend, containment,
-                  budgetIn, trimmed, treasury, attribution, dossier, ladderText,
+                  budgetIn, trimmed, jetTriggered, jetActive,
+                  treasury, attribution, dossier, ladderText,
                   status, obsStreak, landed, committed,
                   prediction: cmd.prediction || "" };
     state.rows.push(row);

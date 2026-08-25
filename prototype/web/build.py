@@ -17,11 +17,17 @@ EXP = [
  ("Siberian Gas Fields","Natural gas",2,0.8,1.3,"hub",[0.1,0,0.15,-0.6],[2,2,3,3]),
  ("Arctic Shelf","Sea lanes and ice",1,1.2,1.4,"ice",[0.1,0,0.3,-0.6],[2,2,2,2]),
 ]
+LATS = {"North American Plains":41.5,"Black Sea Steppe":48,"La Plata Basin":-31,
+ "South Asia":22,"Southeast Asia":12,"Eastern Australia":-29,"Sahel":14,
+ "Horn of Africa":8,"Taiwan Strait Industrial":24,"Persian Gulf Terminals":26.5,
+ "Andean Copper Belt":-24,"Congo Cobalt Belt":-11,"North Sea Energy Shelf":57,
+ "Ganges Delta Ports":22.5,"Siberian Gas Fields":62,"Arctic Shelf":76}
 for (name,com,wt,sens,sig,kind,co,lg) in EXP:
     M["regions"].append({"name":name,"crop":com,"weight":wt,"sens":sens,
                          "sigma":sig,"homeland":False,"kind":kind})
     for di in range(4):
         M["coeff"][di].append(co[di]); M["lags"][di].append(lg[di])
+for r in M["regions"]: r["lat"] = LATS.get(r["name"], 0)
 total = sum(r["weight"] for r in M["regions"])
 for r in M["regions"]: r["weight"] = round(r["weight"]*100.0/total, 4)
 # deterministic weather noise for the new regions
@@ -35,6 +41,16 @@ for row in M["climate"]:
 M["capabilities"].append({"name":"Polar Destabilization","type":"REGION",
     "fixedTarget":0,"mag":2.2,"lag":4,"sig":16,"cost":38,"dispTo":"GLOBAL",
     "dispFactor":0.35,"dispExtraLag":3,"needsDrought":False,"resil":0})
+# Pacing tune (author, 2026-08-24): tools act fast — everything lands next
+# season. The butterfly stays slow: teleconnection edge lags and ledger
+# displacement debts are untouched, so consequences still arrive seasons
+# later, somewhere else. dispExtraLag is re-based so debts keep their
+# original arrival distance from the commit.
+for c in M["capabilities"]:
+    if c["lag"] > 1:
+        if isinstance(c.get("dispTo"), str) and c["dispTo"]:
+            c["dispExtraLag"] = c["dispExtraLag"] + (c["lag"] - 1)
+        c["lag"] = 1
 
 tpl = (d / "template.html").read_text()
 land = (d / "land.json").read_text()
