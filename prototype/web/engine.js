@@ -71,6 +71,7 @@ function createEngine(MODEL, opts) {
           lag: cap.lag + cap.dispExtraLag }
       : null;
     return { t, cap: cap.name, type: cap.type, target, mag, lag: cap.lag,
+             dur: cap.dur || 1, decay: cap.decay === undefined ? 1 : cap.decay,
              sig: cap.sig, cost: cap.cost, disp, resil: cap.resil,
              owner: owner || "player" };
   }
@@ -117,15 +118,20 @@ function createEngine(MODEL, opts) {
     // R2 — maturation scan: effects landing at t from strictly prior commits.
     const landed = [];
     for (const op of state.ops) {
-      if (op.t >= t) continue;
-      if (op.t + op.lag === t && op.mag !== 0)
+      if (op.lag === 0 ? op.t > t : op.t >= t) continue;
+      const start = op.t + op.lag, dur = op.dur || 1;
+      if (t >= start && t < start + dur && op.mag !== 0) {
+        const k = t - start;                        // effect age (burn-down)
         landed.push({ kind: DRIVERS.includes(op.target) ? "driver" : "region",
-                      target: op.target, mag: op.mag, cap: op.cap,
-                      committedT: op.t, sig: op.sig, owner: op.owner });
+                      target: op.target, mag: op.mag * Math.pow(op.decay, k),
+                      cap: op.cap, committedT: op.t,
+                      sig: k === 0 ? op.sig : 0,    // signature on first landing
+                      first: k === 0, age: k, owner: op.owner });
+      }
       if (op.disp && op.t + op.disp.lag === t)
         landed.push({ kind: "driver", target: op.disp.to, mag: op.disp.mag,
                       cap: op.cap + " (displacement)", committedT: op.t,
-                      sig: 0, owner: op.owner });
+                      sig: 0, first: true, age: 0, owner: op.owner });
     }
 
     // jet stream check: did a heavy op just land in the high north?

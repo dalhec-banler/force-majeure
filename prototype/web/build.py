@@ -41,16 +41,28 @@ for row in M["climate"]:
 M["capabilities"].append({"name":"Polar Destabilization","type":"REGION",
     "fixedTarget":0,"mag":2.2,"lag":4,"sig":16,"cost":38,"dispTo":"GLOBAL",
     "dispFactor":0.35,"dispExtraLag":3,"needsDrought":False,"resil":0})
-# Pacing tune (author, 2026-08-24): tools act fast — everything lands next
-# season. The butterfly stays slow: teleconnection edge lags and ledger
-# displacement debts are untouched, so consequences still arrive seasons
-# later, somewhere else. dispExtraLag is re-based so debts keep their
-# original arrival distance from the commit.
+# Pacing tune (author): tools act NOW or next season, then burn down over
+# a duration with decay. Ledger displacement debts keep their original
+# sheet arrival distance from the commit. Signature charges once, on the
+# first landing.
+TUNE = {  # name: (lag, dur, decay)
+ "Cloud Seeding": (0,2,0.5),
+ "Watershed Interference": (1,3,0.7),
+ "Fire Enablement": (0,3,0.6),
+ "Ocean Thermal Forcing": (1,3,0.7),
+ "Stratospheric Aerosol Inj.": (1,4,0.75),
+ "ENSO Forcing": (1,2,0.6),
+ "Ionospheric Coupling [T3]": (0,2,0.5),
+ "Polar Destabilization": (1,3,0.7),
+}
+SHEET_ARRIVAL = {"Ocean Thermal Forcing":8,"Stratospheric Aerosol Inj.":7,
+                 "ENSO Forcing":11,"Polar Destabilization":7}
 for c in M["capabilities"]:
-    if c["lag"] > 1:
+    if c["name"] in TUNE:
+        lag,dur,dec = TUNE[c["name"]]
+        c["lag"], c["dur"], c["decay"] = lag, dur, dec
         if isinstance(c.get("dispTo"), str) and c["dispTo"]:
-            c["dispExtraLag"] = c["dispExtraLag"] + (c["lag"] - 1)
-        c["lag"] = 1
+            c["dispExtraLag"] = SHEET_ARRIVAL[c["name"]] - lag
 
 tpl = (d / "template.html").read_text()
 land = (d / "land.json").read_text()
@@ -61,6 +73,8 @@ out = (tpl.replace("__MODEL__", json.dumps(M, separators=(",",":")))
           .replace("__ENGINE__", engine)
           .replace("__EARTH__", b64("earth.b64"))
           .replace("__CLOUDS__", b64("clouds.b64"))
-          .replace("__STORM__", b64("storm.b64")))
+          .replace("__STORM__", b64("storm.b64"))
+          .replace("__VOLCANO__", b64("volcano.b64"))
+          .replace("__SMOKE__", b64("smoke.b64")))
 (d / "console.html").write_text(out)
 print(f"console.html: {len(out):,} bytes · {len(M['regions'])} regions · {len(M['capabilities'])-1} tools")

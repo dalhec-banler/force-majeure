@@ -61,6 +61,9 @@
   #alarmflash{position:fixed;inset:0;pointer-events:none;z-index:9;opacity:0;
     background:radial-gradient(ellipse at center,rgba(224,82,82,0) 40%,rgba(224,82,82,.3))}
   #alarmflash.on{animation:alarmpulse .9s ease-out}
+  #flashbang{position:fixed;inset:0;pointer-events:none;z-index:9;opacity:0;background:#fff}
+  #flashbang.on{animation:fbpulse .45s ease-out}
+  @keyframes fbpulse{0%{opacity:.85}100%{opacity:0}}
   @keyframes alarmpulse{0%{opacity:1}100%{opacity:0}}
   .shake{animation:shake .4s}
   @keyframes shake{20%{transform:translate(4px,-3px)}40%{transform:translate(-4px,3px)}
@@ -194,6 +197,9 @@
   <span class="stat"><span class="lbl">FEAR</span></span><span id="hMandateWrap"><span id="hMandate" style="width:28%"></span></span>
   <span class="stat"><span class="lbl">GRAIN</span><span class="val" id="hPrice">100.0</span><span class="d" id="hPriceD"></span></span>
   <span class="stat"><span class="lbl">HARVEST</span><span class="val" id="hYield">—</span></span>
+  <span class="stat"><span class="lbl">PROFIT</span><span class="val" id="hProfit">$0M</span></span>
+  <span class="stat"><span class="lbl">DEATH TOLL</span><span class="val" id="hDead" style="color:var(--red)">0</span></span>
+  <span class="stat"><span class="lbl">SEASON CLOSES</span><span class="val" id="szclock">—</span></span>
   <span id="phase">PHASE <b id="phasename">FORECAST</b></span>
   <span id="clock">1946 · WINTER</span>
 </header>
@@ -249,11 +255,13 @@
 
 <footer>
   <span>EYES ONLY // NOFORN // 40-SEASON CORE-LOOP INSTRUMENT</span>
+  <button id="sndtoggle">SOUND: ON</button>
   <button id="teltoggle">TELEMETRY: LADDER ONLY</button>
 </footer>
 </div>
 
 <div id="alarmflash"></div>
+<div id="flashbang"></div>
 
 <div class="overlay" id="intro">
   <div class="sheet">
@@ -337,6 +345,12 @@ let pendingTool = null;          // tool waiting for a globe click
 let slots = [];                  // armed ops, max 2: {cap, target}
 let sevStreak = REG.map(()=>0);  // consecutive severe seasons per region
 let iceMelt = 0;                 // 0..1, cumulative Arctic melt (visual + news)
+let cumDead = 0, cumDeadYours = 0;   // estimated excess mortality (information)
+function fmtDead(n){
+  if(n>=1e6) return (n/1e6).toFixed(1)+"M";
+  if(n>=1e3) return Math.round(n/1e3)+"K";
+  return Math.round(n).toString();
+}
 
 function fmt(n,d=1){ return n.toLocaleString("en-US",
   {minimumFractionDigits:d,maximumFractionDigits:d}); }
@@ -599,11 +613,14 @@ function drawEffects(nowMs){
         g.addColorStop(1,"rgba(224,90,52,0)");
         cx.fillStyle=g; cx.beginPath(); cx.arc(fx,fy,ks*0.55,0,7); cx.fill();
       }
-      for(let i=0;i<9;i++){                       // smoke, drifting downwind, slow
-        const ph=((nowMs/3600)+i/9)%1;
-        const sx=p.x+ph*ks*4.4+i*2, sy=p.y-ph*ks*1.4-Math.sin(i*1.3)*3;
-        cx.fillStyle=`rgba(150,150,150,${0.32*(1-ph)})`;
-        cx.beginPath(); cx.arc(sx,sy,2.5+ph*9,0,7); cx.fill();
+      if(smokeReady){                             // real MODIS smoke, downwind
+        const sw=ks*7;
+        cx.save();
+        cx.translate(p.x+ks*2.2, p.y-ks*0.8);
+        cx.rotate(-0.35+0.06*Math.sin(nowMs/2600));
+        cx.globalAlpha=0.85;
+        cx.drawImage(smokeImg,-sw*0.22,-sw*0.5,sw,sw);
+        cx.restore();
       }
     } else if(e.type==="rain"){
       cx.fillStyle="rgba(190,225,210,.22)";
@@ -616,6 +633,28 @@ function drawEffects(nowMs){
       }
     } else if(e.type==="storm"){                  // hurricane, radar-painted
       drawCyclone(p, 0.30, nowMs, {variant:Math.abs(e.pos[0]|0)%3, lat:e.pos[0]});
+    } else if(e.type==="beam"){
+      const age=nowMs-(e.ms||0);
+      if(age<1400){
+        const hot=1-age/1400;
+        const bw=3+10*hot;
+        const grad=cx.createLinearGradient(p.x,0,p.x,p.y);
+        grad.addColorStop(0,`rgba(255,255,255,0)`);
+        grad.addColorStop(0.25,`rgba(200,230,255,${0.55*hot})`);
+        grad.addColorStop(1,`rgba(255,255,255,${0.95*hot})`);
+        cx.strokeStyle=grad; cx.lineWidth=bw;
+        cx.beginPath(); cx.moveTo(p.x,0); cx.lineTo(p.x,p.y); cx.stroke();
+        cx.lineWidth=1;
+        const g2=cx.createRadialGradient(p.x,p.y,0,p.x,p.y,k*2.4*hot+4);
+        g2.addColorStop(0,`rgba(255,255,255,${0.95*hot})`);
+        g2.addColorStop(0.4,`rgba(255,210,140,${0.6*hot})`);
+        g2.addColorStop(1,"rgba(255,160,80,0)");
+        cx.fillStyle=g2; cx.beginPath(); cx.arc(p.x,p.y,k*2.4*hot+4,0,7); cx.fill();
+      } else {
+        const fl=0.5+0.5*Math.sin(nowMs/90);
+        cx.fillStyle=`rgba(255,170,90,${0.5*fl})`;
+        cx.beginPath(); cx.arc(p.x,p.y,3.5,0,7); cx.fill();
+      }
     } else if(e.type==="oceanheat"){
       const pulse=0.5+0.5*Math.sin(nowMs/350);
       const g=cx.createRadialGradient(p.x,p.y,0,p.x,p.y,k*1.7);
@@ -641,6 +680,11 @@ const volcanoActive=(i,ts)=> ((ts + i*3) % 9) < 2;
 /* a hurricane as it looks from orbit / on radar: filled spiral rainbands,
    dense core, and a real eye (erased through to the earth below) */
 const STORM_SRC="__STORM__";
+const VOLCANO_SRC="__VOLCANO__"; const SMOKE_SRC="__SMOKE__";
+const volcImg=new Image(); let volcReady=false;
+volcImg.onload=()=>{volcReady=true;}; volcImg.src=VOLCANO_SRC;
+const smokeImg=new Image(); let smokeReady=false;
+smokeImg.onload=()=>{smokeReady=true;}; smokeImg.src=SMOKE_SRC;
 /* A real hurricane (Isabel, NASA MODIS 2003, public domain), cut out of its
    ocean and rotated at a creep — the way storms actually turn from orbit. */
 const stormImg=new Image(); let stormReady=false;
@@ -674,12 +718,14 @@ function drawAmbient(nowMs){
     const fl=0.6+0.4*Math.sin(nowMs/120+i);
     cx.fillStyle=`rgba(255,150,60,${0.9*fl})`;
     cx.beginPath(); cx.arc(p.x,p.y,1.8,0,7); cx.fill();
-    for(let j=0;j<10;j++){
-      const ph=((nowMs/5200)+j/10)%1;
-      const sx=p.x+ph*k*4.6+Math.sin(j*2.7)*2;
-      const sy=p.y-ph*k*2.4-Math.sin(j*1.1)*2;
-      cx.fillStyle=`rgba(128,118,108,${0.36*(1-ph)})`;
-      cx.beginPath(); cx.arc(sx,sy,2+ph*11,0,7); cx.fill();
+    if(volcReady){
+      const vw=k*6*(1+0.04*Math.sin(nowMs/3000+i));
+      cx.save();
+      cx.translate(p.x+vw*0.1,p.y-vw*0.12);
+      cx.rotate(0.05*Math.sin(nowMs/4200+i));
+      cx.globalAlpha=0.92;
+      cx.drawImage(volcImg,-vw*0.38,-vw*0.62,vw,vw);
+      cx.restore();
     }
   }
 }
@@ -859,15 +905,17 @@ function wire(html, cls){
 }
 function news(dateline, headline, breaking){
   wire(`${breaking?'<span class="chip">BREAKING</span>':""}<b>${dateline}</b> — ${headline}`,"news");
+  if(breaking) sfxTeletype();
 }
 function alertStrip(msg){
   const d=document.createElement("div"); d.className="alertstrip"; d.textContent=msg;
   $("alerts").appendChild(d); setTimeout(()=>d.remove(), 3000);
+  sfxAlert();
 }
-function shakeNow(){ if(reduced) return;
+function shakeNow(){ sfxBoom(); if(reduced) return;
   const w=$("globe-wrap"); w.classList.remove("shake"); void w.offsetWidth;
   w.classList.add("shake"); }
-function alarm(){ if(reduced) return;
+function alarm(){ sfxKlaxon(); if(reduced) return;
   const a=$("alarmflash"); a.classList.remove("on"); void a.offsetWidth;
   a.classList.add("on"); }
 
@@ -888,14 +936,21 @@ function spark(canvas, series, color){
 function renderInflight(){
   const items=[];
   for(const o of eng.state.ops){
-    const rem=o.t+o.lag-t;
-    if(rem>0 && o.mag!==0) items.push({label:o.cap, tgt:o.target, rem, debt:false});
+    if(o.owner!=="player") continue;
+    const start=o.t+o.lag, dur=o.dur||1;
+    if(start>t && o.mag!==0)
+      items.push({label:o.cap, tgt:o.target, rem:start-t, mode:"pending"});
+    else if(o.mag!==0 && t>=start && t<start+dur && dur>1)
+      items.push({label:o.cap, tgt:o.target, rem:start+dur-1-t, mode:"active"});
     if(o.disp){ const dr=o.t+o.disp.lag-t;
-      if(dr>0) items.push({label:"LEDGER DEBT", tgt:o.disp.to, rem:dr, debt:true}); }
+      if(dr>0) items.push({label:"LEDGER DEBT", tgt:o.disp.to, rem:dr, mode:"debt"}); }
   }
   items.sort((a,b)=>a.rem-b.rem);
   $("inflight").innerHTML = items.length? items.map(i=>
-    `<div class="fl${i.rem===1?" t1":""}${i.debt?" debt":""}">
+    i.mode==="active"
+    ? `<div class="fl"><span><b>${i.label.toUpperCase()}</b> · ${i.tgt}</span>
+       <span class="tmin" style="color:var(--green)">● ACTIVE${i.rem>0?" +"+i.rem:""}</span></div>`
+    : `<div class="fl${i.rem===1&&i.mode==="pending"?" t1":""}${i.mode==="debt"?" debt":""}">
        <span><b>${i.label.toUpperCase()}</b> · ${i.tgt}</span>
        <span class="tmin">T−${i.rem}${i.rem===1?" ⚠":""}</span></div>`).join("")
     : '<p class="none">Nothing in transit. The world is doing this to itself.</p>';
@@ -913,6 +968,10 @@ function updateHUD(row, prev){
   $("hPriceD").textContent=(dp>=0?"+":"")+fmt(dp);
   $("hPriceD").className="d "+(dp>=0?"up":"down");
   $("hYield").textContent=fmt(row.yields[REG.findIndex(r=>r.homeland)],0)+"%";
+  $("hDead").textContent=fmtDead(cumDead);
+  const profit=eng.state.rows.reduce((s2,r2)=>s2+r2.revenue-85,0);
+  $("hProfit").textContent=(profit>=0?"+$":"−$")+fmt(Math.abs(profit))+"M";
+  $("hProfit").style.color=profit>=0?"var(--green)":"var(--red)";
   $("ladder").textContent=row.ladderText;
   $("ladder").className = row.dossier>=80? "hot":"";
   const rung = eng.ladder.filter(l=>row.dossier>=l.threshold).length-1;
@@ -980,6 +1039,27 @@ function memos(row){
 const PHASES=["FORECAST","COMMITMENT","RESOLUTION","CONSEQUENCES","ATTRIBUTION"];
 async function phaseShow(i){ $("phasename").textContent=PHASES[i];
   if(!reduced) await new Promise(r=>setTimeout(r,i===0?60:360)); }
+
+/* diegetic instrument audio — synthesized, no assets */
+let AC=null, sndMuted=false;
+function audioInit(){ if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } }
+function tone(f,dur,type,gain,when,slide){
+  if(!AC||sndMuted) return;
+  const o=AC.createOscillator(), g=AC.createGain();
+  o.type=type||"square"; o.frequency.value=f;
+  const t0=AC.currentTime+(when||0);
+  if(slide) o.frequency.exponentialRampToValueAtTime(slide,t0+dur);
+  g.gain.value=gain||0.05;
+  g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+  o.connect(g); g.connect(AC.destination);
+  o.start(t0); o.stop(t0+dur+0.05);
+}
+function sfxBoom(){ tone(64,0.5,"sine",0.24,0,28); tone(46,0.75,"triangle",0.16,0.04,22); }
+function sfxKlaxon(){ for(let i=0;i<2;i++){ tone(870,0.16,"square",0.045,i*0.4);
+  tone(640,0.16,"square",0.045,i*0.4+0.19); } }
+function sfxAlert(){ tone(1250,0.08,"square",0.04); tone(1650,0.08,"square",0.032,0.1); }
+function sfxClick(){ tone(340,0.035,"square",0.028); }
+function sfxTeletype(){ for(let i=0;i<5;i++) tone(1850+(i%3)*160,0.018,"square",0.02,i*0.045); }
 
 const SEASON_MS=45000;          // time does not stop; RUN SEASON jumps ahead
 let seasonDeadline=null, resolving=false;
@@ -1056,11 +1136,15 @@ async function runSeason(auto){
         shakeNow();
       }
       if(e.cap==="Cloud Seeding"&&pos) effects.push({type:"rain",pos,bornT:t,life:1});
-      if(e.cap.startsWith("Ionospheric")&&pos){
-        effects.push({type:"fire",pos,bornT:t,life:1});
-        shocks.push({pos,until:performance.now()+1600,dur:1600});
-        alertStrip("UNEXPLAINED ATMOSPHERIC EVENT — "+e.target.toUpperCase());
-        news(DATELINE[e.target],"Unexplained atmospheric event. No meteorological cause identified.",true);
+      if((e.cap.startsWith("Ionospheric")||e.cap==="Polar Destabilization")&&pos&&e.first){
+        effects.push({type:"beam",pos,bornT:t,life:1,ms:performance.now()});
+        if(e.cap.startsWith("Ionospheric"))
+          effects.push({type:"fire",pos,bornT:t,life:2,scale:1.3});
+        shocks.push({pos,until:performance.now()+1800,dur:1800});
+        const fb=$("flashbang"); if(!reduced){fb.classList.remove("on");void fb.offsetWidth;fb.classList.add("on");}
+        sfxBoom(); shakeNow();
+        alertStrip((e.cap.startsWith("Ionospheric")?"UNEXPLAINED ATMOSPHERIC EVENT — ":"POLAR SHELF STRIKE — ")+e.target.toUpperCase());
+        news(DATELINE[e.target]||"REUTERS","Unexplained atmospheric event. No meteorological cause identified.",true);
       }
     }
   }
@@ -1131,6 +1215,16 @@ async function runSeason(auto){
       }
     }
   }
+  for(let ri=0;ri<REG.length;ri++){
+    const y=row.yields[ri];
+    if(y<70){
+      const d=Math.pow(70-y,1.25)*(REG[ri].kind?350:2400)*(1+REG[ri].weight/8);
+      cumDead+=d;
+      const trD=traceFor(ri,row);
+      if(Math.abs(row.anomalies[ri])>1e-9 &&
+         Math.max(0,trD.mine/row.anomalies[ri])>0.25) cumDeadYours+=d;
+    }
+  }
   if(prev && Math.abs(row.price-prev.price)>6){
     const up=row.price>prev.price;
     const hy=row.yields[REG.findIndex(r=>r.homeland)];
@@ -1168,7 +1262,7 @@ async function runSeason(auto){
   resolving=false;
   if(running) seasonDeadline=performance.now()+SEASON_MS;
 }
-$("resolve").addEventListener("click",()=>runSeason(false));
+$("resolve").addEventListener("click",()=>{ sfxClick(); runSeason(false); });
 setInterval(()=>{
   const el=$("szclock");
   if(!running || seasonDeadline===null){ el.textContent="—"; el.style.color=""; return; }
@@ -1198,7 +1292,11 @@ function showArchive(finalRow){
     <table><tr><th>tenure</th><th>operations</th><th>seasons outside envelope</th>
     <th>peak dossier</th><th>final funds</th></tr>
     <tr><td>${rows.length} seasons</td><td>${opsDone}</td><td>${outside}</td>
-    <td>${fmt(peakDos)}</td><td>$${fmt(finalRow.treasury)}M</td></tr></table>`;
+    <td>${fmt(peakDos)}</td><td>$${fmt(finalRow.treasury)}M</td></tr></table>
+    <p>Estimated excess mortality, 1946–${finalRow.year}: <b style="color:var(--red)">${fmtDead(cumDead)}</b>
+    — of which attributable to your operations: <b>${fmtDead(cumDeadYours)}</b>.
+    Both figures appear in no report.</p>
+    <p>Profit above baseline, lifetime: <b>${(()=>{const pr=rows.reduce((s2,r2)=>s2+r2.revenue-85,0);return (pr>=0?"+$":"−$")+fmt(Math.abs(pr))+"M";})()}</b>.</p>`;
   html += `<p>${ naturalOps
     ? "Every operation you ran is still filed as natural variability. No one will ever know. Whether that is victory is not a question this office answers."
     : peakDos>=115 ? "History concluded a programme existed. Several events you did not cause are attributed to you; several you did cause are not."
@@ -1222,7 +1320,13 @@ function showArchive(finalRow){
 /* --------------------------------------------------------------- misc */
 buildTray(); renderTray();
 $("begin").addEventListener("click",()=>{ $("intro").style.display="none";
+  audioInit(); sfxClick();
   seasonDeadline=performance.now()+SEASON_MS; });
+$("sndtoggle").addEventListener("click",()=>{
+  sndMuted=!sndMuted;
+  $("sndtoggle").textContent="SOUND: "+(sndMuted?"OFF":"ON");
+  if(!sndMuted){ audioInit(); sfxClick(); }
+});
 $("teltoggle").addEventListener("click",()=>{
   telemetry=!telemetry;
   $("dosnum").style.display=telemetry?"inline":"none";
