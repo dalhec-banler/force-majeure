@@ -8,7 +8,7 @@
      Every surface and ink is painted explicitly; no host theme leaks. */
   :root{
     --ground:#0a0f0c; --panel:#0f1712; --panel2:#121c15; --line:#1d2b22;
-    --ink:#c8e6cf; --ink-dim:#7fa389; --ink-faint:#48604f;
+    --ink:#d6efdc; --ink-dim:#a4c9ae; --ink-faint:#7b9c85;   /* brightened 2026-08-26: the dashboard's dim text was too dim to read */
     --green:#53d97b; --amber:#e0a458; --red:#e05252; --cyan:#5bc8e8;
     --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
     --sans:"IBM Plex Sans",system-ui,sans-serif;
@@ -26,7 +26,7 @@
   #hdrright{display:flex;align-items:baseline;gap:16px;margin-left:auto}
   header h1{font-size:15px;font-weight:600;letter-spacing:.22em}
   .stat{display:flex;align-items:baseline;gap:6px;font-variant-numeric:tabular-nums}
-  .stat .lbl{font-size:9px;letter-spacing:.2em;color:var(--ink-faint)}
+  .stat .lbl{font-size:10px;letter-spacing:.18em;color:var(--ink-dim)}
   .stat .val{font-size:15px;font-weight:600}
   .stat .d{font-size:10px}
   .d.up{color:var(--green)} .d.down{color:var(--red)}
