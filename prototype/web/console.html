@@ -2280,6 +2280,10 @@ function drawGlobe(now){
   finally{ requestAnimationFrame(drawGlobe); }
 }
 function drawGlobeInner(now){
+  // the pane changed under us (a window resize the observer missed, a rail
+  // reflow, a tray that grew): re-size before drawing a single frame wrong
+  { const dpr=devicePixelRatio||1, pw=cv.clientWidth, ph=cv.clientHeight;
+    if(pw && (Math.round(pw*dpr)!==cv.width || Math.round(ph*dpr)!==cv.height)) sizeGlobe(); }
   if(!dragging && !reduced && !FLAT) rot += 0.022;
   const nowMs=now||0;
   cx.clearRect(0,0,W,H);
