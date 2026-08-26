@@ -100,7 +100,8 @@
                font-size:11px;padding:0;font-family:var(--mono)}
   #toolinfo{font-size:10.5px;color:var(--ink-dim);background:rgba(10,15,12,.85);
             padding:2px 10px;min-height:1.4em;max-width:100%;text-align:center}
-  #toolcard{display:none;width:min(360px,100%);background:rgba(10,15,12,.96);border:1px solid var(--line);
+  /* the briefing card floats above the tray — it never takes the globe's room */
+  #toolcard{display:none;position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);width:min(360px,calc(100vw - 40px));z-index:8;background:rgba(10,15,12,.96);border:1px solid var(--line);
             padding:9px 12px;font-size:11px;color:var(--ink-dim);line-height:1.45;text-align:left}
   #toolcard b{color:var(--ink)} #toolcard .tc-h{font-size:12px;letter-spacing:.14em;color:var(--green);margin-bottom:3px}
   #toolcard .tc-h span{color:var(--amber);float:right;letter-spacing:.04em}
@@ -1641,15 +1642,15 @@ function sizeGlobe(){
     cv.width = Math.round(rect.width*dpr); cv.height = Math.round(rect.height*dpr); }
   cx.setTransform(dpr,0,0,dpr,0,0);
   W=rect.width; H=rect.height;
-  const ts=$("topstrip"), tw=$("traywrap");
+  const ts=$("topstrip"), tb=$("toolbar");
   const top = ts? Math.max(0,(ts.getBoundingClientRect().bottom-rect.top)) : 0;
-  const bot = tw? Math.max(top+80, tw.getBoundingClientRect().top-rect.top) : H;
+  const bot = tb? Math.max(top+80, tb.getBoundingClientRect().top-rect.top-26) : H;   // the tray's own top (the hint line above it), never a floating card
   const free=Math.max(120, bot-top);
   CXp=W/2; CYp=top+free/2;
   Rbase=Math.min(W*0.44, free*0.5); Rp=Rbase*zoom;
 }
 addEventListener("resize", sizeGlobe); sizeGlobe();
-if(typeof ResizeObserver!=="undefined"){ const ro=new ResizeObserver(()=>sizeGlobe()); ro.observe(cv.parentElement); const tw=$("traywrap"); if(tw) ro.observe(tw); }
+if(typeof ResizeObserver!=="undefined"){ const ro=new ResizeObserver(()=>sizeGlobe()); ro.observe(cv.parentElement); const tb=$("toolbar"); if(tb) ro.observe(tb); }   // the tray itself, not the wrapper — the floating card must not move the globe
 let lastY=0;
 cv.addEventListener("pointerdown",e=>{dragging=true;moved=0;lastX=e.clientX;lastY=e.clientY;cv.setPointerCapture(e.pointerId)});
 cv.addEventListener("pointerup",e=>{ dragging=false; if(moved<5) globeClick(e); });

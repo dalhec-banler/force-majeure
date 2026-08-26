@@ -12,15 +12,15 @@ function sizeGlobe(){
     cv.width = Math.round(rect.width*dpr); cv.height = Math.round(rect.height*dpr); }
   cx.setTransform(dpr,0,0,dpr,0,0);
   W=rect.width; H=rect.height;
-  const ts=$("topstrip"), tw=$("traywrap");
+  const ts=$("topstrip"), tb=$("toolbar");
   const top = ts? Math.max(0,(ts.getBoundingClientRect().bottom-rect.top)) : 0;
-  const bot = tw? Math.max(top+80, tw.getBoundingClientRect().top-rect.top) : H;
+  const bot = tb? Math.max(top+80, tb.getBoundingClientRect().top-rect.top-26) : H;   // the tray's own top (the hint line above it), never a floating card
   const free=Math.max(120, bot-top);
   CXp=W/2; CYp=top+free/2;
   Rbase=Math.min(W*0.44, free*0.5); Rp=Rbase*zoom;
 }
 addEventListener("resize", sizeGlobe); sizeGlobe();
-if(typeof ResizeObserver!=="undefined"){ const ro=new ResizeObserver(()=>sizeGlobe()); ro.observe(cv.parentElement); const tw=$("traywrap"); if(tw) ro.observe(tw); }
+if(typeof ResizeObserver!=="undefined"){ const ro=new ResizeObserver(()=>sizeGlobe()); ro.observe(cv.parentElement); const tb=$("toolbar"); if(tb) ro.observe(tb); }   // the tray itself, not the wrapper — the floating card must not move the globe
 let lastY=0;
 cv.addEventListener("pointerdown",e=>{dragging=true;moved=0;lastX=e.clientX;lastY=e.clientY;cv.setPointerCapture(e.pointerId)});
 cv.addEventListener("pointerup",e=>{ dragging=false; if(moved<5) globeClick(e); });
