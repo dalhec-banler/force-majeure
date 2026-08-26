@@ -315,15 +315,21 @@
 .tool.wing .mb{display:inline}
 .tool .mb:hover{opacity:1;color:var(--amber)}
 #resume{margin-left:8px}
-#homepick{margin:12px 0 10px}
-#homepick .hp-h{font-size:9px;letter-spacing:.22em;color:var(--ink-dim);margin-bottom:6px}
-#homepickrow{display:flex;flex-wrap:wrap;gap:6px}
-.hp{background:var(--panel2);border:1px solid var(--line);color:var(--ink);font:inherit;text-align:left;padding:7px 9px;cursor:pointer;flex:1 1 220px;min-width:220px}
-.hp b{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.14em} .hp b em{font-style:normal;font-size:9px;letter-spacing:.2em}
-.hp .hp-pm{margin-top:4px} .hp .hp-pm i{display:block;font-style:normal;font-size:10px;line-height:1.35} .hp .hp-pm i.p{color:var(--green)} .hp .hp-pm i.m{color:var(--amber)}
-.hp span{display:block;font-size:10.5px;color:var(--ink-dim);margin-top:2px;line-height:1.35}
+#homepick{margin:14px 0 12px}
+#homepick .hp-h{font-size:9px;letter-spacing:.22em;color:var(--ink-dim);margin-bottom:8px}
+#homepickrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:8px;align-items:stretch}
+.hp{background:var(--panel2);border:1px solid var(--line);color:var(--ink);font:inherit;text-align:left;padding:10px 12px 11px;cursor:pointer;display:flex;flex-direction:column;gap:5px;min-height:100%}
+.hp .hp-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.hp .hp-nation{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.16em}
+.hp .hp-diff{font-family:var(--mono);font-size:9px;letter-spacing:.2em;border:1px solid;padding:1px 6px;white-space:nowrap}
+.hp .hp-meta{font-family:var(--sans);font-size:11.5px;color:var(--ink-dim);line-height:1.35} .hp .hp-meta b{color:var(--ink);font-weight:500}
+.hp .hp-cols{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:5px;padding-top:7px;border-top:1px solid var(--line)}
+.hp .hp-cols .hp-h{margin-bottom:4px}
+.hp .hp-li{font-family:var(--sans);font-size:11px;line-height:1.35;padding-left:11px;text-indent:-11px;margin:0 0 3px;color:var(--ink)}
+.hp .hp-li.p::before{content:"+ ";color:var(--green)} .hp .hp-li.m::before{content:"− ";color:var(--amber)}
 .hp.on{border-color:var(--green);box-shadow:inset 0 0 0 1px var(--green)}
 .hp:hover{border-color:var(--ink-dim)}
+#intro .sheet{max-width:min(760px,94vw)}
 /* the archive as a file to study */
 .sheet.archive{max-width:min(1120px,94vw);padding:22px 28px;position:relative}
 .sheet.archive h3{font-size:10px;letter-spacing:.28em;color:var(--ink-dim);margin:18px 0 6px;border-top:1px solid var(--line);padding-top:10px}
@@ -368,3 +374,7 @@
 .dircard.lapsed{border-color:var(--red)} .dircard.lapsed .dc-h{color:var(--red)}
 #dirpanel{padding-bottom:8px}
 #wirepanel{flex:1 1 320px;min-height:260px}
+
+/* a wing the chest can carry: not dimmed, STAND UP in green, glowing until looked at */
+.tool.locked.standable{opacity:.9;filter:none;border-color:rgba(83,217,123,.6)}
+.tool.locked.standable .pr{color:var(--green)}

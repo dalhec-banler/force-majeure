@@ -4,10 +4,14 @@ buildTray(); clampContainment(); renderTray(); renderDirective(); renderReviewBu
 { const home=REG.find(r=>r.homeland);
   $("introHome").textContent="the "+home.name; $("introCrop").textContent=(home.crop||"").toLowerCase();
   const row=$("homepickrow");
-  for(const [region,st] of Object.entries(STARTS)){
+  const crop=r=>(REG.find(x=>x.name===r)||{}).crop||"";
+  for(const [region,st] of Object.entries(STARTS).sort((a,b)=>(a[1].rank||9)-(b[1].rank||9))){
     const b=document.createElement("button"); b.className="hp"+(region===HOMELAND?" on":"");
-    b.innerHTML=`<b>${st.nation} <em style="color:${st.dcol}">${st.difficulty}</em></b><span>${region} · chest $${st.treasury}M · rival: ${st.rivalName}</span><span>${st.blurb}</span>
-      <span class="hp-pm">${(st.plus||[]).map(x=>`<i class="p">+ ${x}</i>`).join("")}${(st.minus||[]).map(x=>`<i class="m">− ${x}</i>`).join("")}</span>`;
+    b.innerHTML=`<div class="hp-top"><span class="hp-nation">${st.nation}</span><span class="hp-diff" style="color:${st.dcol};border-color:${st.dcol}">${st.difficulty}</span></div>
+      <div class="hp-meta">${region} · ${crop(region).toLowerCase()}</div>
+      <div class="hp-meta">chest <b>$${st.treasury}M</b> · committee <b>${(st.mandate||0)>=0?"+":""}${st.mandate||0}</b> · rival <b>${st.rivalName}</b></div>
+      <div class="hp-cols"><div><div class="hp-h">STRENGTHS</div>${(st.plus||[]).map(x=>`<div class="hp-li p">${x}</div>`).join("")}</div>
+      <div><div class="hp-h">WEAKNESSES</div>${(st.minus||[]).map(x=>`<div class="hp-li m">${x}</div>`).join("")}</div></div>`;
     b.addEventListener("click",()=>{ if(region===HOMELAND) return; try{ localStorage.setItem("fm.homeland", region); }catch(e){} location.reload(); });
     row.appendChild(b); } }
 requestAnimationFrame(drawGlobe);            // every part has run; the loop may start

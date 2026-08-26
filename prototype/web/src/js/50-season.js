@@ -67,6 +67,13 @@ async function runSeasonInner(auto, cmdOverride){
     alertStrip(`NEW CAPABILITY — ${nm} IS POSSIBLE`);
     wire(`<span class="tag tagd">NEW WING</span><b>${nm}</b> — the century has made it possible. ${(c.upkeep||0)<=1? "The lab stands it up on its own." : ws.canStand? "The chest can carry it: order it up from the tray." : `Stand it up when the chest holds $${Math.round(ws.need)}M; upkeep $${ws.upkeep}M a season.`}`,"op");
     sfxChime(); }
+  // the chest can now carry a wing: say so, and light it until it is looked at
+  if(eng.eras) for(const c of CAPS){ if(c.type==="NONE"||!(c.chest>0)||(c.upkeep||0)<=1||readySeen.has(c.name)||readyWings.has(c.name)) continue;
+    const ws=eng.wingStatus(c.name); if(!ws||ws.online||ws.ever||!ws.eligible||!ws.canStand) continue;
+    readyWings.add(c.name); const nm=c.name.replace(" [T3]","").toUpperCase();
+    alertStrip(`WING READY — ${nm} CAN STAND UP`);
+    wire(`<span class="tag tagd">WING READY</span><b>${nm}</b> — the chest holds $${fmt(row.treasury,0)}M; the committee will stand the wing up on your order. Click it in the tray. Upkeep $${ws.upkeep}M a season.`,"op");
+    sfxChime(); }
   for(const g of (row.regionEvents||[])){
     const r=REG[g.ri];
     news(DATELINE[r.name]||r.name.toUpperCase(), `${r.name} is on the board — ${(r.crop||"").toLowerCase()}. ${r.kind==="hub"?"A chokepoint the world now runs through.":r.kind==="ice"?"Sea lanes where the ice used to be.":"A harvest the markets now price."}`, false);
