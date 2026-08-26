@@ -848,7 +848,7 @@ function initEarth(){
   const fs=`precision mediump float;
     uniform sampler2D uT,uCl;uniform vec2 uC;
     uniform float uR,uRot,uTilt,uClOff,uHasCl;
-    uniform vec3 uRV[16];uniform float uRD[16];uniform float uDV[16];uniform float uIceEdge,uDevG,uT2,uFlat;
+    uniform vec3 uRV[16];uniform float uRD[16];uniform float uDV[16];uniform float uIceEdge,uDevG,uT2,uFlat,uSunLon;
     void main(){
       vec2 p=(gl_FragCoord.xy-uC)/uR;
       if(uFlat>0.5){
@@ -858,6 +858,7 @@ function initEarth(){
         if(abs(lat)>1.55){ gl_FragColor=vec4(0.02,0.03,0.05,1.); return; }
         vec2 uv=vec2(fract(lon/6.2831853+0.5),0.5-lat/3.14159265);
         vec3 col=texture2D(uT,uv).rgb;
+        float wat=smoothstep(0.02,0.18,col.b-col.r);
         vec3 ve=vec3(cos(lat)*sin(lon),sin(lat),cos(lat)*cos(lon));
         float dry=0.0; float dev=0.0;
         for(int i=0;i<16;i++){
@@ -880,6 +881,10 @@ function initEarth(){
           float f=smoothstep(uIceEdge,uIceEdge+0.06,lat);
           col=mix(col, vec3(0.93,0.96,0.99), f*0.92);
         }
+        vec3 sun=vec3(cos(0.1)*sin(uSunLon),sin(0.1),cos(0.1)*cos(uSunLon));
+        float day=clamp(dot(ve,sun),-1.,1.);
+        col*=0.42+0.58*smoothstep(-0.22,0.3,day);
+        col+=vec3(1.0,0.95,0.8)*pow(max(day,0.0),24.0)*wat*0.35;
         gl_FragColor=vec4(col,1.0); return;
       }
       float r2=dot(p,p);
@@ -896,6 +901,7 @@ function initEarth(){
       float lon=atan(p.x,z0)-uRot;
       vec2 uv=vec2(fract(lon/6.2831853+0.5),0.5-lat/3.14159265);
       vec3 col=texture2D(uT,uv).rgb;
+      float wat=smoothstep(0.02,0.18,col.b-col.r);   // ocean mask, pre-tint
       // drought browns the land itself — green space disappearing
       vec3 ve=vec3(cos(lat)*sin(lon),sin(lat),cos(lat)*cos(lon));
       float dry=0.0; float dev=0.0;
@@ -922,6 +928,11 @@ function initEarth(){
         float c=texture2D(uCl,vec2(fract(uv.x+uClOff),uv.y)).r;
         col=mix(col,vec3(1.0),c*0.5);
       }
+      // the sun: day/night terminator and a glint on the water
+      vec3 sun=vec3(cos(0.1)*sin(uSunLon),sin(0.1),cos(0.1)*cos(uSunLon));
+      float day=clamp(dot(ve,sun),-1.,1.);
+      col*=0.38+0.62*smoothstep(-0.22,0.3,day);
+      col+=vec3(1.0,0.95,0.8)*pow(max(day,0.0),24.0)*wat*0.4;
       col*=0.5+0.5*z;
       float rim=smoothstep(0.82,1.0,sqrt(r2));
       col=mix(col,vec3(0.55,0.7,0.95),rim*0.28);
@@ -949,6 +960,7 @@ function initEarth(){
         DV:gl.getUniformLocation(pr,"uDV[0]"), DevG:gl.getUniformLocation(pr,"uDevG"),
         T2:gl.getUniformLocation(pr,"uT2"),
         Flat:gl.getUniformLocation(pr,"uFlat"),
+        SunLon:gl.getUniformLocation(pr,"uSunLon"),
         IceEdge:gl.getUniformLocation(pr,"uIceEdge") };
   const rv=new Float32Array(48);
   REG.forEach((r,i)=>{ const [la,lo]=REGPOS[r.name].map(x=>x*Math.PI/180);
@@ -996,6 +1008,7 @@ function drawEarth(nowMs){
   gl.uniform1f(glU.T2, nowMs/1000);
   gl.uniform1f(glU.IceEdge, (66+18*iceMelt)*Math.PI/180);
   gl.uniform1f(glU.Flat, FLAT?1:0);
+  gl.uniform1f(glU.SunLon, (nowMs*0.000013)%(Math.PI*2)+2.6);
   gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
   return true;
 }
@@ -1211,10 +1224,31 @@ function drawAmbient(nowMs){
     }
   }
 }
+let stars=null, starsW=0, starsH=0;
+function makeStars(){
+  stars=[]; starsW=W; starsH=H;
+  let sd=1013904223>>>0;
+  const rnd=()=>((sd=(sd*1664525+1013904223)>>>0)/4294967296);
+  for(let i=0;i<150;i++)
+    stars.push({x:rnd()*W, y:rnd()*H, r:rnd()*1.1+0.3, tw:rnd()*6.28});
+}
+function drawStars(nowMs){
+  if(!stars||starsW!==W||starsH!==H) makeStars();
+  for(const st of stars){
+    if(!FLAT){
+      const d=Math.hypot(st.x-CXp,st.y-CYp);
+      if(d<Rp*1.05) continue;
+    } else if(Math.abs(st.x-CXp)<Rp*1.72 && Math.abs(st.y-CYp)<Rp*0.86) continue;
+    const a=0.35+0.45*Math.abs(Math.sin(nowMs/1400+st.tw));
+    cx.fillStyle=`rgba(210,225,240,${a})`;
+    cx.beginPath(); cx.arc(st.x,st.y,st.r,0,7); cx.fill();
+  }
+}
 function drawGlobe(now){
   if(!dragging && !reduced && !FLAT) rot += 0.022;
   const nowMs=now||0;
   cx.clearRect(0,0,W,H);
+  drawStars(nowMs);
   const earthOn = drawEarth(nowMs);
   if(!earthOn){
     // fallback: the phosphor wireframe, if WebGL is unavailable
@@ -1319,7 +1353,7 @@ function drawGlobe(now){
       cx.font="11px "+getComputedStyle(document.body).getPropertyValue("--mono");
       cx.fillStyle=(grave? "rgba(224,82,82,":"rgba(224,164,88,")
         +(0.55+0.4*Math.sin(nowMs/280))+")";
-      cx.fillText("⚠", p.x-4, p.y-k*sig-6);
+      cx.fillText("⚠", p.x-4, p.y-k*sig-6-(zoom>=1.5?8:0));
     }
     if(pendingTool){ cx.strokeStyle=`rgba(83,217,123,${0.4+0.3*Math.sin(nowMs/300)})`;
       cx.beginPath(); cx.arc(p.x,p.y,8,0,7); cx.stroke(); }
@@ -1516,18 +1550,25 @@ function alarm(){ sfxKlaxon(); if(reduced) return;
   const a=$("alarmflash"); a.classList.remove("on"); void a.offsetWidth;
   a.classList.add("on"); }
 
-function spark(canvas, series, color){
+function spark(canvas, series, color, label){
   const c=canvas.getContext("2d"), dpr=devicePixelRatio||1;
   const w=canvas.clientWidth, h=canvas.clientHeight;
   canvas.width=w*dpr; canvas.height=h*dpr; c.setTransform(dpr,0,0,dpr,0,0);
   c.clearRect(0,0,w,h);
   if(series.length<1) return;
   const lo=Math.min(0,...series), hi=Math.max(...series), span=(hi-lo)||1;
-  const X=i=>2+(w-4)*i/Math.max(1,eng.seasons-1), Y=v=>h-2-(h-6)*(v-lo)/span;
+  const X=i=>2+(w-30)*i/Math.max(1,eng.seasons-1), Y=v=>h-2-(h-8)*(v-lo)/span;
+  c.strokeStyle="rgba(200,230,207,.10)";
+  c.beginPath(); c.moveTo(0,Y(series[0])); c.lineTo(w,Y(series[0])); c.stroke();
   c.beginPath(); series.forEach((v,i)=>i?c.lineTo(X(i),Y(v)):c.moveTo(X(i),Y(v)));
   c.strokeStyle=color; c.lineWidth=1.5; c.stroke();
+  c.lineTo(X(series.length-1),h); c.lineTo(2,h); c.closePath();
+  c.fillStyle=color.replace("rgb","rgba").replace(")",",.12)"); c.fill();
   const lx=X(series.length-1), ly=Y(series[series.length-1]);
   c.fillStyle=color; c.beginPath(); c.arc(lx,ly,2.2,0,7); c.fill();
+  c.font="8px monospace"; c.fillStyle="rgba(200,230,207,.8)";
+  c.fillText((label||"")+" "+series[series.length-1].toFixed(0),
+             Math.min(lx+4,w-28), Math.max(8,ly-2));
 }
 
 function renderInflight(){
@@ -1578,8 +1619,8 @@ function updateHUD(row, prev){
   [...$("sigmeter").children].forEach((el,i)=>el.className = i<rung? "on":"");
   $("sigmeter").classList.toggle("hunted", rung>=4);
   $("dosnum").textContent = `dossier ${fmt(row.dossier)} / 200`;
-  spark($("tspark"), eng.state.rows.map(r=>r.treasury), "rgb(83,217,123)");
-  spark($("pspark"), eng.state.rows.map(r=>r.price), "rgb(200,230,207)");
+  spark($("tspark"), eng.state.rows.map(r=>r.treasury), "rgb(83,217,123)", "$");
+  spark($("pspark"), eng.state.rows.map(r=>r.price), "rgb(200,230,207)", "");
   renderInflight();
   const b=$("banner");
   if(row.status==="obsolescence-warning"){
