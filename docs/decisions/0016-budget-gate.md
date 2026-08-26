@@ -15,14 +15,21 @@
   is the remaining purse; the header shows SPENDABLE (treasury − overhead).
   The flagship earmark counts as payment for its op.
 
-## Consequences
-- Insolvency remains a loss condition but is reachable only by attrition:
-  an idle programme's trimmed appropriation (~$26M) is below the $32M
-  overhead, so a broke programme bleeds ~$6M a season until the committee
-  dissolves it or the treasury runs dry — whichever comes first — unless
-  something happens (a directive reward, the flagship earmark, or a
-  frightened committee). Verified: a campaign that tries to buy T3 + ENSO +
-  full containment every season is refused 21 times and ends insolvent at
-  S11 by attrition, never by purchase.
-- Open for the author: whether attrition insolvency should instead floor
-  at $0 and leave dissolution as the only ending for a broke programme.
+## Consequences (revised 2026-08-26)
+- **A broke programme is wound up, not bankrupted.** When nothing was
+  spent and the rent alone would drive the treasury negative, the committee
+  carries the rent while it deliberates: the treasury floors at zero and the
+  season counts as obsolescent. Four such reviews and the programme is
+  dissolved. Insolvency remains on the books only for the pathological case
+  (a clawback exceeding a season's income), which does not occur in play.
+- **Idleness itself counts.** The dissolution streak no longer resets when
+  the weather or the rival raises severity; a programme with no signature
+  or magnitude operation in eight seasons is obsolescent whatever the
+  mandate. Research and adaptation keep the appropriation (no trim) but not
+  the mandate to exist.
+- **The flagship earmark is drawn only by the op it funds** (`cmd.earmark`);
+  a refused flagship op leaves the earmark on the table. One funded flagship
+  op per earmark.
+- Verified: the idle 36-region programme is wound up at S15; a research-only
+  programme is warned from S9; a campaign that tries to buy T3 + ENSO + full
+  containment every season is refused throughout and never goes negative.
