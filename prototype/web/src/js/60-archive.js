@@ -55,7 +55,7 @@ function showArchive(finalRow){
   }
   const rivalOps=eng.state.ops.filter(o=>o.owner==="rival");
   if(rivalOps.length){
-    html+=`<h2 style="margin-top:14px">DECLASSIFIED — THE EASTERN PROGRAM</h2>
+    html+=`<h2 style="margin-top:14px">DECLASSIFIED — ${START.rivalName.replace(/^the /,"THE ").toUpperCase()}</h2>
       <p>You were never alone in the sky. Their file, opened after ${finalRow.year+25}:</p>`;
     for(const o of rivalOps.slice(0,10))
       html+=`<p style="margin-bottom:3px;color:var(--ink-dim)">S${o.t} — ${o.cap} · ${o.target}</p>`;

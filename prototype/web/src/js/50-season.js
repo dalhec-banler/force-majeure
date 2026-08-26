@@ -351,7 +351,7 @@ async function runSeasonInner(auto, cmdOverride){
     const teeth=[null,null,null,
       "Legal office: every operation now lands in front of a journalist. Whatever we do next carries further than it used to.",
       "Legal office: the consortium is measuring the envelope. Anything that lands outside it is now evidence, and hush money buys less every season.",
-      "Counterintelligence: the Eastern Program has our file. They know what we are, and they know where the harvest is. Expect them at home. The file does not close below ninety now — not ever.",
+      `Counterintelligence: ${START.rivalName} has our file. They know what we are, and they know where the harvest is. Expect them at home. The file does not close below ninety now — not ever.`,
       "Legal office: inspectors are on the ground. Nothing we do is quiet any more. Nothing."];
     if(teeth[rung]) wire(`MEMO — ${teeth[rung]}`,"memo");
   }
@@ -391,7 +391,7 @@ $("resolve").addEventListener("click",()=>{ sfxClick(); if(pendingArchive){ cons
 
 /* Saves (ADR-0001 in prototype form): the campaign is the list of commands;
    the engine is deterministic, so a save replays in a second. One slot. */
-const SAVE_KEY="fm.campaign."+(MODEL.long?"long":"short")+".v1";
+const SAVE_KEY="fm.campaign."+(MODEL.long?"long":"short")+".v1:"+HOMELAND;
 let saveLog=[], replaying=false;
 function persistSave(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify({v:1, log:saveLog})); }catch(e){} }
 function loadSave(){ try{ const s=JSON.parse(localStorage.getItem(SAVE_KEY)||"null"); return (s&&s.v===1&&Array.isArray(s.log)&&s.log.length)? s.log : null; }catch(e){ return null; } }

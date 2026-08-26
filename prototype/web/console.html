@@ -305,6 +305,14 @@
 .tool.wing .mb{display:inline}
 .tool .mb:hover{opacity:1;color:var(--amber)}
 #resume{margin-left:8px}
+#homepick{margin:12px 0 10px}
+#homepick .hp-h{font-size:9px;letter-spacing:.22em;color:var(--ink-dim);margin-bottom:6px}
+#homepickrow{display:flex;flex-wrap:wrap;gap:6px}
+.hp{background:var(--panel2);border:1px solid var(--line);color:var(--ink);font:inherit;text-align:left;padding:7px 9px;cursor:pointer;flex:1 1 180px;min-width:180px}
+.hp b{display:block;font-size:11px;letter-spacing:.14em}
+.hp span{display:block;font-size:10.5px;color:var(--ink-dim);margin-top:2px;line-height:1.35}
+.hp.on{border-color:var(--green);box-shadow:inset 0 0 0 1px var(--green)}
+.hp:hover{border-color:var(--ink-dim)}
 </style>
 
 <div id="app">
@@ -423,7 +431,7 @@
     <p class="q">Is it fun to nudge an invisible system and watch consequences
       arrive four to eight seasons later, in a country you did not target?</p>
     <p>You direct a national environmental warfare programme from 1946 to
-      2060. Homeland: the North American Plains — a wheat and maize exporter.
+      2060. Homeland: <b id="introHome">the North American Plains</b> — <span id="introCrop">wheat and maize</span>.
       A calm world defunds you. A frightening one earns your appropriation.
       You begin as a lab with seeding planes and a budget line: decisions
       come once a year until the ENMOD era, twice a year after, every season
@@ -456,6 +464,7 @@
     </ul>
     <p>One honest run, no undo. Write a prediction each season — the archive
       scores you against them at the end.</p>
+    <div id="homepick"><div class="hp-h">THE PROGRAMME YOU TAKE OVER</div><div id="homepickrow"></div></div>
     <button id="begin">ASSUME DIRECTION ▸</button>
     <button id="resume" style="display:none">RESUME THE PROGRAMME ▸</button>
   </div>
@@ -551,6 +560,11 @@ function createEngine(MODEL, opts) {
   // season while online). A wing whose chest collapses is mothballed; it
   // reopens at three-quarters of the chest. Always a way back. Default off.
   const eras = !!(opts && opts.eras);
+  // nation starts (brief §"difficulty is which programme you take over"):
+  // the homeland region, the rival programme's own region, the chest
+  if (opts && opts.homeland) for (const r of MODEL.regions) r.homeland = (r.name === opts.homeland);
+  const HOME = (MODEL.regions.find((r) => r.homeland) || MODEL.regions[0]).name;
+  const RHOME = (opts && opts.rivalHome) || (HOME === "Black Sea Steppe" ? "North American Plains" : "Black Sea Steppe");
   // the windfall cut (ADR-0023): the programme keeps this share of what it
   // made the homeland this season over the shadow world — the trade desk's
   // motive made into money. Needs the shadow; default 0 (sheet exact).
@@ -587,7 +601,7 @@ function createEngine(MODEL, opts) {
     envelopeMultWeight: A.B22,
     overhead: A.B23,
     severityThreshold: A.B24,
-    startingTreasury: A.B25,
+    startingTreasury: (opts && opts.startingTreasury !== undefined) ? opts.startingTreasury : A.B25,
   };
 
   const DRIVERS = MODEL.drivers;                  // ["ENSO","IOD","NATL","GLOBAL"]
@@ -736,11 +750,11 @@ function createEngine(MODEL, opts) {
       if (era === 0) return plan;
       // its own steppe, on its own clock
       if ((tt - 6) % (era === 1 ? 10 : 7) === 0)
-        plan.push({ cap: "Cloud Seeding", target: "Black Sea Steppe" });
+        plan.push({ cap: "Cloud Seeding", target: RHOME });
       if (era === 1) return plan;                       // a lab. Nothing more.
       const homeEvery = era === 2 ? 7 : era === 3 ? 5 : 4;
       if ((tt - 6) % homeEvery === 3)
-        plan.push({ cap: "Watershed Interference", target: "North American Plains" });
+        plan.push({ cap: "Watershed Interference", target: HOME });
       if ((tt - 6) % 40 === 16) plan.push({ cap: "Ocean Thermal Forcing" });
       if (era >= 3 && (tt - 6) % 40 === 30) plan.push({ cap: "Stratospheric Aerosol Inj." });
       if (era >= 4 && (tt - 6) % 40 === 5) plan.push({ cap: "ENSO Forcing" });
@@ -749,23 +763,23 @@ function createEngine(MODEL, opts) {
         if (loved) plan.push({ cap: "Watershed Interference", target: loved });
         const passive = !state.ops.some(
           (o) => o.owner === "player" && o.sig > 0 && o.t > tt - 8);
-        if (passive && !plan.some((p) => p.target === "North American Plains"))
-          plan.push({ cap: "Watershed Interference", target: "North American Plains" });
+        if (passive && !plan.some((p) => p.target === HOME))
+          plan.push({ cap: "Watershed Interference", target: HOME });
       }
       if (scrutiny) {
         const pd = state.rows[tt - 2] ? state.rows[tt - 2].dossier : 0;
         const every = Math.max(2, scrutiny.retaliateEvery - (era - 2));
         if (pd >= MODEL.ladder[4].threshold && (tt - 6) % every === 0
-            && !plan.some((p) => p.target === "North American Plains"))
-          plan.push({ cap: "Watershed Interference", target: "North American Plains" });
+            && !plan.some((p) => p.target === HOME))
+          plan.push({ cap: "Watershed Interference", target: HOME });
       }
       return plan;
     }
     if ((tt - 6) % 7 === 0)
-      plan.push({ cap: "Cloud Seeding", target: "Black Sea Steppe" });
+      plan.push({ cap: "Cloud Seeding", target: RHOME });
     if (tt > 14 && (tt - 6) % 7 === 3)
       plan.push({ cap: "Watershed Interference",
-                  target: "North American Plains" });
+                  target: HOME });
     if (tt === 22) plan.push({ cap: "Ocean Thermal Forcing" });
     // From season 21 the Eastern Program reads our flight logs: every
     // seventh season it works whichever harvest we have been protecting
@@ -777,15 +791,15 @@ function createEngine(MODEL, opts) {
       const passive = !state.ops.some(
         (o) => o.owner === "player" && o.sig > 0 && o.t > tt - 8);
       if (passive) plan.push({ cap: "Watershed Interference",
-                               target: "North American Plains" });
+                               target: HOME });
     }
     // Named (rung 5): the service that wrote the brief now works our
     // harvest on its own clock. The ladder is the rival's targeting order.
     if (scrutiny && tt > 6) {
       const pd = state.rows[tt - 2] ? state.rows[tt - 2].dossier : 0;
       if (pd >= MODEL.ladder[4].threshold && (tt - 6) % scrutiny.retaliateEvery === 0
-          && !plan.some((p) => p.target === "North American Plains"))
-        plan.push({ cap: "Watershed Interference", target: "North American Plains" });
+          && !plan.some((p) => p.target === HOME))
+        plan.push({ cap: "Watershed Interference", target: HOME });
     }
     return plan;
   }
@@ -798,7 +812,7 @@ function createEngine(MODEL, opts) {
     for (const o of state.ops) {
       if (o.owner !== "player" || o.t <= tt - 16) continue;
       if (o.cap !== "Cloud Seeding" && o.cap !== "Adaptation Investment") continue;
-      if (o.target === home || o.target === "Black Sea Steppe") continue;
+      if (o.target === home || o.target === RHOME) continue;
       score[o.target] = (score[o.target] || 0)
                       + (o.cap === "Adaptation Investment" ? 2 : 1);
     }
@@ -1223,7 +1237,23 @@ for(const e of HISTORY.eruptions){
 }
 for(const q of HISTORY.quakes) for(const h of (q.hit||[]))
   EXO.push({t:q.t, region:h.region, mag:h.mag, dur:h.dur||1, cap:q.name+" earthquake"});
-const eng = createEngine(MODEL, {rivals:true, idleTrim:0.6, jetstream:true, forensics:true, knowledge:true, budgetGate:true, exogenous:EXO, priceCap:300, scrutiny:true, grainSupply:true, priceElasticity:3.0, rivalEras:true, shadow:true, eras:true, envelopeWidening:0.0006, windfall:2, reserveCap:400});
+/* Nation starts — the superpowers. The choice sets starting position only
+   (homeland, the rival's home, the chest); never the systems available. */
+const STARTS={
+ "North American Plains":{nation:"UNITED STATES", rival:"Black Sea Steppe", rivalName:"the Eastern Program", rivalShort:"the Steppe", treasury:90,
+   blurb:"Wheat and maize exporter. The biggest chest; the Soviet programme across the water."},
+ "Black Sea Steppe":{nation:"SOVIET UNION", rival:"North American Plains", rivalName:"the Western Program", rivalShort:"the Plains", treasury:80,
+   blurb:"Wheat exporter with a famine in its first year. The Americans across the water."},
+ "North China Plain":{nation:"CHINA", rival:"Black Sea Steppe", rivalName:"the Northern Program", rivalShort:"the Steppe", treasury:55,
+   blurb:"Wheat and maize for six hundred million. A thin chest; the Soviet programme to the north."},
+ "South Asia":{nation:"INDIA", rival:"North China Plain", rivalName:"the Eastern Program", rivalShort:"the North China Plain", treasury:45,
+   blurb:"Rice and wheat at the monsoon's mercy. The thinnest chest; a programme across the Himalaya."},
+ "Northern European Plain":{nation:"WESTERN EUROPE", rival:"Black Sea Steppe", rivalName:"the Eastern Program", rivalShort:"the Steppe", treasury:70,
+   blurb:"Wheat, sugar beet and dairy; a wet Atlantic to work with. The Soviet programme to the east."},
+};
+let HOMELAND="North American Plains"; try{ const h=localStorage.getItem("fm.homeland"); if(h && STARTS[h]) HOMELAND=h; }catch(e){}
+const START=STARTS[HOMELAND];
+const eng = createEngine(MODEL, {homeland:HOMELAND, rivalHome:START.rival, startingTreasury:START.treasury, rivals:true, idleTrim:0.6, jetstream:true, forensics:true, knowledge:true, budgetGate:true, exogenous:EXO, priceCap:300, scrutiny:true, grainSupply:true, priceElasticity:3.0, rivalEras:true, shadow:true, eras:true, envelopeWidening:0.0006, windfall:2, reserveCap:400});
 const DRVNAME = { ENSO:"the Pacific", IOD:"the Indian Ocean", NATL:"the Atlantic", GLOBAL:"the planet" };
 let SHOW_WIRES=true;             // the known wiring, drawn on the globe
 let newWires=[];                 // wires revealed recently: {di,ri,bornT}
@@ -2830,7 +2860,7 @@ let brisk=false;                 // the seasons inside a review pass quickly; th
    gap with standing demands. */
 const DIRECTIVES=[
  {title:"Prove the concept", reward:8, window:2, tool:"☁ CLOUD SEEDING — any region",
-  text:"Put rain somewhere. Anywhere. Schenectady wants photographs for the appropriations hearing.",
+  text:"Put rain somewhere. Anywhere. The ministry wants photographs for the appropriations hearing.",
   check:(row)=>eng.state.ops.some(o=>o.owner==="player"&&o.cap==="Cloud Seeding")},
  {title:"Stabilize a drought", reward:12, window:3, tool:"☁ CLOUD SEEDING — a strained or failing harvest (amber/red marker)",
   when:(row)=>row && REG.some((r,ri)=>!r.kind && isOnline(ri) && row.yields[ri]<90),   // the committee waits for a real drought
@@ -2854,9 +2884,9 @@ const DIRECTIVES=[
  {title:"Move the ocean, not the country", reward:30, window:3, fromYear:1975, needs:["Ocean Thermal Forcing"], standable:true, tool:"🌊 OCEAN THERMAL — the Atlantic",
   text:"Stop pushing countries. Push the sea that pushes them. The ships exist now; stand the wing up and commit an ocean operation.",
   check:()=>eng.state.ops.some(o=>o.owner==="player"&&o.type==="DRIVER")},
- {title:"Answer them", reward:30, window:3, fromYear:1978, needs:["Watershed Interference","Fire Enablement"], tool:"🚱 WATERSHED or 🔥 FIRE — Black Sea Steppe",
-  text:"Counterintelligence is certain enough: the Eastern Program is real and it is working our watershed. The Steppe grows wheat too. Answer them — quietly or otherwise.",
-  check:(row,d)=>eng.state.ops.some(o=>o.owner==="player"&&o.t>=(d.issuedT||0)&&o.sig>0&&o.target==="Black Sea Steppe")},
+ {title:"Answer them", reward:30, window:3, fromYear:1978, needs:["Watershed Interference","Fire Enablement"], tool:`🚱 WATERSHED or 🔥 FIRE — ${START.rival}`,
+  text:`Counterintelligence is certain enough: ${START.rivalName} is real and it is working our watershed. ${START.rivalShort[0].toUpperCase()+START.rivalShort.slice(1)} grows grain too. Answer them — quietly or otherwise.`,
+  check:(row,d)=>eng.state.ops.some(o=>o.owner==="player"&&o.t>=(d.issuedT||0)&&o.sig>0&&o.target===START.rival)},
 ];
 /* Standing directives — after onboarding the committee writes its own,
    from the state of the board. Deterministic choice: an unanswered attack
@@ -2864,9 +2894,9 @@ const DIRECTIVES=[
 let lastHostileT=-99;                 // last season the homeland was worked by a rival
 const STANDING=[
  {key:"answer", when:()=>lastHostileT>=t-3, needs:["Watershed Interference","Fire Enablement","Ionospheric Coupling [T3]"], title:"Answer the Steppe", reward:18, window:2,
-  tool:"🚱 WATERSHED, 🔥 FIRE, or ⚡ IONOSPHERIC — Black Sea Steppe",
-  text:"They worked our watershed again. The committee wants a reply on the Steppe before the next hearing — it does not care what kind.",
-  check:(row,d)=>eng.state.ops.some(o=>o.owner==="player"&&o.sig>0&&o.target==="Black Sea Steppe"&&o.t>d.issued)},
+  tool:`🚱 WATERSHED, 🔥 FIRE, or ⚡ IONOSPHERIC — ${START.rival}`,
+  text:`They worked our watershed again. The committee wants a reply on ${START.rivalShort} before the next hearing — it does not care what kind.`,
+  check:(row,d)=>eng.state.ops.some(o=>o.owner==="player"&&o.sig>0&&o.target===START.rival&&o.t>d.issued)},
  {key:"client", when:(row)=>clientInNeed(row)!==null, title:"Protect the client", reward:10, window:2,
   make:(row,d)=>{ const r=clientInNeed(row); d.region=r.name;
     d.tool=`☁ CLOUD SEEDING — ${r.name}`;
@@ -2897,7 +2927,7 @@ const STANDING=[
 ];
 function clientInNeed(row){
   let best=null;
-  REG.forEach((r,ri)=>{ if(r.kind||r.homeland||r.name==="Black Sea Steppe"||!isOnline(ri)) return;
+  REG.forEach((r,ri)=>{ if(r.kind||r.homeland||r.name===START.rival||!isOnline(ri)) return;
     // a client in need is one whose marker has gone amber or red (the marker rule: yield < 90)
     if(row.anomalies[ri]<0 && row.yields[ri]<88 && (!best||row.yields[ri]<best.y)) best={name:r.name,a:row.anomalies[ri],y:row.yields[ri]}; });
   return best;
@@ -3395,7 +3425,7 @@ async function runSeasonInner(auto, cmdOverride){
     const teeth=[null,null,null,
       "Legal office: every operation now lands in front of a journalist. Whatever we do next carries further than it used to.",
       "Legal office: the consortium is measuring the envelope. Anything that lands outside it is now evidence, and hush money buys less every season.",
-      "Counterintelligence: the Eastern Program has our file. They know what we are, and they know where the harvest is. Expect them at home. The file does not close below ninety now — not ever.",
+      `Counterintelligence: ${START.rivalName} has our file. They know what we are, and they know where the harvest is. Expect them at home. The file does not close below ninety now — not ever.`,
       "Legal office: inspectors are on the ground. Nothing we do is quiet any more. Nothing."];
     if(teeth[rung]) wire(`MEMO — ${teeth[rung]}`,"memo");
   }
@@ -3435,7 +3465,7 @@ $("resolve").addEventListener("click",()=>{ sfxClick(); if(pendingArchive){ cons
 
 /* Saves (ADR-0001 in prototype form): the campaign is the list of commands;
    the engine is deterministic, so a save replays in a second. One slot. */
-const SAVE_KEY="fm.campaign."+(MODEL.long?"long":"short")+".v1";
+const SAVE_KEY="fm.campaign."+(MODEL.long?"long":"short")+".v1:"+HOMELAND;
 let saveLog=[], replaying=false;
 function persistSave(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify({v:1, log:saveLog})); }catch(e){} }
 function loadSave(){ try{ const s=JSON.parse(localStorage.getItem(SAVE_KEY)||"null"); return (s&&s.v===1&&Array.isArray(s.log)&&s.log.length)? s.log : null; }catch(e){ return null; } }
@@ -3631,7 +3661,7 @@ function showArchive(finalRow){
   }
   const rivalOps=eng.state.ops.filter(o=>o.owner==="rival");
   if(rivalOps.length){
-    html+=`<h2 style="margin-top:14px">DECLASSIFIED — THE EASTERN PROGRAM</h2>
+    html+=`<h2 style="margin-top:14px">DECLASSIFIED — ${START.rivalName.replace(/^the /,"THE ").toUpperCase()}</h2>
       <p>You were never alone in the sky. Their file, opened after ${finalRow.year+25}:</p>`;
     for(const o of rivalOps.slice(0,10))
       html+=`<p style="margin-bottom:3px;color:var(--ink-dim)">S${o.t} — ${o.cap} · ${o.target}</p>`;
@@ -3645,6 +3675,15 @@ function showArchive(finalRow){
 
 /* --------------------------------------------------------------- misc */
 buildTray(); clampContainment(); renderTray(); renderDirective(); renderReviewButton();
+// the nation picker: choosing another programme stores the choice and reloads the console with it
+{ const home=REG.find(r=>r.homeland);
+  $("introHome").textContent="the "+home.name; $("introCrop").textContent=(home.crop||"").toLowerCase();
+  const row=$("homepickrow");
+  for(const [region,st] of Object.entries(STARTS)){
+    const b=document.createElement("button"); b.className="hp"+(region===HOMELAND?" on":"");
+    b.innerHTML=`<b>${st.nation}</b><span>${region} · chest $${st.treasury}M · rival: ${st.rivalName}<br>${st.blurb}</span>`;
+    b.addEventListener("click",()=>{ if(region===HOMELAND) return; try{ localStorage.setItem("fm.homeland", region); }catch(e){} location.reload(); });
+    row.appendChild(b); } }
 requestAnimationFrame(drawGlobe);            // every part has run; the loop may start
 const savedLog=loadSave();
 if(savedLog){ $("resume").style.display=""; $("begin").textContent="NEW PROGRAMME ▸"; }

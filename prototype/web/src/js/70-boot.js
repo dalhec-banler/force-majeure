@@ -1,5 +1,14 @@
 /* --------------------------------------------------------------- misc */
 buildTray(); clampContainment(); renderTray(); renderDirective(); renderReviewButton();
+// the nation picker: choosing another programme stores the choice and reloads the console with it
+{ const home=REG.find(r=>r.homeland);
+  $("introHome").textContent="the "+home.name; $("introCrop").textContent=(home.crop||"").toLowerCase();
+  const row=$("homepickrow");
+  for(const [region,st] of Object.entries(STARTS)){
+    const b=document.createElement("button"); b.className="hp"+(region===HOMELAND?" on":"");
+    b.innerHTML=`<b>${st.nation}</b><span>${region} · chest $${st.treasury}M · rival: ${st.rivalName}<br>${st.blurb}</span>`;
+    b.addEventListener("click",()=>{ if(region===HOMELAND) return; try{ localStorage.setItem("fm.homeland", region); }catch(e){} location.reload(); });
+    row.appendChild(b); } }
 requestAnimationFrame(drawGlobe);            // every part has run; the loop may start
 const savedLog=loadSave();
 if(savedLog){ $("resume").style.display=""; $("begin").textContent="NEW PROGRAMME ▸"; }

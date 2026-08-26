@@ -12,7 +12,23 @@ for(const e of HISTORY.eruptions){
 }
 for(const q of HISTORY.quakes) for(const h of (q.hit||[]))
   EXO.push({t:q.t, region:h.region, mag:h.mag, dur:h.dur||1, cap:q.name+" earthquake"});
-const eng = createEngine(MODEL, {rivals:true, idleTrim:0.6, jetstream:true, forensics:true, knowledge:true, budgetGate:true, exogenous:EXO, priceCap:300, scrutiny:true, grainSupply:true, priceElasticity:3.0, rivalEras:true, shadow:true, eras:true, envelopeWidening:0.0006, windfall:2, reserveCap:400});
+/* Nation starts — the superpowers. The choice sets starting position only
+   (homeland, the rival's home, the chest); never the systems available. */
+const STARTS={
+ "North American Plains":{nation:"UNITED STATES", rival:"Black Sea Steppe", rivalName:"the Eastern Program", rivalShort:"the Steppe", treasury:90,
+   blurb:"Wheat and maize exporter. The biggest chest; the Soviet programme across the water."},
+ "Black Sea Steppe":{nation:"SOVIET UNION", rival:"North American Plains", rivalName:"the Western Program", rivalShort:"the Plains", treasury:80,
+   blurb:"Wheat exporter with a famine in its first year. The Americans across the water."},
+ "North China Plain":{nation:"CHINA", rival:"Black Sea Steppe", rivalName:"the Northern Program", rivalShort:"the Steppe", treasury:55,
+   blurb:"Wheat and maize for six hundred million. A thin chest; the Soviet programme to the north."},
+ "South Asia":{nation:"INDIA", rival:"North China Plain", rivalName:"the Eastern Program", rivalShort:"the North China Plain", treasury:45,
+   blurb:"Rice and wheat at the monsoon's mercy. The thinnest chest; a programme across the Himalaya."},
+ "Northern European Plain":{nation:"WESTERN EUROPE", rival:"Black Sea Steppe", rivalName:"the Eastern Program", rivalShort:"the Steppe", treasury:70,
+   blurb:"Wheat, sugar beet and dairy; a wet Atlantic to work with. The Soviet programme to the east."},
+};
+let HOMELAND="North American Plains"; try{ const h=localStorage.getItem("fm.homeland"); if(h && STARTS[h]) HOMELAND=h; }catch(e){}
+const START=STARTS[HOMELAND];
+const eng = createEngine(MODEL, {homeland:HOMELAND, rivalHome:START.rival, startingTreasury:START.treasury, rivals:true, idleTrim:0.6, jetstream:true, forensics:true, knowledge:true, budgetGate:true, exogenous:EXO, priceCap:300, scrutiny:true, grainSupply:true, priceElasticity:3.0, rivalEras:true, shadow:true, eras:true, envelopeWidening:0.0006, windfall:2, reserveCap:400});
 const DRVNAME = { ENSO:"the Pacific", IOD:"the Indian Ocean", NATL:"the Atlantic", GLOBAL:"the planet" };
 let SHOW_WIRES=true;             // the known wiring, drawn on the globe
 let newWires=[];                 // wires revealed recently: {di,ri,bornT}

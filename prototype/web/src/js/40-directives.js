@@ -14,7 +14,7 @@ let brisk=false;                 // the seasons inside a review pass quickly; th
    gap with standing demands. */
 const DIRECTIVES=[
  {title:"Prove the concept", reward:8, window:2, tool:"☁ CLOUD SEEDING — any region",
-  text:"Put rain somewhere. Anywhere. Schenectady wants photographs for the appropriations hearing.",
+  text:"Put rain somewhere. Anywhere. The ministry wants photographs for the appropriations hearing.",
   check:(row)=>eng.state.ops.some(o=>o.owner==="player"&&o.cap==="Cloud Seeding")},
  {title:"Stabilize a drought", reward:12, window:3, tool:"☁ CLOUD SEEDING — a strained or failing harvest (amber/red marker)",
   when:(row)=>row && REG.some((r,ri)=>!r.kind && isOnline(ri) && row.yields[ri]<90),   // the committee waits for a real drought
@@ -38,9 +38,9 @@ const DIRECTIVES=[
  {title:"Move the ocean, not the country", reward:30, window:3, fromYear:1975, needs:["Ocean Thermal Forcing"], standable:true, tool:"🌊 OCEAN THERMAL — the Atlantic",
   text:"Stop pushing countries. Push the sea that pushes them. The ships exist now; stand the wing up and commit an ocean operation.",
   check:()=>eng.state.ops.some(o=>o.owner==="player"&&o.type==="DRIVER")},
- {title:"Answer them", reward:30, window:3, fromYear:1978, needs:["Watershed Interference","Fire Enablement"], tool:"🚱 WATERSHED or 🔥 FIRE — Black Sea Steppe",
-  text:"Counterintelligence is certain enough: the Eastern Program is real and it is working our watershed. The Steppe grows wheat too. Answer them — quietly or otherwise.",
-  check:(row,d)=>eng.state.ops.some(o=>o.owner==="player"&&o.t>=(d.issuedT||0)&&o.sig>0&&o.target==="Black Sea Steppe")},
+ {title:"Answer them", reward:30, window:3, fromYear:1978, needs:["Watershed Interference","Fire Enablement"], tool:`🚱 WATERSHED or 🔥 FIRE — ${START.rival}`,
+  text:`Counterintelligence is certain enough: ${START.rivalName} is real and it is working our watershed. ${START.rivalShort[0].toUpperCase()+START.rivalShort.slice(1)} grows grain too. Answer them — quietly or otherwise.`,
+  check:(row,d)=>eng.state.ops.some(o=>o.owner==="player"&&o.t>=(d.issuedT||0)&&o.sig>0&&o.target===START.rival)},
 ];
 /* Standing directives — after onboarding the committee writes its own,
    from the state of the board. Deterministic choice: an unanswered attack
@@ -48,9 +48,9 @@ const DIRECTIVES=[
 let lastHostileT=-99;                 // last season the homeland was worked by a rival
 const STANDING=[
  {key:"answer", when:()=>lastHostileT>=t-3, needs:["Watershed Interference","Fire Enablement","Ionospheric Coupling [T3]"], title:"Answer the Steppe", reward:18, window:2,
-  tool:"🚱 WATERSHED, 🔥 FIRE, or ⚡ IONOSPHERIC — Black Sea Steppe",
-  text:"They worked our watershed again. The committee wants a reply on the Steppe before the next hearing — it does not care what kind.",
-  check:(row,d)=>eng.state.ops.some(o=>o.owner==="player"&&o.sig>0&&o.target==="Black Sea Steppe"&&o.t>d.issued)},
+  tool:`🚱 WATERSHED, 🔥 FIRE, or ⚡ IONOSPHERIC — ${START.rival}`,
+  text:`They worked our watershed again. The committee wants a reply on ${START.rivalShort} before the next hearing — it does not care what kind.`,
+  check:(row,d)=>eng.state.ops.some(o=>o.owner==="player"&&o.sig>0&&o.target===START.rival&&o.t>d.issued)},
  {key:"client", when:(row)=>clientInNeed(row)!==null, title:"Protect the client", reward:10, window:2,
   make:(row,d)=>{ const r=clientInNeed(row); d.region=r.name;
     d.tool=`☁ CLOUD SEEDING — ${r.name}`;
@@ -81,7 +81,7 @@ const STANDING=[
 ];
 function clientInNeed(row){
   let best=null;
-  REG.forEach((r,ri)=>{ if(r.kind||r.homeland||r.name==="Black Sea Steppe"||!isOnline(ri)) return;
+  REG.forEach((r,ri)=>{ if(r.kind||r.homeland||r.name===START.rival||!isOnline(ri)) return;
     // a client in need is one whose marker has gone amber or red (the marker rule: yield < 90)
     if(row.anomalies[ri]<0 && row.yields[ri]<88 && (!best||row.yields[ri]<best.y)) best={name:r.name,a:row.anomalies[ri],y:row.yields[ri]}; });
   return best;

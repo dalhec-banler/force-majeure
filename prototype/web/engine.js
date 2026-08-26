@@ -80,6 +80,11 @@ function createEngine(MODEL, opts) {
   // season while online). A wing whose chest collapses is mothballed; it
   // reopens at three-quarters of the chest. Always a way back. Default off.
   const eras = !!(opts && opts.eras);
+  // nation starts (brief §"difficulty is which programme you take over"):
+  // the homeland region, the rival programme's own region, the chest
+  if (opts && opts.homeland) for (const r of MODEL.regions) r.homeland = (r.name === opts.homeland);
+  const HOME = (MODEL.regions.find((r) => r.homeland) || MODEL.regions[0]).name;
+  const RHOME = (opts && opts.rivalHome) || (HOME === "Black Sea Steppe" ? "North American Plains" : "Black Sea Steppe");
   // the windfall cut (ADR-0023): the programme keeps this share of what it
   // made the homeland this season over the shadow world — the trade desk's
   // motive made into money. Needs the shadow; default 0 (sheet exact).
@@ -116,7 +121,7 @@ function createEngine(MODEL, opts) {
     envelopeMultWeight: A.B22,
     overhead: A.B23,
     severityThreshold: A.B24,
-    startingTreasury: A.B25,
+    startingTreasury: (opts && opts.startingTreasury !== undefined) ? opts.startingTreasury : A.B25,
   };
 
   const DRIVERS = MODEL.drivers;                  // ["ENSO","IOD","NATL","GLOBAL"]
@@ -265,11 +270,11 @@ function createEngine(MODEL, opts) {
       if (era === 0) return plan;
       // its own steppe, on its own clock
       if ((tt - 6) % (era === 1 ? 10 : 7) === 0)
-        plan.push({ cap: "Cloud Seeding", target: "Black Sea Steppe" });
+        plan.push({ cap: "Cloud Seeding", target: RHOME });
       if (era === 1) return plan;                       // a lab. Nothing more.
       const homeEvery = era === 2 ? 7 : era === 3 ? 5 : 4;
       if ((tt - 6) % homeEvery === 3)
-        plan.push({ cap: "Watershed Interference", target: "North American Plains" });
+        plan.push({ cap: "Watershed Interference", target: HOME });
       if ((tt - 6) % 40 === 16) plan.push({ cap: "Ocean Thermal Forcing" });
       if (era >= 3 && (tt - 6) % 40 === 30) plan.push({ cap: "Stratospheric Aerosol Inj." });
       if (era >= 4 && (tt - 6) % 40 === 5) plan.push({ cap: "ENSO Forcing" });
@@ -278,23 +283,23 @@ function createEngine(MODEL, opts) {
         if (loved) plan.push({ cap: "Watershed Interference", target: loved });
         const passive = !state.ops.some(
           (o) => o.owner === "player" && o.sig > 0 && o.t > tt - 8);
-        if (passive && !plan.some((p) => p.target === "North American Plains"))
-          plan.push({ cap: "Watershed Interference", target: "North American Plains" });
+        if (passive && !plan.some((p) => p.target === HOME))
+          plan.push({ cap: "Watershed Interference", target: HOME });
       }
       if (scrutiny) {
         const pd = state.rows[tt - 2] ? state.rows[tt - 2].dossier : 0;
         const every = Math.max(2, scrutiny.retaliateEvery - (era - 2));
         if (pd >= MODEL.ladder[4].threshold && (tt - 6) % every === 0
-            && !plan.some((p) => p.target === "North American Plains"))
-          plan.push({ cap: "Watershed Interference", target: "North American Plains" });
+            && !plan.some((p) => p.target === HOME))
+          plan.push({ cap: "Watershed Interference", target: HOME });
       }
       return plan;
     }
     if ((tt - 6) % 7 === 0)
-      plan.push({ cap: "Cloud Seeding", target: "Black Sea Steppe" });
+      plan.push({ cap: "Cloud Seeding", target: RHOME });
     if (tt > 14 && (tt - 6) % 7 === 3)
       plan.push({ cap: "Watershed Interference",
-                  target: "North American Plains" });
+                  target: HOME });
     if (tt === 22) plan.push({ cap: "Ocean Thermal Forcing" });
     // From season 21 the Eastern Program reads our flight logs: every
     // seventh season it works whichever harvest we have been protecting
@@ -306,15 +311,15 @@ function createEngine(MODEL, opts) {
       const passive = !state.ops.some(
         (o) => o.owner === "player" && o.sig > 0 && o.t > tt - 8);
       if (passive) plan.push({ cap: "Watershed Interference",
-                               target: "North American Plains" });
+                               target: HOME });
     }
     // Named (rung 5): the service that wrote the brief now works our
     // harvest on its own clock. The ladder is the rival's targeting order.
     if (scrutiny && tt > 6) {
       const pd = state.rows[tt - 2] ? state.rows[tt - 2].dossier : 0;
       if (pd >= MODEL.ladder[4].threshold && (tt - 6) % scrutiny.retaliateEvery === 0
-          && !plan.some((p) => p.target === "North American Plains"))
-        plan.push({ cap: "Watershed Interference", target: "North American Plains" });
+          && !plan.some((p) => p.target === HOME))
+        plan.push({ cap: "Watershed Interference", target: HOME });
     }
     return plan;
   }
@@ -327,7 +332,7 @@ function createEngine(MODEL, opts) {
     for (const o of state.ops) {
       if (o.owner !== "player" || o.t <= tt - 16) continue;
       if (o.cap !== "Cloud Seeding" && o.cap !== "Adaptation Investment") continue;
-      if (o.target === home || o.target === "Black Sea Steppe") continue;
+      if (o.target === home || o.target === RHOME) continue;
       score[o.target] = (score[o.target] || 0)
                       + (o.cap === "Adaptation Investment" ? 2 : 1);
     }
