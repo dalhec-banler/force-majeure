@@ -10,13 +10,13 @@ funds go away and so do the weapons")
 |---|---|---|---|---|
 | Cloud Seeding, Adaptation | 1946 | — | — | Schaefer, GE, Nov 1946 |
 | Climate Research | 1950 | $40M | $1M | a room of analysts; IGY 1957 |
-| Watershed Interference | 1966 | $70M | $3M | Popeye flies 1967 |
-| Fire Enablement | 1968 | $60M | $2M | |
-| Ocean Thermal Forcing | 1975 | $110M | $5M | the ENMOD years |
-| Stratospheric Aerosol | 1984 | $140M | $6M | Budyko 1974; El Chichón 1982 |
-| ENSO Forcing | 1995 | $180M | $8M | TOGA moorings |
-| Ionospheric Coupling | 1998 | $220M | $10M | HAARP |
-| Polar Destabilization | 2015 | $200M | $8M | the open Arctic |
+| Watershed Interference | 1962 | $70M | $3M | Popeye flies 1967 |
+| Fire Enablement | 1966 | $60M | $2M | |
+| Ocean Thermal Forcing | 1972 | $110M | $5M | the ENMOD years |
+| Stratospheric Aerosol | 1980 | $140M | $6M | Budyko 1974; El Chichón 1982 |
+| ENSO Forcing | 1990 | $180M | $8M | TOGA moorings |
+| Ionospheric Coupling | 1996 | $220M | $10M | HAARP |
+| Polar Destabilization | 2014 | $200M | $8M | the open Arctic |
 
 - A wing is **ordered** (click it in the tray) once its year has come and
   the chest holds its threshold; it stands up at the next review and
@@ -39,3 +39,6 @@ The opening is a lab with seeding planes and a budget line; by ENMOD a
 programme has two or three wings; the full arsenal's rent ($43M) needs a
 frightened committee. Nothing in the tutorial decade can move a market
 yet — the "Move a market" directive waits for 1966 and asks for the wing.
+
+
+**Revised 2026-08-26 (author: arrivals felt laggy).** Dates brought forward as above — Cirrus 1947 / Stormfury 1962 justify a watershed wing in 1962; Budyko 1974 → aerosol 1980; the 1982–83 Niño → ENSO 1990; HAARP 1993 → 1996. Earmarks follow (1982, 1990, 2014, 2035). The first weapon now arrives at review 16 instead of 20; the longest early gap falls from 22 reviews to 12. The back half (2014–2060, ~150 reviews) still has no arrivals — new wings proposed: Hurricane Steering (1955), Engineered Bloom (2008), Marine Cloud Brightening (2024), Orbital Mirror (2032), Engineered Biology (2040), the AMOC Lever (2046).

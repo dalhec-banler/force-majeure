@@ -131,10 +131,13 @@ if LONG:
     # to stand it up; upkeep = its rent per season while online.
     WING = {  # name: (from, chest, upkeep)
      "Cloud Seeding": (1946, 0, 0), "Adaptation Investment": (1946, 0, 0),
-     "Climate Research": (1950, 40, 1), "Watershed Interference": (1966, 70, 3),
-     "Fire Enablement": (1968, 60, 2), "Ocean Thermal Forcing": (1975, 110, 5),
-     "Stratospheric Aerosol Inj.": (1984, 140, 6), "ENSO Forcing": (1995, 180, 8),
-     "Ionospheric Coupling [T3]": (1998, 220, 10), "Polar Destabilization": (2015, 200, 8)}
+     "Climate Research": (1950, 40, 1), "Watershed Interference": (1962, 70, 3),
+     "Fire Enablement": (1966, 60, 2), "Ocean Thermal Forcing": (1972, 110, 5),
+     "Stratospheric Aerosol Inj.": (1980, 140, 6), "ENSO Forcing": (1990, 180, 8),
+     "Ionospheric Coupling [T3]": (1996, 220, 10), "Polar Destabilization": (2014, 200, 8)}
+    # dates brought forward 2026-08-26 (author: arrivals felt laggy): Cirrus seeded
+    # a hurricane in 1947 and Stormfury ran from 1962, so a watershed wing in
+    # 1962 is fair; Budyko 1974 → 1980; the 1982–83 Niño → ENSO 1990; HAARP 1993 → 1996
     # cadence tiers (ADR-0010): decisions per year, then per half-year, then
     # per season; the clock per review in seconds
     M["tiers"] = [{"from":1946,"every":4,"name":"PROGRAMME REVIEW","clock":45},

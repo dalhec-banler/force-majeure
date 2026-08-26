@@ -52,13 +52,13 @@ function capInfo(c){
 /* The century's arsenal: why a wing is not yet possible, in the fiction */
 const WHEN={
  "Climate Research":"The instruments do not exist yet. The committee funds a room of analysts from 1950; the International Geophysical Year is 1957.",
- "Watershed Interference":"Nobody has moved a monsoon yet. Popeye flies in 1967; the wing is possible from 1966.",
- "Fire Enablement":"Enablement needs the drying technique and the aircraft to deliver it. 1968.",
- "Ocean Thermal Forcing":"The ships and the theory come together in the ENMOD years. 1975.",
- "Stratospheric Aerosol Inj.":"Budyko wrote it down in 1974; El Chichón proved it in 1982. The wing is possible from 1984.",
- "ENSO Forcing":"The Pacific is not understood until the TOGA moorings are in. 1995.",
- "Ionospheric Coupling [T3]":"The ionospheric heater is a 1990s machine. 1998.",
- "Polar Destabilization":"The Arctic is not open enough to work until the 2010s. 2015.",
+ "Watershed Interference":"Nobody has moved a watershed yet. Stormfury flies from 1962; the wing is possible from then.",
+ "Fire Enablement":"Enablement needs the drying technique and the aircraft to deliver it. 1966.",
+ "Ocean Thermal Forcing":"The ships and the theory come together on the eve of ENMOD. 1972.",
+ "Stratospheric Aerosol Inj.":"Budyko wrote it down in 1974. The wing is possible from 1980.",
+ "ENSO Forcing":"The Pacific is not understood until the 1982–83 Niño has been studied. 1990.",
+ "Ionospheric Coupling [T3]":"The ionospheric heater is a 1990s machine. 1996.",
+ "Polar Destabilization":"The Arctic is not open enough to work until the 2010s. 2014.",
 };
 function wingLine(c){
   const ws=eng.eras? eng.wingStatus(c.name) : null; if(!ws) return "";

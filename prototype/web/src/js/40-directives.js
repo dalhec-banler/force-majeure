@@ -29,13 +29,13 @@ const DIRECTIVES=[
  {title:"Read the wiring", reward:10, window:2, fromYear:1950, needs:["Climate Research"], tool:"🔬 CLIMATE RESEARCH — a region whose weather you do not understand",
   text:"Your analysts can see a fifth of how the world is wired. The committee has funded a room of them. Point it somewhere.",
   check:()=>eng.state.ops.some(o=>o.owner==="player"&&o.research)},
- {title:"Move a market", reward:24, window:3, fromYear:1966, needs:["Watershed Interference"], standable:true, tool:"🚱 WATERSHED INTERFERENCE — a wheat exporter (Black Sea, Australia, the Plata)",
+ {title:"Move a market", reward:24, window:3, fromYear:1962, needs:["Watershed Interference"], standable:true, tool:"🚱 WATERSHED INTERFERENCE — a wheat exporter (Black Sea, Australia, the Plata)",
   text:"Make the weather move a price. Stand the watershed wing up if it is not, and put it on an exporter. The board is watching the wheat number, and your positioning.",
   check:(row)=>row.price>=107&&eng.state.ops.some(o=>o.owner==="player"&&o.sig>0&&o.t+o.lag>=t-2&&o.t+o.lag<=t)},
  {title:"Stay invisible", reward:15, window:3, tool:"CONTAINMENT BUDGET — the slider under ATTRIBUTION",
   text:"Operations are landing and the ladder has not moved. Keep the dossier quiet — that is the craft, not the storm.",
   check:(row)=>row.dossier<40&&eng.state.ops.filter(o=>o.owner==="player"&&o.sig>0&&o.t+o.lag<=t).length>=3},
- {title:"Move the ocean, not the country", reward:30, window:3, fromYear:1975, needs:["Ocean Thermal Forcing"], standable:true, tool:"🌊 OCEAN THERMAL — the Atlantic",
+ {title:"Move the ocean, not the country", reward:30, window:3, fromYear:1972, needs:["Ocean Thermal Forcing"], standable:true, tool:"🌊 OCEAN THERMAL — the Atlantic",
   text:"Stop pushing countries. Push the sea that pushes them. The ships exist now; stand the wing up and commit an ocean operation.",
   check:()=>eng.state.ops.some(o=>o.owner==="player"&&o.type==="DRIVER")},
  {title:"Answer them", reward:30, window:3, fromYear:1978, needs:["Watershed Interference","Fire Enablement"], tool:`🚱 WATERSHED or 🔥 FIRE — ${START.rival}`,
@@ -179,9 +179,9 @@ const FLAGSHIP_CAPS=["ENSO Forcing","Ionospheric Coupling [T3]","Polar Destabili
    earmark arrives with each new tier of capability. It stands the wing up
    whether or not the chest could — the demonstration is the point. */
 const EARMARKS=[
- {year:1984, amount:40, caps:["Stratospheric Aerosol Inj."], ask:"a stratospheric demonstration — AEROSOL", line:"El Chichón proved the sky can be veiled. The committee wants ours."},
- {year:1995, amount:60, caps:FLAGSHIP_CAPS, ask:"a flagship demonstration — ENSO", line:"The Pacific is understood well enough to be pushed. The committee wants to watch it move."},
- {year:2015, amount:60, caps:FLAGSHIP_CAPS, ask:"a flagship demonstration — ENSO, IONOSPHERIC, or POLAR", line:"The Arctic is open and the heater is warm. Something the committee can see from orbit."},
+ {year:1982, amount:40, caps:["Stratospheric Aerosol Inj."], ask:"a stratospheric demonstration — AEROSOL", line:"El Chichón proved the sky can be veiled. The committee wants ours."},
+ {year:1990, amount:60, caps:FLAGSHIP_CAPS, ask:"a flagship demonstration — ENSO", line:"The Pacific is understood well enough to be pushed. The committee wants to watch it move."},
+ {year:2014, amount:60, caps:FLAGSHIP_CAPS, ask:"a flagship demonstration — ENSO, IONOSPHERIC, or POLAR", line:"The Arctic is open and the heater is warm. Something the committee can see from orbit."},
  {year:2035, amount:80, caps:FLAGSHIP_CAPS, ask:"a flagship demonstration — ENSO, IONOSPHERIC, or POLAR", line:"The world is louder than it was. The committee wants the programme to be louder than the world."},
 ];
 const FLAGSHIP_FUSE=3;
