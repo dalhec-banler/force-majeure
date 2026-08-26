@@ -1415,6 +1415,7 @@ function buildTray(){
 }
 function budgetRefuse(c){                 // true if the purse says no (and says why)
   if(canAfford(c)) return false;
+  alertStrip(`NOT IN THE BUDGET — ${c.name.replace(" [T3]","").toUpperCase()} NEEDS $${capCost(c.name)}M, $${fmt(available(),0)}M LEFT`);
   if(spendable()<6)
     $("toolinfo").innerHTML = `<span style="color:var(--red)">Nothing is in the budget.</span> Overhead is $${eng.assumptions.overhead}M a season. Wait for the committee — or for the world to frighten it.`;
   else
