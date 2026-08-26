@@ -235,7 +235,7 @@ function hoverCheck(e){
     : a>0.7? "Unusually wet season" : "Seasonal norms";
   h.innerHTML=`<b>${r.name.toUpperCase()}</b>${r.homeland?" · HOMELAND":""}<br>
     ${read}. ${r.crop} ${r.kind?"output":"harvest"} at <span class="num">${y.toFixed(0)}%</span>
-    · ${r.weight}% of world supply${res?` · hardened`:""}<br>
+    · ${r.weight.toFixed(1)}% of world supply${res?` · hardened`:""}<br>
     <span style="color:var(--ink-faint)">anomaly ${a.toFixed(2)} vs natural range ±${s.toFixed(2)}${Math.abs(a)>s?" — outside":""}</span>${(()=>{
       if(!eng.knowledge.on) return "";
       const fc=eng.knowledge.forecast(); if(!fc) return "";
