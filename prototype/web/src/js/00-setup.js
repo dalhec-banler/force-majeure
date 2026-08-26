@@ -12,7 +12,7 @@ for(const e of HISTORY.eruptions){
 }
 for(const q of HISTORY.quakes) for(const h of (q.hit||[]))
   EXO.push({t:q.t, region:h.region, mag:h.mag, dur:h.dur||1, cap:q.name+" earthquake"});
-const eng = createEngine(MODEL, {rivals:true, idleTrim:0.6, jetstream:true, forensics:true, knowledge:true, budgetGate:true, exogenous:EXO, priceCap:300, scrutiny:true, grainSupply:true, priceElasticity:3.0, rivalEras:true, shadow:true});
+const eng = createEngine(MODEL, {rivals:true, idleTrim:0.6, jetstream:true, forensics:true, knowledge:true, budgetGate:true, exogenous:EXO, priceCap:300, scrutiny:true, grainSupply:true, priceElasticity:3.0, rivalEras:true, shadow:true, eras:true, envelopeWidening:0.0006, windfall:2, reserveCap:400});
 const DRVNAME = { ENSO:"the Pacific", IOD:"the Indian Ocean", NATL:"the Atlantic", GLOBAL:"the planet" };
 let SHOW_WIRES=true;             // the known wiring, drawn on the globe
 let newWires=[];                 // wires revealed recently: {di,ri,bornT}
@@ -59,6 +59,20 @@ const MONO_FONT='"IBM Plex Mono", Menlo, monospace';    // cached once: canvas f
 
 let FLAT=false;                  // flat-map view toggle
 let t = 0;                       // last resolved season
+/* The long campaign (ADR-0023): decisions come at REVIEWS — a year at a
+   time while the programme is a lab with a budget line, a half-year from
+   ENMOD, a season in the situation room. The engine ticks every season. */
+const TIERS=(MODEL.tiers&&MODEL.tiers.length)? MODEL.tiers : [{from:0,every:1,name:"SEASON",clock:45}];
+function yearOfSeason(s){ return MODEL.climate[Math.max(1,Math.min(s,MODEL.climate.length))-1].year; }
+function curYear(){ return yearOfSeason(Math.max(1,t)); }
+function tierFor(s){ const yr=yearOfSeason(s); let tt=TIERS[0]; for(const x of TIERS) if(yr>=x.from) tt=x; return tt; }
+function tierStartT(tier){ const i=MODEL.climate.findIndex(c=>c.year>=tier.from); return i<0?1:i+1; }
+function isReviewStart(s){ const tier=tierFor(s); return (s-tierStartT(tier))%tier.every===0; }
+function nextBatch(){ const s=t+1, tier=tierFor(s), start=tierStartT(tier); return Math.min(tier.every-((s-start)%tier.every), eng.seasons-t); }
+function clockMs(){ return (tierFor(t+1).clock||45)*1000; }
+let rv=0;                        // reviews begun so far — directive fuses count these
+let wingOrders={standup:[],mothball:[]};   // orders for the next review
+function isOnline(ri){ const r=lastRow(); return r? !!r.online[ri] : eng.regionOnline(ri,1); }
 let flash = [];                  // travelling arcs
 let shocks = [];                 // expanding event shockwaves
 let effects = [];                // persistent spectacle: fire, smoke, storm...
@@ -94,11 +108,12 @@ function placeName(dl){ return dl.toLowerCase().replace(/(^|[\s\-'])(\S)/g,(m,a,
 /* the purse: what is on hand, what is already committed, what is left */
 function funds(){ const r=lastRow(); return r? r.treasury : eng.assumptions.startingTreasury; }
 function capCost(name){ const c=CAPS.find(c2=>c2.name===name); if(!c) return 0;
-  const funded = flagship && FLAGSHIP_CAPS.includes(name) && !slots.some(s=>FLAGSHIP_CAPS.includes(s.cap) && s.cap!==name);
+  const fc = flagship? (flagship.caps||FLAGSHIP_CAPS) : [];
+  const funded = flagship && fc.includes(name) && !slots.some(s=>fc.includes(s.cap) && s.cap!==name);
   return funded? 0 : c.cost; }
 function escapeHTML(x){ return String(x).replace(/[&<>"]/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch])); }
 function armedCost(){ return slots.reduce((s,x)=>s+capCost(x.cap),0); }
-function spendable(){ return Math.max(0, funds()-eng.assumptions.overhead); }   // after the overhead reserve
+function spendable(){ const r=lastRow(); return Math.max(0, funds()-(r&&r.overhead!==undefined? r.overhead : eng.assumptions.overhead)); }   // after the overhead reserve (rent plus the wings' upkeep)
 function available(){ return Math.max(0, spendable()-armedCost()); }
 function canAfford(c){ if(capCost(c.name)===0 && c.cost>0) return funds()>=eng.assumptions.overhead; return capCost(c.name) <= available(); }
 function renderTab(){

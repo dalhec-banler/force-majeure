@@ -66,3 +66,19 @@ basins are as recorded (no forcing reaches them yet). Weather disasters,
 famine, locusts fire unless the player's own traced contribution to the
 region opposes them (unmade) or reinforces them (worse). Epidemics and
 tornadoes are canon.
+
+## 1956–2022 (century session, 2026-08-26)
+The record now runs to 2022. Storms: HURDAT2 + IBTrACS as before; after
+1955 only Cat 2+ landfalls and Cat 4+ within reach of a coast are kept
+(1,674 storms in all). Authored catalogs live under
+`prototype/web/tools/history/` with a verification table beside each:
+- `eruptions-1956-2022.py` (43) — `eruptions-sources.md`
+- `quakes-1956-2022.py` (49, MAJOR rule) — `quakes-sources.md`
+- `weather-1956-2022.py` (91: 82 alterable, 9 canon) — `weather-sources.md`
+Every entry was checked against its Wikipedia article (GVP/USGS where
+noted) by the authoring pass; fields marked *authored* in the tables
+(display durations, ash/hit magnitudes, months of multi-year famines) are
+game values, not record. Flags for the author: 2002 floods filed under
+the Danube Basin (Elbe cities); 2011 Texas drought filed under the Gulf
+Coast; famine tolls use the conservative end of the scholarly range
+(ranges in the tables). 2023 onward is fiction.

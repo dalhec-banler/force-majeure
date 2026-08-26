@@ -1,9 +1,14 @@
 /* --------------------------------------------------------------- misc */
-buildTray(); clampContainment(); renderTray(); renderDirective();
+buildTray(); clampContainment(); renderTray(); renderDirective(); renderReviewButton();
 requestAnimationFrame(drawGlobe);            // every part has run; the loop may start
+const savedLog=loadSave();
+if(savedLog){ $("resume").style.display=""; $("begin").textContent="NEW PROGRAMME ▸"; }
 $("begin").addEventListener("click",()=>{ $("intro").style.display="none";
-  audioInit(); sfxClick();
-  seasonDeadline=performance.now()+SEASON_MS; });
+  clearSave(); audioInit(); sfxClick();
+  SEASON_MS=clockMs(); seasonDeadline=performance.now()+SEASON_MS; });
+$("resume").addEventListener("click",async()=>{ $("intro").style.display="none";
+  audioInit(); sfxClick(); $("resume").disabled=true;
+  await replaySave(savedLog); });
 $("intro").style.display="none";
 const bootT=setTimeout(()=>{ $("boot").style.display="none";
   $("intro").style.display="flex"; }, 2600);

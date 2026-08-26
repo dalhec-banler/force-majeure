@@ -34,5 +34,15 @@ After any edit: `python3 build.py`, then the engine integrity check in
 feature list in the night report before publishing. Engine opts that must be
 present in `00-setup.js`: `rivals:true, idleTrim:0.6, jetstream:true, forensics:true,
 knowledge:true, budgetGate:true, priceCap:300, scrutiny:true, grainSupply:true,
-priceElasticity:3.0, rivalEras:true, shadow:true`. `model-expanded.json` is the
+priceElasticity:3.0, rivalEras:true, shadow:true, eras:true, envelopeWidening:0.0006,
+windfall:2, reserveCap:400`. `model-expanded.json` is the
 console's world for engine-level tests (`HTML=` overrides the harness page).
+
+## The long campaign (ADR-0023)
+`build.py` with `LONG = True` builds the 460-season world (1946–2060)
+from the climate pack; regions carry `from`, capabilities `from/chest/
+upkeep`, and `MODEL.tiers` sets the review cadence. `tools/extract-history.py`
+rebuilds `history.json` to 2022 from `data/raw` and `tools/history/`.
+Harness: `node tools/playharness.js "$PWD/tools/campaign-century.js"`
+(`LAB=1` for the lab line); `api.review()` runs one review, `api.standup(cap)`
+/ `api.mothball(cap)` order wings, `api.wing(cap)` reads a wing's status.

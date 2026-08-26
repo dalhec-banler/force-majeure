@@ -73,6 +73,25 @@ function createEngine(MODEL, opts) {
   // in which the programme never acts. Each row carries baseRevenue — what
   // the homeland would have earned anyway — so PROFIT is what the
   // programme made, not what the weather did. Default off.
+  // eras (ADR-0023/24/25, author 2026-08-26): the world grows and the
+  // arsenal arrives on the calendar. Regions carry `from` (the year they
+  // come on the board); capabilities carry `from`, `chest` (the treasury the
+  // programme must hold to stand the wing up) and `upkeep` (its rent per
+  // season while online). A wing whose chest collapses is mothballed; it
+  // reopens at three-quarters of the chest. Always a way back. Default off.
+  const eras = !!(opts && opts.eras);
+  // the windfall cut (ADR-0023): the programme keeps this share of what it
+  // made the homeland this season over the shadow world — the trade desk's
+  // motive made into money. Needs the shadow; default 0 (sheet exact).
+  const windfallCut = (opts && opts.windfall) ? opts.windfall : 0;
+  // use it or lose it (ADR-0023): treasury above the reserve cap lapses at
+  // 15% a season — the committee does not let a directorate bank a war
+  // chest it is not using. Default Infinity (sheet exact).
+  const reserveCap = (opts && opts.reserveCap) ? opts.reserveCap : Infinity;
+  // envelope widening per season override (the sheet's 0.006 was tuned for
+  // forty seasons; the long campaign uses ~0.0006)
+  const envelopeWidening = (opts && opts.envelopeWidening !== undefined)
+    ? opts.envelopeWidening : null;
   const shadow = (opts && opts.shadow)
     ? createEngine(MODEL, Object.assign({}, opts, { shadow: false })) : null;
   const A = {};
@@ -107,7 +126,40 @@ function createEngine(MODEL, opts) {
   const capByName = Object.fromEntries(
     MODEL.capabilities.map((c) => [c.name, c]));
 
-  const state = { ops: [], rows: [], jetUntil: 0, dossierFloor: 0 };  // rows[t-1] = season t
+  const state = { ops: [], rows: [], jetUntil: 0, dossierFloor: 0, wings: {} };  // rows[t-1] = season t
+  for (const c of MODEL.capabilities) if (c.type !== "NONE") {
+    // the lab (upkeep ≤ $1M) stands itself up — from the first season if
+    // its year has come; wings are ordered
+    const lab = (c.upkeep || 0) <= 1;
+    const atStart = eras && lab && (!c.from || c.from <= MODEL.climate[0].year) && (c.chest || 0) <= P.startingTreasury;
+    state.wings[c.name] = { online: !eras || atStart, ever: atStart, low: 0, wanted: lab };
+  }
+  // appropriations follow the threat (ADR-0023): the committee's baseline
+  // mandate rises with the era — a lab's budget line in 1946, a Cold War
+  // directorate by ENMOD, a standing programme by the century's end
+  const MANDATE_RAMP = [[1946,0],[1960,2],[1976,10],[1990,18],[2000,24],[2015,32],[2030,40],[2060,48]];
+  function mandateLift(year) {
+    if (!eras) return 0;
+    for (let i = 0; i + 1 < MANDATE_RAMP.length; i++) {
+      const [y0, v0] = MANDATE_RAMP[i], [y1, v1] = MANDATE_RAMP[i + 1];
+      if (year >= y0 && year <= y1) return v0 + (v1 - v0) * (year - y0) / (y1 - y0);
+    }
+    return MANDATE_RAMP[MANDATE_RAMP.length - 1][1];
+  }
+  const yearOf = (tt) => MODEL.climate[Math.max(1, Math.min(tt, MODEL.climate.length)) - 1].year;
+  function regionOnline(ri, tt) { const r = REGIONS[ri]; return !eras || !r.from || yearOf(tt) >= r.from; }
+  function wingOnline(name) { if (!eras) return true; const w = state.wings[name]; return !w || w.online; }
+  function wingStatus(name) {   // {online, eligible, chest, need, upkeep, from, ever, wanted}
+    const cap = capByName[name], w = state.wings[name];
+    if (!cap || !w) return null;
+    const tt = state.rows.length + 1, yr = yearOf(tt);
+    const prevT = state.rows.length ? state.rows[state.rows.length - 1].treasury : P.startingTreasury;
+    const need = (cap.chest || 0) * (w.ever ? 0.75 : 1);
+    return { online: w.online, eligible: !cap.from || yr >= cap.from, from: cap.from || null,
+             chest: cap.chest || 0, need, canStand: (!cap.from || yr >= cap.from) && prevT >= need,
+             upkeep: cap.upkeep || 0, ever: w.ever, wanted: w.wanted };
+  }
+  function wingsSnapshot() { const o = {}; for (const k of Object.keys(state.wings)) o[k] = state.wings[k].online; return o; }
   // grain supply weights: share of the index carried by each region
   const supplyShare = (() => {
     const counts = REGIONS.map((r) => !grainSupply || !r.kind || !!r.grain);
@@ -294,12 +346,47 @@ function createEngine(MODEL, opts) {
 
     // C — commitment: preconditions bound, ops recorded, costs fixed.
     const committed = [], refused = [];
-    // the purse reserves this season's overhead: you cannot spend the rent
-    let purse = (prev ? prev.treasury : P.startingTreasury) + Math.max(0, cmd.grant || 0)
-              - Math.max(0, cmd.clawback || 0) - (budgetGate ? P.overhead : 0);
     // a flagship earmark {amount, caps} is drawn only by the op it funds
     const earmark = cmd.earmark && cmd.earmark.amount > 0 ? cmd.earmark : null;
     let earmarkUsed = 0;
+    // the arsenal (eras): wings stand up when the calendar and the chest
+    // allow, are mothballed by order (cmd.mothball) or by attrition (four
+    // seasons under a quarter of the chest), reopen at three-quarters
+    const wingEvents = [];
+    if (eras) {
+      const prevT = prev ? prev.treasury : P.startingTreasury;
+      const yr = yearOf(t);
+      for (const cap of MODEL.capabilities) {
+        if (cap.type === "NONE") continue;
+        const w = state.wings[cap.name];
+        const eligible = !cap.from || yr >= cap.from;
+        if (cmd.mothball && cmd.mothball.includes(cap.name)) {
+          w.wanted = false;
+          if (w.online) { w.online = false; w.low = 0;
+            wingEvents.push({ cap: cap.name, what: "mothballed", why: "order" }); } }
+        if (cmd.standup && cmd.standup.includes(cap.name)) w.wanted = true;
+        const fundedNow = earmark && earmark.caps.includes(cap.name);
+        if (!w.online && eligible && (w.wanted || fundedNow)) {
+          const need = (cap.chest || 0) * (w.ever ? 0.75 : 1);
+          const funded = fundedNow;
+          if (prevT >= need || funded) {
+            const why = (funded && !w.wanted) ? "earmark" : w.ever ? "reopened" : "new";
+            w.online = true; w.low = 0; w.wanted = true; w.ever = true;
+            wingEvents.push({ cap: cap.name, what: "online", why }); }
+        } else if (w.online && (cap.chest || 0) > 0) {
+          if (prevT < cap.chest / 4) w.low++; else w.low = 0;
+          if (w.low >= 4) { w.online = false; w.low = 0; w.wanted = false;
+            wingEvents.push({ cap: cap.name, what: "mothballed", why: "attrition" }); }
+        }
+      }
+    }
+    const upkeep = eras ? MODEL.capabilities.reduce((s2, c) =>
+      s2 + ((c.type !== "NONE" && state.wings[c.name].online) ? (c.upkeep || 0) : 0), 0) : 0;
+    const overhead = P.overhead + upkeep;
+    // the purse reserves this season's overhead: you cannot spend the rent
+    let purse = (prev ? prev.treasury : P.startingTreasury) + Math.max(0, cmd.grant || 0)
+              - Math.max(0, cmd.clawback || 0) - (budgetGate ? overhead : 0);
+    const purseAtCommit = purse;
     if (earmark) purse += earmark.amount;                 // available to the flagship op
     // any number of operations a season (author rule 2026-08-25); the sheet's
     // two-slot cmd shape (opA/opB) is still accepted for conformance
@@ -309,6 +396,12 @@ function createEngine(MODEL, opts) {
     for (const [capName, target] of wanted) {
       const op = makeOp(t, capName, target, prevAnom, "player");
       if (!op) continue;
+      if (eras) {
+        if (!wingOnline(op.cap)) { refused.push(Object.assign({ why: "locked" }, op)); continue; }
+        const tri = regionIndex[op.target];
+        if (op.type === "REGION" && tri !== undefined && !regionOnline(tri, t)) {
+          refused.push(Object.assign({ why: "offline" }, op)); continue; }
+      }
       const funded = earmark && !earmarkUsed && earmark.caps.includes(op.cap);
       if (budgetGate && op.cost > (funded ? purse : purse - (earmark && !earmarkUsed ? earmark.amount : 0))) { refused.push(op); continue; }
       purse -= op.cost;
@@ -316,6 +409,13 @@ function createEngine(MODEL, opts) {
       committed.push(op); state.ops.push(op);
     }
     for (const r of rivalPlan(t)) {
+      // the rival shares the century's technology and the board as it stands
+      if (eras) {
+        const rc = capByName[r.cap];
+        if (rc && rc.from && yearOf(t) < rc.from) continue;
+        const tri = regionIndex[r.target];
+        if (tri !== undefined && !regionOnline(tri, t)) continue;
+      }
       const op = makeOp(t, r.cap, r.target, prevAnom, "rival");
       if (op) state.ops.push(op);
     }
@@ -383,7 +483,14 @@ function createEngine(MODEL, opts) {
     });
 
     // R4 — envelope (pure function of t in the prototype).
-    const sigmas = REGIONS.map((r) => r.sigma * (1 + P.envelopeWidening * t));
+    const sigmas = REGIONS.map((r) => r.sigma * (1 + (envelopeWidening !== null ? envelopeWidening : P.envelopeWidening) * t));
+    // the board as it stands this season (eras): regions not yet online
+    // grow nothing anyone trades, weigh nothing, and cannot be worked
+    const online = REGIONS.map((r, ri) => regionOnline(ri, t));
+    const nOnline = online.filter(Boolean).length;
+    const regionEvents = eras && t > 1
+      ? REGIONS.map((r, ri) => ({ ri, region: r.name })).filter((x) => online[x.ri] && !regionOnline(x.ri, t - 1))
+      : [];
 
     // R5 — anomalies: noise + lagged edge reads + landed region injections.
     const anomalies = REGIONS.map((r, ri) => {
@@ -418,7 +525,7 @@ function createEngine(MODEL, opts) {
       }
       const obs = [];
       for (const e of EDGES) {
-        if (known.has(ekey(e.di, e.ri))) continue;
+        if (known.has(ekey(e.di, e.ri)) || !online[e.ri]) continue;
         const ts = t - e.lag; if (ts < 1) continue;
         const dv = state.rows[ts - 1].driverTotals[e.di], c = Math.abs(dv * e.coeff);
         if (Math.abs(dv) >= 1.1 && c >= 0.55) obs.push({ e, c });
@@ -440,6 +547,7 @@ function createEngine(MODEL, opts) {
       return v;
     });
     const yields = REGIONS.map((r, ri) => {
+      if (!online[ri]) return 100;
       const a = anomalies[ri];
       const damage = (Math.max(0, -a) * r.sens * P.droughtPenalty
         + Math.max(0, a - P.floodThreshold) * r.sens * P.floodPenalty)
@@ -448,23 +556,34 @@ function createEngine(MODEL, opts) {
     });
 
     // R8 — markets.
+    const shareNow = eras ? (() => {
+      const w = supplyShare.map((x, ri) => online[ri] ? x : 0);
+      const tot = w.reduce((s2, x) => s2 + x, 0) || 1;
+      return w.map((x) => x * 100 / tot); })() : supplyShare;
     const supply = REGIONS.reduce(
-      (s, r, ri) => s + yields[ri] * supplyShare[ri] / 100, 0);
+      (s, r, ri) => s + yields[ri] * shareNow[ri] / 100, 0);
     const price = Math.min(priceCap, 100 * Math.pow(100 / Math.max(1, supply), elasticity || P.priceElasticity));
     const homelandIdx = REGIONS.findIndex((r) => r.homeland);
     const revenue = yields[homelandIdx] * price / 100 * P.revenueScale;
+    const baseRevenue = shadow ? shadow.resolve(t, {}).revenue : null;
+    const windfall = (shadow && windfallCut) ? Math.max(0, revenue - baseRevenue) * windfallCut : 0;
 
     // R9 — severity, mandate, budget, treasury.
+    const sevTot = eras ? REGIONS.reduce((s2, r, ri) => s2 + (online[ri] ? r.weight : 0), 0) : 100;
     const severity = REGIONS.reduce((s, r, ri) =>
-      s + Math.max(0, Math.abs(anomalies[ri])
-                      - sigmas[ri] * P.severityThreshold) * r.weight / 100, 0);
+      s + (online[ri] ? Math.max(0, Math.abs(anomalies[ri])
+                      - sigmas[ri] * P.severityThreshold) * r.weight / sevTot : 0), 0);
     const mandate = Math.min(P.mandateCap,
-                             P.mandateBase + severity * P.mandatePerSeverity);
+                             P.mandateBase + mandateLift(clim.year) + severity * P.mandatePerSeverity);
     const opsSpend = committed.reduce((s, o) => s + o.cost, 0);
+    // the committee's patience is measured in reviews: at an annual cadence
+    // the idle windows stretch so a year's silence is not a season's
+    const every = (MODEL.tiers || []).filter((x) => clim.year >= x.from).map((x) => x.every).pop() || 1;
+    const idleWin = Math.max(4, 2 * every), realWin = Math.max(8, 3 * every);
     // the committee funds programmes that do things
     const recentOp = state.ops.some(
       (o) => o.owner === "player"
-        && (o.t > t - 4                                   // committed recently
+        && (o.t > t - idleWin                             // committed recently
             || (o.mag !== 0 && t < o.t + o.lag + (o.dur || 1))));  // or still burning
 
     const trimmed = t > 4 && !recentOp && idleTrim < 1;
@@ -472,25 +591,28 @@ function createEngine(MODEL, opts) {
     // (signature or magnitude) in eight seasons — research and adaptation
     // keep the appropriation, not the mandate to exist (budget gate only)
     const recentRealOp = state.ops.some(
-      (o) => o.owner === "player" && (o.sig > 0 || o.mag !== 0) && o.t > t - 8);
+      (o) => o.owner === "player" && (o.sig > 0 || o.mag !== 0) && o.t > t - realWin);
     const budgetIn = revenue * P.budgetFromRevenue
                    + mandate * P.budgetFromMandate * (trimmed ? idleTrim : 1)
                    + Math.max(0, cmd.grant || 0) + earmarkUsed   // directive appropriations, the earmark if drawn
+                   + windfall                                    // the trade desk's cut
                    - Math.max(0, cmd.clawback || 0); // lapsed-directive clawback
     const prevTreasury = prev ? prev.treasury : P.startingTreasury;
     let treasury = prevTreasury + budgetIn - opsSpend - containment
-                   - P.overhead;
+                   - overhead;
     // a broke programme is wound up, not bankrupted (author rule 2026-08-26,
     // budget gate only): when nothing was spent and the rent alone drives the
     // treasury negative, the committee carries the rent while it deliberates
     // — the treasury floors at zero and the season counts as obsolescent.
     const broke = budgetGate && opsSpend === 0 && containment === 0 && treasury < 0;
     if (broke) treasury = 0;
+    const lapsed = treasury > reserveCap ? (treasury - reserveCap) * 0.15 : 0;
+    treasury -= lapsed;
 
     // A — attribution: signatures of main effects that LANDED this season,
     // amplified by how far outside the envelope the world is.
     const envelopeStress = REGIONS.reduce((s, r, ri) =>
-      s + Math.max(0, Math.abs(anomalies[ri]) / sigmas[ri] - 1), 0) / NR;
+      s + (online[ri] ? Math.max(0, Math.abs(anomalies[ri]) / sigmas[ri] - 1) : 0), 0) / Math.max(1, nOnline);
     // only the player's signatures feed the player's dossier
     const prevDossier = prev ? prev.dossier : 0;
     // scrutiny: the rung the world was on when these ops landed decides how
@@ -503,12 +625,15 @@ function createEngine(MODEL, opts) {
     let attribution = 0;
     for (const e of landed) {
       if (e.owner !== "player" || !e.sig) continue;
-      let sig = e.sig * scrutinyMult;
-      // relief at home is what the programme is for, on paper (ADR-0020):
-      // seeding your own farmland is public and legal everywhere, so it is
-      // never pattern evidence — it still pays its signature under the eyes
-      const homeRelief = scrutiny && e.kind === "region" && e.mag > 0
-        && e.target === REGIONS[homelandIdx].name;
+      // relief pays half its signature under scrutiny and none of the rung's
+      // eyes: rain on a harvest is announced and thanked, not investigated
+      const reliefOp = scrutiny && e.kind === "region" && e.mag > 0;
+      let sig = e.sig * (reliefOp ? 0.5 : scrutinyMult);
+      // relief is the programme's public face (ADR-0020, widened in the
+      // century session): rain put on a harvest is announced, photographed
+      // and thanked — it is never pattern evidence, at home or abroad. It
+      // still pays its signature under the eyes.
+      const homeRelief = scrutiny && e.kind === "region" && e.mag > 0;
       if (forensics && !homeRelief) {
         // pattern evidence: same-target player landings in the repeat window
         let repeats = 0;
@@ -570,23 +695,34 @@ function createEngine(MODEL, opts) {
     let status = "running";
     // (recentOp computed above counts PLAYER ops only — rival activity must
     // never shield the player from the committee)
+    // a starved programme (the purse could not buy the cheapest operation)
+    // is not idle — poverty costs it the wings by attrition, never the
+    // programme (author 2026-08-26: always a way back). Idleness with money
+    // is what the committee winds up.
+    const cheapest = MODEL.capabilities.reduce((m, c) => (c.type !== "NONE" && c.cost > 0) ? Math.min(m, c.cost) : m, Infinity);
+    const starved = budgetGate && (purseAtCommit < cheapest);
     const obsolescent = budgetGate
-      ? (t > 8 && (!recentRealOp || broke))                 // idleness itself, not the weather
+      ? (t > 8 && !starved && !recentRealOp)                 // idleness itself, not the weather, not poverty
       : (t > 8 && mandate <= P.mandateBase + 1 && !recentOp);
     const obsStreak = obsolescent ? ((prev ? prev.obsStreak : 0) + 1) : 0;
+    // the committee winds a programme up after four warned seasons — never
+    // fewer than two reviews at the current cadence (the player must have
+    // had a chance to answer the warning)
+    const obsLimit = Math.max(4, 3 * every);
     if (dossier >= 200) status = "exposed";
     else if (treasury < 0) status = "insolvent";
-    else if (obsStreak >= 4) status = "dissolved";
+    else if (obsStreak >= obsLimit) status = "dissolved";
     else if (obsolescent) status = "obsolescence-warning";
+    else if (starved && t > 8) status = "starved";
 
-    const baseRevenue = shadow ? shadow.resolve(t, {}).revenue : null;
     const row = { t, year: clim.year, qtr: clim.qtr, driverNat: clim.drivers,
-                  baseRevenue,
+                  baseRevenue, windfall, lapsed,
                   driverTotals, sigmas, anomalies, resil, yields, supply,
                   price, revenue, severity, mandate, opsSpend, containment,
                   budgetIn, trimmed, jetTriggered, jetActive,
                   treasury, attribution, dossier, ladderText,
                   dossierFloor: state.dossierFloor, scrutinyMult,
+                  online, regionEvents, wingEvents, upkeep, overhead, wings: wingsSnapshot(),
                   status, obsStreak, landed, committed, refused, revealed, earmarkUsed,
                   prediction: cmd.prediction || "" };
     state.rows.push(row);
@@ -597,8 +733,11 @@ function createEngine(MODEL, opts) {
            capabilities: MODEL.capabilities, regions: REGIONS,
            drivers: DRIVERS, ladder: MODEL.ladder, assumptions: P,
            seasons: MODEL.climate.length,
+           eras, regionOnline, wingOnline, wingStatus, wings: wingsSnapshot, yearOf,
            knowledge: { on: knowledgeOn, edges: EDGES, isKnown, forecast,
-                        count: () => ({ known: known.size, total: EDGES.length }) } };
+                        count: () => { const tt = state.rows.length || 1;
+                          const live = EDGES.filter((e) => regionOnline(e.ri, tt));
+                          return { known: live.filter((e) => known.has(ekey(e.di, e.ri))).length, total: live.length }; } } };
 }
 
 if (typeof module !== "undefined") module.exports = { createEngine };

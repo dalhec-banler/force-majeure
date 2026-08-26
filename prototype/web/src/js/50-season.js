@@ -1,26 +1,64 @@
-const SEASON_MS=45000;          // time does not stop; RUN SEASON jumps ahead
+let SEASON_MS=45000;            // time does not stop; RUN jumps ahead (set per tier)
 let seasonDeadline=null, resolving=false;
+/* A REVIEW resolves every season until the next review point: the armed
+   operations commit on its first season; containment and the earmark ride
+   along; the seasons between pass briskly and the last one lingers. */
 async function runSeason(auto){
   if(!running || resolving) return;
   resolving=true; seasonDeadline=null;
   $("resolve").disabled=true;
-  alertQ.length=0;                                   // a new season's chyrons, not last season's backlog
-  try{ await runSeasonInner(auto); }
+  alertQ.length=0;                                   // a new review's chyrons, not last review's backlog
+  try{
+    const n=nextBatch();
+    for(let i=0;i<n && running;i++){ brisk=i<n-1; await runSeasonInner(auto); }
+  }
   catch(e){ console.error("season error", e); wire(`<span class="tag tagr">FAULT</span> The season resolved with an error in the instrument: ${escapeHTML(e.message)}. The record stands.`,"att"); }
-  finally{ resolving=false; $("resolve").disabled=!running; if(running && seasonDeadline===null) seasonDeadline=performance.now()+SEASON_MS; }
+  finally{ brisk=false; resolving=false; $("resolve").disabled=!running; SEASON_MS=clockMs(); renderReviewButton(); if(running && seasonDeadline===null) seasonDeadline=performance.now()+SEASON_MS; }
 }
-async function runSeasonInner(auto){
+function renderReviewButton(){
+  const n=running? nextBatch() : 0;
+  $("resolve").textContent = n>=4? "RUN THE YEAR ▸" : n>=2? "RUN THE HALF-YEAR ▸" : "RUN SEASON ▸";
+  const cl=$("szclockLbl"); if(cl) cl.textContent = n>=2? "REVIEW CLOSES" : "SEASON CLOSES";
+}
+async function runSeasonInner(auto, cmdOverride){
   const prev=lastRow();
-  const cmd={ ops:slots.map(s=>({cap:s.cap,target:s.target})),
-              containment:+$("containment").value,
-              grant:pendingGrant, clawback:pendingClaw,
-              prediction:$("predict").value.trim() };
-  // the flagship earmark travels with the commitment; the engine draws it
-  // only if the flagship op actually commits
-  if(flagship) cmd.earmark={amount:flagship.amount, caps:FLAGSHIP_CAPS};
+  const first=isReviewStart(t+1);
+  if(first) rv++;
+  let cmd;
+  if(cmdOverride) cmd=cmdOverride;
+  else {
+    cmd={ ops: first? slots.map(s=>({cap:s.cap,target:s.target})) : [],
+          containment:+$("containment").value,
+          grant:pendingGrant, clawback:pendingClaw,
+          prediction: first? $("predict").value.trim() : "" };
+    if(first && (wingOrders.standup.length||wingOrders.mothball.length)){
+      cmd.standup=wingOrders.standup.slice(); cmd.mothball=wingOrders.mothball.slice();
+      wingOrders={standup:[],mothball:[]}; }
+    // the flagship earmark travels with the commitment; the engine draws it
+    // only if the flagship op actually commits
+    if(flagship) cmd.earmark={amount:flagship.amount, caps:flagship.caps||FLAGSHIP_CAPS};
+  }
   pendingGrant=0; pendingClaw=0;
   t++;
   const row = eng.resolve(t, cmd);
+  if(!replaying){ saveLog.push(cmd); persistSave(); }
+  for(const w of (row.wingEvents||[])){
+    const c=CAPS.find(x=>x.name===w.cap); const nm=w.cap.replace(" [T3]","").toUpperCase();
+    if(w.what==="online"){
+      if((c&&(c.upkeep||0)>0)||w.why!=="new"){
+        alertStrip(`${nm} WING STANDS UP`);
+        wire(`<span class="tag tagd">WING</span><b>${nm}</b> — ${w.why==="reopened"?"reopened. The planes come out of the desert.":w.why==="earmark"?"stood up on the committee's earmark. The demonstration is expected.":"the wing stands up."}${(c&&c.upkeep)?` Upkeep $${c.upkeep}M a season for as long as you keep it.`:""}`,"op");
+        sfxChime(); }
+    } else {
+      alertStrip(`${nm} WING MOTHBALLED`);
+      wire(`<span class="tag" style="color:var(--amber);border-color:var(--amber)">MOTHBALLED</span><b>${nm}</b> — ${w.why==="attrition"?"the chest could not carry it. The planes go to the desert; the crews go to the airlines.":"stood down by order."}${(c&&c.chest)?` It reopens at $${Math.round(c.chest*0.75)}M in the chest.`:""}`,"att");
+      sfxAlert(); }
+  }
+  for(const g of (row.regionEvents||[])){
+    const r=REG[g.ri];
+    news(DATELINE[r.name]||r.name.toUpperCase(), `${r.name} is on the board — ${(r.crop||"").toLowerCase()}. ${r.kind==="hub"?"A chokepoint the world now runs through.":r.kind==="ice"?"Sea lanes where the ice used to be.":"A harvest the markets now price."}`, false);
+    sfxTeletype(); }
+  if(row.lapsed>0.5) wire(`MEMO — Budget office: $${fmt(row.lapsed,0)}M of unspent appropriation lapsed to the Treasury. A chest the programme does not use is one the committee does not renew.`,"memo");
   newWires=newWires.filter(w=>t-w.bornT<3);
   for(const e of (row.revealed||[])){
     if(e.how==="exhausted"){ wire(`RESEARCH — ${e.region}: nothing left to learn. Every wire into it is on the board.`,"op"); continue; }
@@ -36,7 +74,7 @@ async function runSeasonInner(auto){
   }
   const drawn=!!row.earmarkUsed;
   if(drawn){
-    wire(`<span class="tag tagd">EARMARK DRAWN</span> $${flagship.amount}M. The demonstration is funded. The committee will want to watch.`,"op");
+    wire(`<span class="tag tagd">EARMARK DRAWN</span> $${row.earmarkUsed}M. The demonstration is funded. The committee will want to watch.`,"op");
     flagship=null;
   }
   effects = effects.filter(e=> t - e.bornT < e.life);
@@ -150,6 +188,7 @@ async function runSeasonInner(auto){
   await phaseShow(3);
   let shaken=false;
   for(let ri=0;ri<REG.length;ri++){
+    if(!isOnline(ri)) continue;
     const a=row.anomalies[ri], s=row.sigmas[ri], r=REG[ri];
     const severe = Math.abs(a)>s*eng.assumptions.severityThreshold && Math.abs(a)>0.6;
     sevStreak[ri] = severe? sevStreak[ri]+1 : 0;
@@ -235,6 +274,7 @@ async function runSeasonInner(auto){
     }
   }
   for(let ri=0;ri<REG.length;ri++){
+    if(!isOnline(ri)) continue;
     const y=row.yields[ri];
     if(y<70){
       const d=Math.pow(70-y,1.25)*(REG[ri].kind?350:2400)*(1+REG[ri].weight/8);
@@ -303,14 +343,34 @@ async function runSeasonInner(auto){
   $("predict").value=""; slots=[]; pendingTool=null; clampContainment(); renderTray();
   $("toolinfo").textContent="Pick a tool. Aim it at the world. Scroll to zoom.";
   if(row.status==="exposed"||row.status==="insolvent"||row.status==="dissolved"||t>=eng.seasons){
-    running=false; setTimeout(()=>showArchive(row), reduced?0:900);
+    running=false; clearSave(); if(!replaying) setTimeout(()=>showArchive(row), reduced?0:900);
   }
   if(auto && row.committed.length===0)
     wire(`The season closed while the directorate deliberated.`);
   $("resolve").disabled=!running;
-  if(running) seasonDeadline=performance.now()+SEASON_MS;
 }
 $("resolve").addEventListener("click",()=>{ sfxClick(); runSeason(false); });
+
+/* Saves (ADR-0001 in prototype form): the campaign is the list of commands;
+   the engine is deterministic, so a save replays in a second. One slot. */
+const SAVE_KEY="fm.campaign."+(MODEL.long?"long":"short")+".v1";
+let saveLog=[], replaying=false;
+function persistSave(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify({v:1, log:saveLog})); }catch(e){} }
+function loadSave(){ try{ const s=JSON.parse(localStorage.getItem(SAVE_KEY)||"null"); return (s&&s.v===1&&Array.isArray(s.log)&&s.log.length)? s.log : null; }catch(e){ return null; } }
+function clearSave(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
+async function replaySave(log){
+  replaying=true; const wasMuted=sndMuted; sndMuted=true;
+  try{ for(const cmd of log){ if(!running) break; await runSeasonInner(false, cmd); } }
+  catch(e){ console.error("replay error", e); }
+  saveLog=log.slice(0, t); replaying=false; sndMuted=wasMuted;
+  flash=[]; shocks=[]; vehicles=[];
+  const last=lastRow(); if(last){ $("containment").value=String(log[log.length-1].containment||0); $("contval").textContent=$("containment").value; }
+  $("wire").innerHTML="";
+  wire(`<span class="tag tagd">RESUMED</span> The programme picks up where the file left off — ${last? last.year+" · "+last.qtr : "1946"}. ${t} seasons on the record.`,"op");
+  if(last) updateHUD(last, eng.state.rows[t-2]);
+  clampContainment(); renderTray(); renderDirective(); renderReviewButton();
+  SEASON_MS=clockMs(); if(running) seasonDeadline=performance.now()+SEASON_MS;
+}
 setInterval(()=>{
   const el=$("szclock");
   if(!running || seasonDeadline===null){ el.textContent="—"; el.style.color=""; return; }

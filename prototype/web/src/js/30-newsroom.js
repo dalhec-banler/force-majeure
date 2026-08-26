@@ -1,5 +1,6 @@
 /* --------------------------------------------------------- feed & drama */
 function wire(html, cls){
+  if(typeof replaying!=="undefined" && replaying) return;
   const row=lastRow(); const p=document.createElement("p");
   const stamp = row? `${row.year}·${row.qtr[0]}` : "1946·W";
   p.innerHTML=`<span class="stamp">${stamp}</span> ${cls?`<span class="${cls}">${html}</span>`:html}`;
@@ -90,6 +91,7 @@ function news(dateline, headline, breaking){
 const ALERT_MAX=3, ALERT_LIFE=5200, ALERT_GAP=1000, ALERT_FADE=700;
 const alertQ=[]; let alertLive=0, lastAlertAt=-1e9, alertTimer=null;
 function alertStrip(msg){
+  if(typeof replaying!=="undefined" && replaying) return;
   if(alertQ.includes(msg) || [...$("alerts").children].some(d=>d.textContent===msg)) return;
   alertQ.push(msg); pumpAlerts();
 }

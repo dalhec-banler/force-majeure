@@ -42,8 +42,9 @@ function renderInflight(){
     : '<p class="none">Nothing in transit. The world is doing this to itself.</p>';
 }
 
+const wingMemoDone=new Set();
 function updateHUD(row, prev){
-  $("clock").textContent = `${row.year} · ${row.qtr.toUpperCase()}  ·  S${row.t}/40`;
+  $("clock").textContent = `${row.year} · ${row.qtr.toUpperCase()}  ·  ${tierFor(row.t).name}`;
   $("hFunds").textContent = "$"+fmt(row.treasury)+"M";
   const dt = row.treasury-(prev?prev.treasury:eng.assumptions.startingTreasury);
   $("hFundsD").textContent=(dt>=0?"+":"−")+"$"+fmt(Math.abs(dt))+"M";
@@ -76,8 +77,12 @@ function updateHUD(row, prev){
   renderInflight();
   const b=$("banner");
   if(row.status==="obsolescence-warning"){
+    const lim=Math.max(4, 3*tierFor(row.t).every), left=Math.max(1, Math.ceil((lim-row.obsStreak)/tierFor(row.t).every));
     b.style.display="block";
-    b.textContent=`▲ NO OPERATIONS IN A YEAR — COMMITTEE ASKING WHAT YOU ARE FOR (${row.obsStreak}/4 reviews to dissolution)`;
+    b.textContent=`▲ NO REAL OPERATION IN ${tierFor(row.t).every>=4?"THREE YEARS":"TWO YEARS"} — COMMITTEE ASKING WHAT YOU ARE FOR (${left} review${left===1?"":"s"} to dissolution — run anything)`;
+  } else if(row.status==="starved"){
+    b.style.display="block";
+    b.textContent=`▲ THE PURSE CANNOT BUY AN OPERATION — the wings go to the desert first; the programme survives on its appropriation. Wait, and keep the chest.`;
   } else b.style.display="none";
 }
 
@@ -124,13 +129,20 @@ function memos(row){
     out.push(`Ops desk: ${REG[dryRi].name} is dry as tinder. Conditions for enablement will not hold.`);
   if(eng.knowledge.on){                             // the unexplained season
     let worst=null;
-    REG.forEach((r,ri)=>{ const a=row.anomalies[ri];
+    REG.forEach((r,ri)=>{ if(!isOnline(ri)) return; const a=row.anomalies[ri];
       if(Math.abs(a)<=row.sigmas[ri]*eng.assumptions.severityThreshold) return;
       let u=0; for(let di=0;di<ND;di++){ if(eng.knowledge.isKnown(di,ri)) continue;
         const ts=t-MODEL.lags[di][ri]; if(ts>=1) u+=Math.abs(eng.state.rows[ts-1].driverTotals[di]*MODEL.coeff[di][ri]); }
       if(u>=0.3&&(!worst||u>worst.u)) worst={r,u}; });
     if(worst) out.push(`Analysis desk: we cannot explain ${worst.r.name}'s season. Something is wired to it that is not on our board.`);
   }
+  if(eng.eras) for(const c of CAPS){ if(c.type==="NONE"||wingMemoDone.has(c.name)) continue;
+    const ws=eng.wingStatus(c.name); if(!ws||ws.online||!ws.eligible||ws.ever) continue;
+    wingMemoDone.add(c.name);
+    out.unshift(ws.canStand
+      ? `Budget office: the ${c.name.replace(" [T3]","")} wing is possible now, and the chest can carry it. Order it up when you want it — $${ws.upkeep}M a season.`
+      : `Budget office: the ${c.name.replace(" [T3]","")} wing is possible now. The committee will stand it up when the chest holds $${Math.round(ws.need)}M; it holds $${fmt(row.treasury,0)}M.`); }
+  if(row.windfall>=4) out.push(`Trade desk: the desk's positions returned $${fmt(row.windfall,0)}M this season. We knew what was coming.`);
   if(row.dossier>=25 && row.containment===0)
     out.push("Legal office: we spend nothing on containment while questions accumulate.");
   if(t>4 && row.mandate<=eng.assumptions.mandateBase+1)

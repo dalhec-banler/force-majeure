@@ -35,7 +35,7 @@ function toolCard(c){
   const burn=c.dur&&c.dur>1? ` · burns ${c.dur} seasons` : "";
   return `<div class="tc-h">${(TOOLICON[c.name]||"")+" "+c.name.replace(" [T3]","").toUpperCase()}<span>$${c.cost}M${flagship&&FLAGSHIP_CAPS.includes(c.name)?" · FUNDED":""}</span></div>
     ${BRIEF[c.name]||DESC[c.name]||""}
-    <div class="tc-f"><i>${when}${burn}</i><i>${sig}</i>${c.needsDrought?"<i>wants drought</i>":""}${c.resil?"<i>permanent</i>":""}${reach}</div>`;
+    <div class="tc-f"><i>${when}${burn}</i><i>${sig}</i>${c.needsDrought?"<i>wants drought</i>":""}${c.resil?"<i>permanent</i>":""}${reach}${wingLine(c)}</div>`;
 }
 function showToolCard(c){ const el=$("toolcard"); el.innerHTML=toolCard(c); el.style.display="block"; }
 function hideToolCard(){ $("toolcard").style.display="none"; }
@@ -49,6 +49,23 @@ function capInfo(c){
   if(c.resil>0) bits.push("hardens a region, permanently");
   return bits.join(" · ");
 }
+/* The century's arsenal: why a wing is not yet possible, in the fiction */
+const WHEN={
+ "Climate Research":"The instruments do not exist yet. The committee funds a room of analysts from 1950; the International Geophysical Year is 1957.",
+ "Watershed Interference":"Nobody has moved a monsoon yet. Popeye flies in 1967; the wing is possible from 1966.",
+ "Fire Enablement":"Enablement needs the drying technique and the aircraft to deliver it. 1968.",
+ "Ocean Thermal Forcing":"The ships and the theory come together in the ENMOD years. 1975.",
+ "Stratospheric Aerosol Inj.":"Budyko wrote it down in 1974; El Chichón proved it in 1982. The wing is possible from 1984.",
+ "ENSO Forcing":"The Pacific is not understood until the TOGA moorings are in. 1995.",
+ "Ionospheric Coupling [T3]":"The ionospheric heater is a 1990s machine. 1998.",
+ "Polar Destabilization":"The Arctic is not open enough to work until the 2010s. 2015.",
+};
+function wingLine(c){
+  const ws=eng.eras? eng.wingStatus(c.name) : null; if(!ws) return "";
+  if(ws.online) return ws.upkeep? `<i>wing online · upkeep $${ws.upkeep}M/season</i>` : "";
+  if(!ws.eligible) return `<i>arrives ${ws.from}</i>`;
+  return `<i>${ws.canStand? "the wing can stand up" : `needs $${Math.round(ws.need)}M in the chest`} · upkeep $${ws.upkeep}M/season</i>`;
+}
 function buildTray(){
   const bar=$("toolbar"); bar.innerHTML="";
   for(const c of CAPS){
@@ -57,8 +74,14 @@ function buildTray(){
     b.className="tool"; b.dataset.cap=c.name;
     b.innerHTML=`<span class="ic">${TOOLICON[c.name]||"◈"}</span>
       <span class="nm">${c.name.replace(" [T3]","")}</span>
-      <span class="pr">$${c.cost}M</span>`;
+      <span class="pr">$${c.cost}M</span><span class="mb" title="stand this wing down (mothball)">⏏</span>`;
     b.addEventListener("click",()=>toolClick(c));
+    const mb=b.querySelector? b.querySelector(".mb") : null;
+    if(mb) mb.addEventListener("click",(ev)=>{ ev.stopPropagation(); if(!running||resolving) return;
+      const i=wingOrders.mothball.indexOf(c.name);
+      if(i>=0){ wingOrders.mothball.splice(i,1); $("toolinfo").textContent=`${c.name} — the wing stays.`; }
+      else { wingOrders.mothball.push(c.name); $("toolinfo").innerHTML=`<b>${c.name.replace(" [T3]","").toUpperCase()} WING</b> stands down at the next review — no upkeep, no capability. It reopens at three-quarters of the chest. Click ⏏ again to keep it.`; }
+      sfxClick(); renderTray(); });
     b.addEventListener("mouseenter",()=>showToolCard(c));
     b.addEventListener("focus",()=>showToolCard(c));
     b.addEventListener("mouseleave",hideToolCard);
@@ -78,6 +101,15 @@ function toolClick(c){
   if(!running || resolving) return;
   if(pendingTool===c.name){ pendingTool=null; renderTray();
     $("toolinfo").textContent="Pick a tool. Aim it at the world. Scroll to zoom."; return; }
+  const ws=eng.eras? eng.wingStatus(c.name) : null;
+  if(ws && !ws.online){                        // a wing that is not flying
+    const i=wingOrders.standup.indexOf(c.name);
+    if(i>=0){ wingOrders.standup.splice(i,1); renderTray(); sfxClick(); $("toolinfo").textContent=`${c.name} — the order is withdrawn.`; return; }
+    if(!ws.eligible){ $("toolinfo").innerHTML=`<span style="color:var(--amber)">${c.name.replace(" [T3]","")}</span> — not yet. ${WHEN[c.name]||`This capability arrives in ${ws.from}.`}`; sfxAlert(); return; }
+    if(!ws.canStand){ $("toolinfo").innerHTML=`<span style="color:var(--amber)">${c.name.replace(" [T3]","")}</span> — the committee stands a wing up when the programme can carry it: <b>$${Math.round(ws.need)}M in the chest</b> (you hold $${fmt(funds(),0)}M). Build the chest. Upkeep is $${ws.upkeep}M a season once it flies.`; sfxAlert(); return; }
+    wingOrders.standup.push(c.name); renderTray(); sfxChime();
+    $("toolinfo").innerHTML=`<b>${c.name.replace(" [T3]","").toUpperCase()} WING</b> stands up at the next review — $${ws.upkeep}M a season for as long as you keep it. Click again to withdraw the order.`; return;
+  }
   if(budgetRefuse(c)) return;
   if(false){
   }
@@ -94,12 +126,22 @@ function toolClick(c){
 function renderTray(){
   $("globe").classList.toggle("aiming", !!pendingTool);
   for(const b of $("toolbar").children){
-    b.classList.toggle("sel", b.dataset.cap===pendingTool);
+    const cap=b.dataset.cap, c=CAPS.find(x=>x.name===cap);
+    b.classList.toggle("sel", cap===pendingTool);
     b.classList.remove("off");
-    const funded=!!flagship && FLAGSHIP_CAPS.includes(b.dataset.cap);
-    b.classList.toggle("funded", funded);
-    b.classList.toggle("poor", !canAfford(CAPS.find(c=>c.name===b.dataset.cap)) && b.dataset.cap!==pendingTool);
-    const pr=b.querySelector(".pr"); if(pr) pr.textContent=funded? "FUNDED" : "$"+CAPS.find(c=>c.name===b.dataset.cap).cost+"M";
+    const funded=!!flagship && (flagship.caps||FLAGSHIP_CAPS).includes(cap);
+    const ws=eng.eras? eng.wingStatus(cap) : null;
+    const ordered=wingOrders.standup.includes(cap), moth=wingOrders.mothball.includes(cap);
+    const locked=!!ws && !ws.online;
+    b.classList.toggle("locked", locked && !ordered);
+    b.classList.toggle("ordered", ordered||moth);
+    b.classList.toggle("wing", !!ws && ws.online && ws.upkeep>0);
+    b.classList.toggle("funded", funded && !locked);
+    b.classList.toggle("poor", !locked && !canAfford(c) && cap!==pendingTool);
+    const pr=b.querySelector(".pr");
+    if(pr) pr.textContent = ordered? "STANDING UP" : moth? "STANDING DOWN"
+      : locked? (ws.eligible? (ws.canStand? "STAND UP" : "CHEST $"+Math.round(ws.need)+"M") : String(ws.from))
+      : (funded? "FUNDED" : "$"+c.cost+"M");
   }
   renderTab();
   $("armed").innerHTML = slots.map((s,i)=>

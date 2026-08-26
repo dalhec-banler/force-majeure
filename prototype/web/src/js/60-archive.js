@@ -4,7 +4,7 @@ function showArchive(finalRow){
   const cause={ exposed:"EXPOSED — the record is public and it is yours.",
     insolvent:"INSOLVENT — the programme could not meet its obligations.",
     dissolved:"DISSOLVED — the committee concluded you were for nothing.",
-  }[finalRow.status] || "TENURE COMPLETE — 1955. The programme continues without you.";
+  }[finalRow.status] || `TENURE COMPLETE — ${finalRow.year}. The programme continues without you.`;
   const opsDone=eng.state.ops.filter(o=>o.owner==="player").length;
   const outside=rows.reduce((n,r)=>n+r.anomalies.filter((a,i)=>Math.abs(a)>r.sigmas[i]).length,0);
   const peakDos=Math.max(...rows.map(r=>r.dossier));

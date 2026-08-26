@@ -60,7 +60,7 @@ function drawGlobeInner(now){
   { const AD=armedDrivers();
     if(AD.GLOBAL!==undefined){                   // aerosol / polar: the whole board
       const ph=(nowMs/1600)%1;
-      for(let ri=0;ri<REG.length;ri++){ const p=project(...REGPOS[REG[ri].name]); if(!p.vis) continue;
+      for(let ri=0;ri<REG.length;ri++){ if(!isOnline(ri)) continue; const p=project(...REGPOS[REG[ri].name]); if(!p.vis) continue;
         const lag=AD.GLOBAL+MODEL.lags[3][ri];
         cx.strokeStyle=`rgba(224,164,88,${0.55*(1-ph)})`; cx.lineWidth=1;
         cx.beginPath(); cx.arc(p.x,p.y,8+ph*18,0,7); cx.stroke();
@@ -81,6 +81,7 @@ function drawGlobeInner(now){
     cx.fillRect(v>=0?p.x:p.x-w, p.y-3, w, 4);
   }
   for(let ri=0;ri<REG.length;ri++){
+    if(!isOnline(ri)) continue;
     const r=REG[ri], p=project(...REGPOS[r.name]);
     if(!p.vis) continue;
     const sig = row? row.sigmas[ri] : r.sigma, a = row? row.anomalies[ri] : 0;
@@ -227,7 +228,7 @@ function drawWires(nowMs,row){
   if(researching){
     const targets=new Set(slots.filter(s=>s.cap==="Climate Research").map(s=>s.target));
     for(const e of K.edges){
-      if(K.isKnown(e.di,e.ri)) continue;
+      if(K.isKnown(e.di,e.ri) || !isOnline(e.ri)) continue;
       const dp=DRVPOS[e.driver]; if(!dp) continue;
       const a=project(...REGPOS[e.region]), b=project(...dp); if(!a.vis) continue;
       const armed=targets.has(e.region);
@@ -242,7 +243,7 @@ function drawWires(nowMs,row){
     cx.lineWidth=1;
   }
   for(const e of K.edges){
-    if(!K.isKnown(e.di,e.ri)) continue;
+    if(!K.isKnown(e.di,e.ri) || !isOnline(e.ri)) continue;
     const dp=DRVPOS[e.driver]; if(!dp) continue;
     const a=project(...dp), b=project(...REGPOS[e.region]);
     if(!a.vis||!b.vis) continue;

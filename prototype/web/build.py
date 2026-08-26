@@ -81,6 +81,66 @@ for (name,com,wt,sens,sig,kind,co,lg) in EXP:
 for r in M["regions"]:
     r["lat"] = LATS.get(r["name"], 0)
     if r["name"] in EXPORT and "export" not in r: r["export"]=EXPORT[r["name"]]
+
+# --- THE LONG CAMPAIGN (ADR-0023): 1946 Winter → 2060 Autumn, 460 seasons.
+# Drivers 1946–2022 are the ingest pack's observed indices (ONI as is; DMI
+# and AMO rescaled to the sheet's driver units: IOD ×2.0, NATL ×2.2 — the
+# sheet's 40 seasons have sd 0.63/0.46 against the pack's 0.31/0.21). The
+# pack's 1946–49 ENSO is the authored backfill (no ONI before 1950).
+# 2023–2060 replays 1985–2022's indices: the future's weather is fiction
+# (brief §19) but its rhythm is the record's. GLOBAL is an authored
+# warming-stress ramp: 0.4 × global mean surface temperature above the
+# 1946–75 mean (anchors from GISTEMP/HadCRUT decadal means; 2030–60 follows
+# a middle-of-the-road pathway). VERIFY the anchors before v0.1.
+LONG = True
+if LONG:
+    pack = json.load(open(d / "../../data/processed/pack-climate.json"))
+    PD = pack["drivers"]; n_obs = len(PD["enso"]["values"])
+    N = (2060 - 1946 + 1) * 4
+    QTR = ["Winter", "Spring", "Summer", "Autumn"]
+    GMST = [(1946,0.0),(1975,0.0),(1985,0.15),(1995,0.27),(2005,0.42),(2015,0.60),(2022,0.72),
+            (2030,0.85),(2040,1.05),(2050,1.25),(2060,1.45)]
+    def gmst(y):
+        for (y0,v0),(y1,v1) in zip(GMST,GMST[1:]):
+            if y0 <= y <= y1: return v0 + (v1-v0)*(y-y0)/(y1-y0)
+        return GMST[-1][1]
+    climate = []
+    for i in range(N):
+        year, q = 1946 + i//4, i % 4
+        src = i if i < n_obs else (n_obs - (N - n_obs)) + (i - n_obs)
+        climate.append({"t": i+1, "year": year, "qtr": QTR[q],
+            "drivers": [round(PD["enso"]["values"][src],3), round(PD["iod"]["values"][src]*2.0,3),
+                        round(PD["natl"]["values"][src]*2.2,3), round(0.4*gmst(year+q/4),3)],
+            "noise": [], "src": "observed" if i < n_obs else "replay"})
+    M["climate"] = climate
+    # The board grows (ADR-0025): the year a region comes on the board. The
+    # 1946 world is sixteen breadbaskets and gateways; the rest arrive on
+    # their own dates (independence, a pipeline, a port, a foundry).
+    FROM = {"Murray–Darling Basin":1949,"Persian Gulf Terminals":1951,"Nile Delta":1952,
+     "Kazakh Virgin Lands":1954,"Hawaiian Islands":1959,"Japan (Kanto–Kansai)":1960,"Sahel":1960,
+     "Horn of Africa":1960,"Southern African Maize Belt":1961,"Andean Copper Belt":1966,
+     "Pilbara Iron Belt":1966,"Ganges Delta Ports":1971,"North Sea Energy Shelf":1975,
+     "Malacca Strait":1980,"Cerrado":1980,"Siberian Gas Fields":1984,"Taiwan Strait Industrial":1987,
+     "Mekong Delta":1989,"Congo Cobalt Belt":2006,"Arctic Shelf":2010}
+    for r in M["regions"]:
+        if r["name"] in FROM: r["from"] = FROM[r["name"]]
+    # The arsenal arrives on the calendar (ADR-0024): from = the year the
+    # wing can stand up (Schaefer 1946, Popeye 1966, ENMOD-era ocean work
+    # 1975, Budyko/El Chichón aerosols 1984, TOGA-era ENSO 1995, HAARP 1998,
+    # Arctic shipping 2015); chest = the treasury the programme must hold
+    # to stand it up; upkeep = its rent per season while online.
+    WING = {  # name: (from, chest, upkeep)
+     "Cloud Seeding": (1946, 0, 0), "Adaptation Investment": (1946, 0, 0),
+     "Climate Research": (1950, 40, 1), "Watershed Interference": (1966, 70, 3),
+     "Fire Enablement": (1968, 60, 2), "Ocean Thermal Forcing": (1975, 110, 5),
+     "Stratospheric Aerosol Inj.": (1984, 140, 6), "ENSO Forcing": (1995, 180, 8),
+     "Ionospheric Coupling [T3]": (1998, 220, 10), "Polar Destabilization": (2015, 200, 8)}
+    # cadence tiers (ADR-0010): decisions per year, then per half-year, then
+    # per season; the clock per review in seconds
+    M["tiers"] = [{"from":1946,"every":4,"name":"PROGRAMME REVIEW","clock":45},
+                  {"from":1976,"every":2,"name":"OPERATIONS TEMPO","clock":40},
+                  {"from":2030,"every":1,"name":"SITUATION ROOM","clock":35}]
+    M["long"] = True
 total = sum(r["weight"] for r in M["regions"])
 for r in M["regions"]: r["weight"] = round(r["weight"]*100.0/total, 4)
 # deterministic weather noise for the new regions
@@ -90,13 +150,17 @@ def rnd():
     seed = (seed*1103515245+12345) & 0x7fffffff
     return seed/0x7fffffff
 for row in M["climate"]:
-    row["noise"] = row["noise"] + [round((rnd()*2-1)*0.28,3) for _ in EXP]
+    if LONG: row["noise"] = [round((rnd()*2-1)*0.28,3) for _ in M["regions"]]
+    else:    row["noise"] = row["noise"] + [round((rnd()*2-1)*0.28,3) for _ in EXP]
 M["capabilities"].append({"name":"Climate Research","type":"REGION",
     "fixedTarget":0,"mag":0,"lag":1,"sig":0,"cost":8,"dispTo":"",
     "dispFactor":0,"dispExtraLag":0,"needsDrought":False,"resil":0,"research":True})
 M["capabilities"].append({"name":"Polar Destabilization","type":"REGION",
     "fixedTarget":0,"mag":2.2,"lag":4,"sig":16,"cost":38,"dispTo":"GLOBAL",
     "dispFactor":0.35,"dispExtraLag":3,"needsDrought":False,"resil":0})
+if LONG:
+    for c in M["capabilities"]:
+        if c["name"] in WING: c["from"], c["chest"], c["upkeep"] = WING[c["name"]]
 # Pacing tune (author): tools act NOW or next season, then burn down over
 # a duration with decay. Ledger displacement debts keep their original
 # sheet arrival distance from the commit. Signature charges once, on the

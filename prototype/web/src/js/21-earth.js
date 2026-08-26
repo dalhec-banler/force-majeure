@@ -190,6 +190,7 @@ function nearestRegion(e){
   const rect=cv.getBoundingClientRect(), mx=e.clientX-rect.left, my=e.clientY-rect.top;
   let best=null,bd=22;
   for(let ri=0;ri<REG.length;ri++){
+    if(!isOnline(ri)) continue;
     const p=project(...REGPOS[REG[ri].name]); if(!p.vis) continue;
     const d=Math.hypot(p.x-mx,p.y-my); if(d<bd){bd=d;best=ri;}
   }

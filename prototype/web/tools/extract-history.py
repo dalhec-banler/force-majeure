@@ -12,6 +12,7 @@ Run: python3 tools/extract-history.py   (from prototype/web)
 import json, glob, math, pathlib
 HERE=pathlib.Path(__file__).resolve().parent.parent
 RAW=sorted(glob.glob(str(HERE/'../../data/raw/hurdat2-*.txt')))
+LAST_YEAR=2022    # the record ends here; 2023 on is fiction (ADR-0023)
 def season(y,m): return (y-1946)*4 + (m-1)//3 + 1
 def doq(y,m,d):   # fraction through the quarter, 0..1
     m0=((m-1)//3)*3+1; days=92; return min(1,max(0,((m-m0)*30.5+d-1)/days))
@@ -43,20 +44,21 @@ if RAW:
             rows.append(dict(ymd=r[0],hh=r[1],rec=r[2],st=r[3],lat=la,lon=lo,w=w))
         i+=n
         y=int(sid[4:8])
-        if not (1946<=y<=1955) or not any(r['st']=='HU' for r in rows): continue
+        if not (1946<=y<=LAST_YEAR) or not any(r['st']=='HU' for r in rows): continue
         peak=max(r['w'] for r in rows)
         f,l=rows[0],rows[-1]
         y0,m0,d0=int(f['ymd'][:4]),int(f['ymd'][4:6]),int(f['ymd'][6:8])
         y1,m1,d1=int(l['ymd'][:4]),int(l['ymd'][4:6]),int(l['ymd'][6:8])
         t=season(y0,m0)
         # daily samples + every landfall + the peak
-        keep=[j for j in range(len(rows)) if j%4==0 or rows[j]['rec']=='L' or rows[j]['w']==peak or j==len(rows)-1]
+        keep=[j for j in range(len(rows)) if j%(4 if y<=1955 else 8)==0 or rows[j]['rec']=='L' or rows[j]['w']==peak or j==len(rows)-1]
         track=[[round(rows[j]['lat'],1),round(rows[j]['lon'],1),rows[j]['w'],rows[j]['st'],1 if rows[j]['rec']=='L' else 0] for j in sorted(set(keep))]
         land=[r for r in rows if r['rec']=='L']
         # consequential only (author rule): it came ashore, or it was a major
         # hurricane that passed within reach of a coast (a port under 300 km)
         near=min(min(math.hypot(r['lat']-pa,(r['lon']-po)*math.cos(math.radians(r['lat']))) for n,pa,po in PORTS) for r in rows)
         if not land and not (peak>=96 and near<2.7): continue
+        if y>1955 and not ((land and peak>=83) or (peak>=113 and near<2.7)): continue   # after the slice: Cat 2+ ashore, Cat 4+ near a coast
         dl=nearest_port([(r['lat'],r['lon']) for r in (land or rows)])
         storms.append(dict(id=sid,name=None if name=='UNNAMED' else name.title(),year=y0,t=t,
             p0=round(doq(y0,m0,d0),3),p1=round(doq(y1,m1,d1),3) if season(y1,m1)==t else 1.0,
@@ -83,8 +85,8 @@ def ibtracs(basin):
     for r in rd:
         try: yr=int(r[ix['SEASON']])
         except: continue
-        if yr>1956: break
-        if yr<1946 or yr>1955: continue
+        if yr>LAST_YEAR+1: break
+        if yr<1946 or yr>LAST_YEAR: continue
         sid=r[ix['SID']]
         w=-1
         for k in ('USA_WIND','WMO_WIND'):
@@ -107,12 +109,13 @@ def ibtracs(basin):
         y0,m0,d0=int(f0['iso'][:4]),int(f0['iso'][5:7]),int(f0['iso'][8:10])
         y1,m1=int(l0['iso'][:4]),int(l0['iso'][5:7])
         t=season(y0,m0)
-        if t<1 or t>40: continue
-        keep=[j for j in range(len(rows)) if j%4==0 or rows[j]['w']==peak or j==len(rows)-1 or rows[j]['lf']=='0']
+        if t<1 or t>(LAST_YEAR-1945)*4: continue
+        keep=[j for j in range(len(rows)) if j%(4 if y0<=1955 else 8)==0 or rows[j]['w']==peak or j==len(rows)-1 or rows[j]['lf']=='0']
         track=[[round(rows[j]['lat'],1),round(rows[j]['lon'],1),int(rows[j]['w']) if rows[j]['w']>0 else 0,rows[j]['nat'],1 if rows[j]['lf']=='0' else 0] for j in sorted(set(keep))]
         land=[r for r in rows if r['lf']=='0']
         near=min(min(math.hypot(r['lat']-pa,(r['lon']-po)*math.cos(math.radians(r['lat']))) for n,pa,po in BASIN_PORTS[basin]) for r in rows)
         if not land and not (peak>=96 and near<2.7): continue      # consequential only
+        if y0>1955 and not ((land and peak>=83) or (peak>=113 and near<2.7)): continue
         pts=[(r['lat'],r['lon']) for r in (land or rows)]
         best=None
         for la,lo in pts:
@@ -252,6 +255,15 @@ weather=[
  W(1955,10,1,"South Asia","flood","LAHORE","The Punjab rivers in flood together. Lahore's suburbs under water; the wheat sowing lost.",
    "The Punjab rivers stay low into October.","The five rivers of the Punjab flood at once. Lahore cut off for a week."),
 ]
+# ---- 1956–2022: the catalogs under tools/history/ (verified against Wikipedia
+# / GVP / USGS by the authoring pass of 2026-08-26; see docs/history-sources.md)
+HD=pathlib.Path(__file__).resolve().parent/'history'
+for fn,var,dest in (('eruptions-1956-2022.py','ERUPTIONS_EXT',eruptions),('quakes-1956-2022.py','QUAKES_EXT',quakes),('weather-1956-2022.py','WEATHER_EXT',weather)):
+    f=HD/fn
+    if f.exists():
+        ns={'E':E,'Q':Q,'W':W,'C':C,'season':season}
+        exec(f.read_text(), ns); dest.extend(ns[var])
+eruptions.sort(key=lambda e:e['t']); quakes.sort(key=lambda q:q['t']); weather.sort(key=lambda w:w['t'])
 out=dict(note="storms: HURDAT2 (NOAA/NHC, public domain), hurricanes only. eruptions/quakes/weather: authored from general knowledge — VERIFY dates, magnitudes, tolls against Smithsonian GVP, USGS/ISC, and period press before v0.1.",
          storms=storms,eruptions=eruptions,quakes=quakes,weather=weather)
 (HERE/'history.json').write_text(json.dumps(out,separators=(',',':'),ensure_ascii=False))

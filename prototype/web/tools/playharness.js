@@ -51,7 +51,7 @@ const driver=`
     view:()=>{
       const row=lastRow();
       return { t, running,
-        regions:REG.map((r,i)=>({name:r.name,kind:r.kind||"crop",
+        regions:REG.map((r,i)=>({name:r.name,kind:r.kind||"crop",online:(row&&row.online)? !!row.online[i] : true,
           anomaly:row?+row.anomalies[i].toFixed(2):0,
           sigma:row?+row.sigmas[i].toFixed(2):r.sigma,
           yield:row?Math.round(row.yields[i]):100})),
@@ -66,11 +66,19 @@ const driver=`
         flagship: flagship? flagship.deadline-t : 0, lapses,
         wires: eng.knowledge.count(), history:{asRecorded:histAsRecorded, altered:histAltered.length},
         inflight:eng.state.ops.filter(o=>o.owner==="player"&&o.t+o.lag>t).length,
+        year:row?row.year:1946, tier:(typeof tierFor==="function")? tierFor(t+1).name : "SEASON", review:(typeof rv!=="undefined")? rv : t,
+        wings: eng.wings? Object.entries(eng.wings()).filter(([k,v])=>v).map(([k])=>k) : [],
+        online: row&&row.online? row.online.filter(Boolean).length : REG.length,
+        overhead: row&&row.overhead!==undefined? row.overhead : 32, windfall: row? +(row.windfall||0).toFixed(1) : 0,
         status:row?row.status:"running" };
     },
     journalSince:(n)=>journal.slice(n),
     journalLen:()=>journal.length,
     arm:(cap,target)=>{ slots.push({cap,target}); },
+    standup:(cap)=>{ if(!wingOrders.standup.includes(cap)) wingOrders.standup.push(cap); },
+    mothball:(cap)=>{ if(!wingOrders.mothball.includes(cap)) wingOrders.mothball.push(cap); },
+    wing:(cap)=>eng.wingStatus? eng.wingStatus(cap) : {online:true},
+    review:async()=>{ await runSeason(false); try{ drawGlobeInner(0); }catch(e){ console.error("DRAW ERROR", e.stack); } },
     containment:(v)=>{ document.getElementById("containment").value=String(Math.max(0,Math.min(40,v))); },
     predict:(p)=>{ document.getElementById("predict").value=p; },
     season:async()=>{ await runSeason(false); try{ drawGlobeInner(0); }catch(e){ console.error("DRAW ERROR", e.stack); } },
