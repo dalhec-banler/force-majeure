@@ -192,6 +192,20 @@ async function runSeasonInner(auto, cmdOverride){
     news("REYKJAVIK","The polar jet settles into a new pattern. Forecasters exhale.");
   await phaseShow(3);
   let shaken=false;
+  /* The hierarchy of the wire (author 2026-08-26): the committee first; then
+     whatever touches YOU — the homeland, harvests you have worked, a rival's
+     hand on your weather, your own landings — which get chyrons, sound and
+     the card; the world last, on the quiet wire, three worst harvests a
+     season and one line for the rest. */
+  const sevList=[]; let naturalN=0; const quiet=[];
+  for(let ri=0;ri<REG.length;ri++){
+    if(!isOnline(ri)) continue;
+    const a=row.anomalies[ri], s=row.sigmas[ri];
+    if(Math.abs(a)>s*eng.assumptions.severityThreshold && Math.abs(a)>0.6) sevList.push({ri, rank:Math.abs(a)*REG[ri].weight});
+  }
+  sevList.sort((x,y)=>y.rank-x.rank);
+  const topSev=new Set(sevList.slice(0,3).map(x=>x.ri));
+  const workedByYou=ri=>eng.state.ops.some(o=>o.owner==="player"&&o.target===REG[ri].name&&o.t>t-16);
   for(let ri=0;ri<REG.length;ri++){
     if(!isOnline(ri)) continue;
     const a=row.anomalies[ri], s=row.sigmas[ri], r=REG[ri];
@@ -199,43 +213,48 @@ async function runSeasonInner(auto, cmdOverride){
     sevStreak[ri] = severe? sevStreak[ri]+1 : 0;
     if(!severe) continue;
     const pct=fmt(row.yields[ri],0), outside=Math.abs(a)>s, pos=REGPOS[r.name];
+    const tr0=traceFor(ri,row);
+    const yours0=Math.abs(a)>1e-9 && Math.max(0,Math.min(1,tr0.mine/a))>0.2, theirs0=Math.abs(a)>1e-9 && Math.max(0,Math.min(1,tr0.theirs/a))>0.25;
+    const loud = r.homeland || yours0 || (theirs0 && workedByYou(ri)) || (!r.kind && (r.export||0)>=0.8 && row.yields[ri]<60);   // chyron, sound, the card
+    const told = loud || topSev.has(ri);                                                    // a line on the wire at all
+    if(!told) quiet.push(r.name);
     if(r.kind==="ice")
-      news(DATELINE[r.name], a>0
+      if(told) news(DATELINE[r.name], a>0
         ? `Record melt across the ${r.name}. Ice loss without precedent.`
-        : `Hard freeze locks the ${r.name}. Sea lanes close.`, outside);
+        : `Hard freeze locks the ${r.name}. Sea lanes close.`, outside&&loud);
     else if(r.kind==="hub"){
-      if(a<0) newsFrom("hubDry", t*7+ri*13, DATELINE[r.name], {NAME:r.name,PCT:pct}, outside);
+      if(a<0) newsFrom("hubDry", t*7+ri*13, DATELINE[r.name], {NAME:r.name,PCT:pct}, outside&&loud);
       else {
         if(row.yields[ri]>=92)
-          news(DATELINE[r.name], `Storm surge tests the defenses at ${r.name}. Operations continue.`, outside);
-        else newsFrom("hubFlood", t*7+ri*13, DATELINE[r.name], {NAME:r.name,PCT:pct}, outside);
+          if(told) news(DATELINE[r.name], `Storm surge tests the defenses at ${r.name}. Operations continue.`, outside&&loud);
+        else if(told) newsFrom("hubFlood", t*7+ri*13, DATELINE[r.name], {NAME:r.name,PCT:pct}, outside&&loud);
         if(outside) effects.push({type:"storm",pos,bornT:t,life:1});
       }
     }
     else if(a<0) newsFrom("droughtCrop", t*7+ri*13, DATELINE[r.name],
-      {CROP:r.crop,PCT:pct}, outside,
+      {CROP:r.crop,PCT:pct}, outside&&loud,
       outside? pick("droughtOut", t*5+ri*3):"");
     else {
       if(row.yields[ri]>=92)
-        news(DATELINE[r.name], `Storm cells beyond anything on file sweep the ${r.name}. The ${r.crop} crop, remarkably, stands.`, outside);
-      else newsFrom("floodCrop", t*7+ri*13, DATELINE[r.name], {CROP:r.crop,PCT:pct}, outside);
+        if(told) news(DATELINE[r.name], `Storm cells beyond anything on file sweep the ${r.name}. The ${r.crop} crop, remarkably, stands.`, outside&&loud);
+      else if(told) newsFrom("floodCrop", t*7+ri*13, DATELINE[r.name], {CROP:r.crop,PCT:pct}, outside&&loud);
       if(outside){
         if(["North American Plains","Black Sea Steppe","La Plata Basin"].includes(r.name)){
           effects.push({type:"tornado",pos,bornT:t,life:1});
-          alertStrip("TORNADO OUTBREAK — "+r.name.toUpperCase());
+          if(loud) alertStrip("TORNADO OUTBREAK — "+r.name.toUpperCase());
         } else effects.push({type:"storm",pos,bornT:t,life:1});
       }
     }
     if(outside){
       shocks.push({pos,until:performance.now()+1600,dur:1600});
-      alertStrip((a<0?"HARVEST COLLAPSE — ":"FLOOD EVENT — ")+r.name.toUpperCase());
-      if(!shaken){ shakeNow(); shaken=true; }
+      if(loud) alertStrip((a<0?"HARVEST COLLAPSE — ":"FLOOD EVENT — ")+r.name.toUpperCase());
+      if(loud && !shaken){ shakeNow(); shaken=true; }
       if(a<0)                              // deep drought sparks wildfire
         effects.push({type:"fire",pos,bornT:t,life:1,scale:0.55});
     }
     if(sevStreak[ri]>=2 && a<0 && row.yields[ri]<78)
-      news(DATELINE[r.name], pick("unrest", t*3+ri), true);
-    if(outside){
+      if(told) news(DATELINE[r.name], pick("unrest", t*3+ri), true);
+    if(outside && loud){
       showBriefing(
         (a<0? "EVENT: HARVEST COLLAPSE":"EVENT: FLOOD / STORM")+"",
         `${r.name} · anomaly ${a.toFixed(2)} vs ±${s2f(row.sigmas[ri])} · ${r.kind?"output":"harvest"} ${pct}%`,
@@ -251,8 +270,7 @@ async function runSeasonInner(auto, cmdOverride){
     }
     else if(pctThem>0.25){
       wire(`TRACE — not ours. The pattern is too clean to be weather. <b>Someone is operating.</b>`,"att");
-      alarm();
-      alertStrip("SUSPECTED HOSTILE OPERATION — "+r.name.toUpperCase());
+      if(REG[ri].homeland || workedByYou(ri)){ alarm(); alertStrip("SUSPECTED HOSTILE OPERATION — "+r.name.toUpperCase()); }
       if(REG[ri].homeland){
         lastHostileT=t;
         wire(`MEMO — Counterintelligence: someone is working our watershed. Recommend we return the favor.`,"memo");
@@ -261,9 +279,11 @@ async function runSeasonInner(auto, cmdOverride){
     }
     else if(tr.parts.length && pctYou>0.05)
       wire(`TRACE — trace contribution yours (${tr.parts.join(", ")}). Mostly the planet.${tr.unknown?" Some of yours came by a wire not on our board.":""}`,"op");
-    else if(severe)
-      wire(`TRACE — fully natural. Cover, if you want it.`,"op");
+    else if(severe) naturalN++;
   }
+  if(quiet.length) wire(`Elsewhere, outside the envelope: ${quiet.slice(0,5).join(", ")}${quiet.length>5?` and ${quiet.length-5} more`:""}. The world, as recorded.`,"news");
+  if(naturalN>0 && eng.state.ops.some(o=>o.owner==="player"&&o.sig>0&&o.t+o.lag>=t-2))
+    wire(`TRACE — ${naturalN} season${naturalN===1?"":"s"} outside the envelope this quarter, all of them the planet's. Cover, if you want it.`,"op");
   {
     const hIdx=REG.findIndex(r=>r.homeland);
     const hTr=traceFor(hIdx,row), hA=row.anomalies[hIdx];
@@ -473,7 +493,7 @@ function historyBeats(row){
     const WET=new Set(["flood","typhoon","cyclone","tornado","blizzard","avalanche","locusts"]);
     const tr=traceFor(ri,row), sign=WET.has(w.kind)? 1 : -1;
     const push=tr.mine*sign;                       // >0 with the record, <0 against it
-    if(w.canon){ news(w.dl, w.line, (w.toll||0)>=5000); if((w.toll||0)>=5000) alertStrip(`${w.kind.toUpperCase()} — ${w.region.toUpperCase()}`); histAsRecorded++; cumDead+=w.toll||0; continue; }
+    if(w.canon){ news(w.dl, w.line, (w.toll||0)>=5000); if((w.toll||0)>=20000) alertStrip(`${w.kind.toUpperCase()} — ${w.region.toUpperCase()}`); histAsRecorded++; cumDead+=w.toll||0; continue; }
     if(push<-0.3){
       news(w.dl, w.unmade);
       wire(`TRACE — the record said ${w.kind} in ${w.region}. <b>You unmade it.</b>`,"op");
