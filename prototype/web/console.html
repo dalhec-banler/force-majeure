@@ -1836,18 +1836,21 @@ function advanceDir(){
   else standing=null;
   if(!DIRECTIVES[dirIdx]) nextStandingT=t+2;     // the committee drafts language
 }
+function earmarkLine(){
+  if(!flagship) return "";
+  const n=flagship.deadline-t;
+  return `<div style="margin-top:5px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:${n<=1?"var(--red)":"var(--amber)"}">EARMARK: $${flagship.amount}M for a flagship demonstration — ENSO, IONOSPHERIC, or POLAR · ${n} season${n===1?"":"s"} left</div>`;
+}
 function renderDirective(){
   const d=curDir();
-  if(!d){ $("dirtext").textContent="The committee is drafting language. Continue operations.";
-    $("dirreward").textContent=""; return; }
-  if(d.from && t<d.from){
-    $("dirtext").textContent="The committee is drafting language. Continue operations.";
+  if(!d || (d.from && t<d.from)){
+    $("dirtext").innerHTML="The committee is drafting language. Continue operations."+earmarkLine();
     $("dirreward").textContent=""; return; }
   const issued=d.standing? d.issued : Math.max(dirIssued, d.from||0);
   const left=Math.max(0,d.window-(t-issued));
   $("dirtext").innerHTML=d.text+(d.tool?
     `<div style="margin-top:5px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--green)">USE: ${d.tool}</div>`:"")
-    +(flagship? `<div style="margin-top:5px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--amber)">EARMARK: $${flagship.amount}M for a flagship demonstration · ${flagship.deadline-t} season${flagship.deadline-t===1?"":"s"} left</div>`:"");
+    +earmarkLine();
   $("dirreward").innerHTML=`+$${d.reward}M <span style="color:${left<=1?"var(--red)":"var(--ink-dim)"}">· ${left} season${left===1?"":"s"}</span>`;
 }
 
@@ -1860,13 +1863,13 @@ let flagship=null;
 function flagshipStep(row){
   if(flagship && t>flagship.deadline){
     wire(`<span class="tag" style="color:var(--amber);border-color:var(--amber)">EARMARK WITHDRAWN</span> $${flagship.amount}M returns to the classified line. The Navy sends its regards.`,"att");
-    flagship=null; renderTray();
+    flagship=null; renderTray(); renderDirective();
   }
   if(!flagship && FLAGSHIP_AT.includes(t) && row.status==="running"){
     flagship={amount:FLAGSHIP_AMOUNT, issued:t, deadline:t+FLAGSHIP_FUSE};
     alertStrip("FLAGSHIP APPROPRIATION — $"+FLAGSHIP_AMOUNT+"M EARMARKED");
     wire(`<span class="tag tagd">EARMARK</span><b>FLAGSHIP APPROPRIATION</b> — the committee has found $${FLAGSHIP_AMOUNT}M in a classified line. It wants a demonstration: ENSO, Ionospheric, or Polar. ${FLAGSHIP_FUSE} seasons, then the money goes to the Navy.`,"op");
-    sfxChime(); renderTray();
+    sfxChime(); renderTray(); renderDirective();
   }
 }
 function sfxChime(){ tone(660,0.1,"sine",0.05); tone(880,0.14,"sine",0.05,0.11); }
