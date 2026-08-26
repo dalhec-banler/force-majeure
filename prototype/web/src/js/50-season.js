@@ -314,9 +314,9 @@ $("containment").addEventListener("input",()=>{ clampContainment(); $("contval")
 function historyBeats(row){
   const canon=!lithoUnlocked();
   if(canon){
-    for(const e of HISTORY.eruptions) if(e.t===t) news(e.dl, e.line, (e.scale||1)>=1.2);
+    for(const e of HISTORY.eruptions) if(e.t===t){ news(e.dl, e.line, (e.scale||1)>=1.2); cumDead+=e.toll||0; }
     for(const q of HISTORY.quakes) if(q.t===t){
-      news(q.dl, q.line, q.mag>=8);
+      news(q.dl, q.line, q.mag>=8); cumDead+=q.toll||0;
       if(q.mag>=8){ alertStrip(`EARTHQUAKE M${q.mag.toFixed(1)} — ${q.name.toUpperCase()}`); shakeNow(); }
     }
   } else {
@@ -385,17 +385,19 @@ function historyBeats(row){
     const ri=REG.findIndex(r=>r.name===w.region); if(ri<0) continue;
     const tr=traceFor(ri,row), sign=(w.kind==="flood")? 1 : -1;
     const push=tr.mine*sign;                       // >0 with the record, <0 against it
+    if(w.canon){ news(w.dl, w.line, true); alertStrip(`${w.kind.toUpperCase()} — ${w.region.toUpperCase()}`); histAsRecorded++; cumDead+=w.toll||0; continue; }
     if(push<-0.3){
       news(w.dl, w.unmade);
       wire(`TRACE — the record said ${w.kind} in ${w.region}. <b>You unmade it.</b>`,"op");
       histAltered.push({t, what:`the ${w.date} ${w.region} ${w.kind}`, how:"unmade"});
     } else if(push>0.3){
       news(w.dl, w.worse, true); alertStrip(`${w.kind.toUpperCase()} — ${w.region.toUpperCase()}`);
+      cumDead+=(w.toll||0)*1.5; cumDeadYours+=(w.toll||0)*0.5;
       wire(`TRACE — the record said ${w.kind} in ${w.region}. <b>You made it worse.</b>`,"op");
       histAltered.push({t, what:`the ${w.date} ${w.region} ${w.kind}`, how:"worse"});
     } else {
       news(w.dl, w.line, true); alertStrip(`${w.kind.toUpperCase()} — ${w.region.toUpperCase()}`);
-      histAsRecorded++;
+      histAsRecorded++; cumDead+=w.toll||0;
     }
   }
 }
