@@ -1968,7 +1968,12 @@ function drawAmbient(nowMs){
   }
   [...stormFade.values()].forEach((st,idx)=>{
     const p=project(st.lat,st.lon); if(!p.vis) return;
-    const dia=(0.09+0.11*Math.min(1,st.w/150))*st.strength*(0.55+0.45*st.a);   // it grows as it forms
+    // size is the storm's CATEGORY (its peak), not the wind at this point of
+    // the track — a C5 is always the biggest thing in its basin; the current
+    // wind only breathes it a little, and it grows as it forms
+    const CAT_DIA=[0.085,0.10,0.12,0.145,0.175,0.21];
+    const breathe=st.s.peak? 0.85+0.15*Math.min(1, st.w/st.s.peak) : 1;
+    const dia=CAT_DIA[Math.min(5,st.s.cat||0)]*breathe*st.strength*(0.55+0.45*st.a);
     drawCyclone(p, dia, nowMs+st.idx*900, {alpha:0.92*st.a, lat:st.lat, variant:st.idx});
     if(st.a<0.35) return;                                    // no label until it is a storm
     if(zoom>=1.2 || st.s.cat>=3){
