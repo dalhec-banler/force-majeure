@@ -54,7 +54,7 @@ const STANDING=[
  {key:"client", when:(row)=>clientInNeed(row)!==null, title:"Protect the client", reward:10, window:2,
   make:(row,d)=>{ const r=clientInNeed(row); d.region=r.name;
     d.tool=`☁ CLOUD SEEDING — ${r.name}`;
-    d.text=`${r.name} is failing, and they buy our wheat with money they will not have. Put rain on it before the ministry stops answering our calls.`; },
+    d.text=`${r.name} is ${r.y<60?"failing":"strained"} — harvest at ${Math.round(r.y)}% — and they buy our wheat with money they will not have. Put rain on it before the ministry stops answering our calls.`; },
   check:(row,d)=>eng.state.ops.some(o=>o.owner==="player"&&o.cap==="Cloud Seeding"&&o.target===d.region&&o.t>d.issued)},
  {key:"price", needs:["Watershed Interference","Fire Enablement"], title:"Move the wheat number", reward:16, window:2,
   tool:"🚱 WATERSHED or 🔥 FIRE — a competing exporter",
@@ -82,7 +82,8 @@ const STANDING=[
 function clientInNeed(row){
   let best=null;
   REG.forEach((r,ri)=>{ if(r.kind||r.homeland||r.name==="Black Sea Steppe"||!isOnline(ri)) return;
-    if(row.anomalies[ri]<eng.assumptions.dryThreshold&&(!best||row.anomalies[ri]<best.a)) best={name:r.name,a:row.anomalies[ri]}; });
+    // a client in need is one whose marker has gone amber or red (the marker rule: yield < 90)
+    if(row.anomalies[ri]<0 && row.yields[ri]<88 && (!best||row.yields[ri]<best.y)) best={name:r.name,a:row.anomalies[ri],y:row.yields[ri]}; });
   return best;
 }
 let dirIdx=0, dirIssued=0, dirIssuedRv=0, pendingGrant=0, pendingClaw=0;
