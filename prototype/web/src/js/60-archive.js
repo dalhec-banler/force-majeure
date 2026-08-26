@@ -24,7 +24,7 @@ function showArchive(finalRow){
       devastation()>0.55? " — from orbit, the night side glows." :
       devastation()>0.25? " — the burn scars will outlive the programme." :
       " — largely intact. History may call that restraint."}</p>
-    <p>Profit above baseline, lifetime: <b>${(()=>{const pr=rows.reduce((s2,r2)=>s2+r2.revenue-85,0);return (pr>=0?"+$":"−$")+fmt(Math.abs(pr))+"M";})()}</b>.</p>`;
+    <p>Profit above baseline, lifetime: <b>${(()=>{const pr=profitOf(rows);return (pr>=0?"+$":"−$")+fmt(Math.abs(pr))+"M";})()}</b>.</p>`;
   html += `<p>${ naturalOps
     ? "Every operation you ran is still filed as natural variability. No one will ever know. Whether that is victory is not a question this office answers."
     : peakDos>=115 ? "History concluded a programme existed. Several events you did not cause are attributed to you; several you did cause are not."

@@ -28,7 +28,9 @@ function toolCard(c){
   const reach=c.type==="DRIVER"? (()=>{ const di=DRV.indexOf(c.fixedTarget); if(di<0) return "";
       const n=eng.knowledge.edges.filter(e=>e.di===di).length, k=eng.knowledge.edges.filter(e=>e.di===di&&eng.knowledge.isKnown(e.di,e.ri)).length;
       return `<i>reaches ${n} regions · ${k} wires known</i>`; })() : "";
-  const sig=c.sig>=20? "loud — the ladder moves" : c.sig>=10? "leaves a signature" : c.sig>0? "quiet" : "invisible";
+  const lr=lastRow(), sm=lr&&lr.scrutinyMult? lr.scrutinyMult : 1;
+  const eyes=sm>=3? " · every eye on us" : sm>=2.5? " · under investigation" : sm>=2.2? " · under study" : sm>=1.8? " · under scrutiny" : "";
+  const sig=(c.sig>=20? "loud — the ladder moves" : c.sig>=10? "leaves a signature" : c.sig>0? "quiet" : "invisible")+(c.sig>0?eyes:"");
   const when=c.lag===0? "acts this season" : `lands in ${c.lag} season${c.lag===1?"":"s"}`;
   const burn=c.dur&&c.dur>1? ` · burns ${c.dur} seasons` : "";
   return `<div class="tc-h">${(TOOLICON[c.name]||"")+" "+c.name.replace(" [T3]","").toUpperCase()}<span>$${c.cost}M${flagship&&FLAGSHIP_CAPS.includes(c.name)?" · FUNDED":""}</span></div>

@@ -44,6 +44,37 @@ function createEngine(MODEL, opts) {
   // grain price ceiling (author balance rule 2026-08-26): crisis spikes run
   // 2–3× baseline, not 5×. Default Infinity keeps the sheet exact.
   const priceCap = (opts && opts.priceCap) ? opts.priceCap : Infinity;
+  // scrutiny (ADR-0020, ladder session 2026-08-26): the ladder has teeth.
+  // Signatures scale up, the file forgets more slowly, patterns are
+  // remembered longer, each rung amplifies every landing that follows
+  // (more eyes), hush money saturates within a season, crossing rung 5
+  // leaves a permanent floor (ADR-0009), and the service that named you
+  // works your harvest. Default off: the sheet baseline never climbs.
+  const scrutiny = (opts && opts.scrutiny)
+    ? Object.assign({ sigScale: 1.5, decay: 0.03, repeatWindow: 12,
+                      rungMult: [1, 1, 1.25, 1.5, 1.75, 2, 2],
+                      contSat: 40, floor: 90, retaliateEvery: 4 },
+                    opts.scrutiny === true ? {} : opts.scrutiny)
+    : null;
+  // grain supply (ADR-0021, author rule 2026-08-26): only regions that
+  // grow grain or factually ship it (hubs flagged `grain`) count in the
+  // supply index; the other hubs keep their weight for severity only.
+  // Default off: the sheet's eight regions are all breadbaskets anyway.
+  const grainSupply = !!(opts && opts.grainSupply);
+  // traded-market elasticity (ADR-0021): staples have a demand elasticity
+  // near −0.15, so a 1% shortfall in the traded market moves price ~5%.
+  // Default: the sheet's exponent.
+  const elasticity = (opts && opts.priceElasticity) ? opts.priceElasticity : null;
+  // the Eastern Program by era (author 2026-08-26): almost irrelevant at
+  // the start, contemporary in contemporary times. Keyed to the calendar
+  // year, never to the season count. Default off: the season-count schedule.
+  const rivalEras = !!(opts && opts.rivalEras);
+  // the shadow world (ADR-0021): a second engine, same world and rules,
+  // in which the programme never acts. Each row carries baseRevenue — what
+  // the homeland would have earned anyway — so PROFIT is what the
+  // programme made, not what the weather did. Default off.
+  const shadow = (opts && opts.shadow)
+    ? createEngine(MODEL, Object.assign({}, opts, { shadow: false })) : null;
   const A = {};
   for (const [cell, o] of Object.entries(MODEL.assumptions)) A[cell] = o.value;
   // Named views of the ASSUMPTIONS cells the sheet references.
@@ -76,7 +107,15 @@ function createEngine(MODEL, opts) {
   const capByName = Object.fromEntries(
     MODEL.capabilities.map((c) => [c.name, c]));
 
-  const state = { ops: [], rows: [], jetUntil: 0 };  // rows[t-1] = season t
+  const state = { ops: [], rows: [], jetUntil: 0, dossierFloor: 0 };  // rows[t-1] = season t
+  // grain supply weights: share of the index carried by each region
+  const supplyShare = (() => {
+    const counts = REGIONS.map((r) => !grainSupply || !r.kind || !!r.grain);
+    const w = REGIONS.map((r, ri) => counts[ri]
+      ? r.weight * (grainSupply && r.export !== undefined ? r.export : 1) : 0);
+    const tot = w.reduce((s, x) => s + x, 0);
+    return w.map((x) => x * 100 / tot);
+  })();
   for (let di = 0; di < ND; di++) for (let ri = 0; ri < NR; ri++)
     if (MODEL.coeff[di][ri] !== 0 && MODEL.lags[di][ri] < 1)
       throw new Error("lag 0 edge: forbidden (" + DRIVERS[di] + " → " + REGIONS[ri].name + ")");
@@ -161,9 +200,44 @@ function createEngine(MODEL, opts) {
    * its chaos still raises severity, and therefore the player's mandate.
    * Enabled only with createEngine(MODEL, {rivals:true}); the no-rivals
    * baseline remains the exact ENGINE-sheet conformance target. */
+  // era of the Eastern Program for a calendar year: 0 none, 1 a lab with
+  // seeding planes, 2 ENMOD-era operator, 3 contemporary, 4 the future
+  function rivalEra(year) {
+    return year < 1962 ? 0 : year < 1976 ? 1 : year < 2000 ? 2 : year < 2030 ? 3 : 4;
+  }
   function rivalPlan(tt) {
     if (!rivalsOn || tt < 6) return [];
     const plan = [];
+    if (rivalEras) {
+      const era = rivalEra(MODEL.climate[tt - 1].year);
+      if (era === 0) return plan;
+      // its own steppe, on its own clock
+      if ((tt - 6) % (era === 1 ? 10 : 7) === 0)
+        plan.push({ cap: "Cloud Seeding", target: "Black Sea Steppe" });
+      if (era === 1) return plan;                       // a lab. Nothing more.
+      const homeEvery = era === 2 ? 7 : era === 3 ? 5 : 4;
+      if ((tt - 6) % homeEvery === 3)
+        plan.push({ cap: "Watershed Interference", target: "North American Plains" });
+      if ((tt - 6) % 40 === 16) plan.push({ cap: "Ocean Thermal Forcing" });
+      if (era >= 3 && (tt - 6) % 40 === 30) plan.push({ cap: "Stratospheric Aerosol Inj." });
+      if (era >= 4 && (tt - 6) % 40 === 5) plan.push({ cap: "ENSO Forcing" });
+      if ((tt - 6) % 7 === 1) {
+        const loved = playerFavourite(tt);
+        if (loved) plan.push({ cap: "Watershed Interference", target: loved });
+        const passive = !state.ops.some(
+          (o) => o.owner === "player" && o.sig > 0 && o.t > tt - 8);
+        if (passive && !plan.some((p) => p.target === "North American Plains"))
+          plan.push({ cap: "Watershed Interference", target: "North American Plains" });
+      }
+      if (scrutiny) {
+        const pd = state.rows[tt - 2] ? state.rows[tt - 2].dossier : 0;
+        const every = Math.max(2, scrutiny.retaliateEvery - (era - 2));
+        if (pd >= MODEL.ladder[4].threshold && (tt - 6) % every === 0
+            && !plan.some((p) => p.target === "North American Plains"))
+          plan.push({ cap: "Watershed Interference", target: "North American Plains" });
+      }
+      return plan;
+    }
     if ((tt - 6) % 7 === 0)
       plan.push({ cap: "Cloud Seeding", target: "Black Sea Steppe" });
     if (tt > 14 && (tt - 6) % 7 === 3)
@@ -181,6 +255,14 @@ function createEngine(MODEL, opts) {
         (o) => o.owner === "player" && o.sig > 0 && o.t > tt - 8);
       if (passive) plan.push({ cap: "Watershed Interference",
                                target: "North American Plains" });
+    }
+    // Named (rung 5): the service that wrote the brief now works our
+    // harvest on its own clock. The ladder is the rival's targeting order.
+    if (scrutiny && tt > 6) {
+      const pd = state.rows[tt - 2] ? state.rows[tt - 2].dossier : 0;
+      if (pd >= MODEL.ladder[4].threshold && (tt - 6) % scrutiny.retaliateEvery === 0
+          && !plan.some((p) => p.target === "North American Plains"))
+        plan.push({ cap: "Watershed Interference", target: "North American Plains" });
     }
     return plan;
   }
@@ -367,8 +449,8 @@ function createEngine(MODEL, opts) {
 
     // R8 — markets.
     const supply = REGIONS.reduce(
-      (s, r, ri) => s + yields[ri] * r.weight / 100, 0);
-    const price = Math.min(priceCap, 100 * Math.pow(100 / Math.max(1, supply), P.priceElasticity));
+      (s, r, ri) => s + yields[ri] * supplyShare[ri] / 100, 0);
+    const price = Math.min(priceCap, 100 * Math.pow(100 / Math.max(1, supply), elasticity || P.priceElasticity));
     const homelandIdx = REGIONS.findIndex((r) => r.homeland);
     const revenue = yields[homelandIdx] * price / 100 * P.revenueScale;
 
@@ -410,16 +492,29 @@ function createEngine(MODEL, opts) {
     const envelopeStress = REGIONS.reduce((s, r, ri) =>
       s + Math.max(0, Math.abs(anomalies[ri]) / sigmas[ri] - 1), 0) / NR;
     // only the player's signatures feed the player's dossier
+    const prevDossier = prev ? prev.dossier : 0;
+    // scrutiny: the rung the world was on when these ops landed decides how
+    // many eyes were on them. rungMult is indexed by ladder rung (0 = nothing)
+    const prevRung = MODEL.ladder.filter((l) => prevDossier >= l.threshold).length - 1;
+    const scrutinyMult = scrutiny
+      ? scrutiny.sigScale * (scrutiny.rungMult[Math.min(prevRung, scrutiny.rungMult.length - 1)])
+      : 1;
+    const repeatWindow = scrutiny ? scrutiny.repeatWindow : 8;
     let attribution = 0;
     for (const e of landed) {
       if (e.owner !== "player" || !e.sig) continue;
-      let sig = e.sig;
-      if (forensics) {
-        // pattern evidence: same-target player landings in the last 8 seasons
+      let sig = e.sig * scrutinyMult;
+      // relief at home is what the programme is for, on paper (ADR-0020):
+      // seeding your own farmland is public and legal everywhere, so it is
+      // never pattern evidence — it still pays its signature under the eyes
+      const homeRelief = scrutiny && e.kind === "region" && e.mag > 0
+        && e.target === REGIONS[homelandIdx].name;
+      if (forensics && !homeRelief) {
+        // pattern evidence: same-target player landings in the repeat window
         let repeats = 0;
         for (const o of state.ops)
           if (o.owner === "player" && o.sig > 0 && o.target === e.target
-              && o.t + o.lag < t && o.t + o.lag >= t - 8) repeats++;
+              && o.t + o.lag < t && o.t + o.lag >= t - repeatWindow) repeats++;
         // and the ones that landed beside it this season — a stack is a pattern
         repeats += landed.filter((x) => x !== e && x.owner === "player" && x.sig > 0
                                       && x.first && x.target === e.target
@@ -436,19 +531,31 @@ function createEngine(MODEL, opts) {
       }
       attribution += sig;
     }
-    const prevDossier = prev ? prev.dossier : 0;
     // forensics: hush money buys less once questions circulate — containment
     // efficiency falls as the standing dossier grows (sheet behavior when off)
     const contEff = forensics
       ? P.containmentEff / (1 + prevDossier / 60)
       : P.containmentEff;
+    // scrutiny: hush money is a trickle, not a firehose — the points a
+    // season's spend buys saturate (C / (1 + C/contSat))
+    const contPts = scrutiny
+      ? containment / (1 + containment / scrutiny.contSat)
+      : containment;
     // once a rival service has named you (rung 5, dossier 115+), the file
     // grows on its own: investigators are working it. Institutional
     // forgetting no longer applies above that line. (forensics only)
     const investigators = forensics && prevDossier >= 115 ? 3 : 0;
-    const decayEff = investigators ? 0 : P.dossierDecay;
-    const dossier = Math.max(0, prevDossier * (1 - decayEff)
-      + attribution + investigators - containment * contEff);
+    const decayEff = investigators ? 0 : (scrutiny ? scrutiny.decay : P.dossierDecay);
+    let dossier = Math.max(0, prevDossier * (1 - decayEff)
+      + attribution + investigators - contPts * contEff);
+    // ADR-0009: crossing rung 5 sets a permanent floor — intelligence
+    // services do not forget, whatever the press cycle does. Below 115 the
+    // file decays again, but never beneath the floor. (scrutiny only)
+    if (scrutiny) {
+      if (dossier >= MODEL.ladder[4].threshold)
+        state.dossierFloor = Math.max(state.dossierFloor, scrutiny.floor);
+      dossier = Math.max(dossier, state.dossierFloor);
+    }
 
     let ladderText = MODEL.ladder[0].text;
     for (const rung of MODEL.ladder)
@@ -472,11 +579,14 @@ function createEngine(MODEL, opts) {
     else if (obsStreak >= 4) status = "dissolved";
     else if (obsolescent) status = "obsolescence-warning";
 
+    const baseRevenue = shadow ? shadow.resolve(t, {}).revenue : null;
     const row = { t, year: clim.year, qtr: clim.qtr, driverNat: clim.drivers,
+                  baseRevenue,
                   driverTotals, sigmas, anomalies, resil, yields, supply,
                   price, revenue, severity, mandate, opsSpend, containment,
                   budgetIn, trimmed, jetTriggered, jetActive,
                   treasury, attribution, dossier, ladderText,
+                  dossierFloor: state.dossierFloor, scrutinyMult,
                   status, obsStreak, landed, committed, refused, revealed, earmarkUsed,
                   prediction: cmd.prediction || "" };
     state.rows.push(row);

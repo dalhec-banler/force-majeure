@@ -12,7 +12,7 @@ for(const e of HISTORY.eruptions){
 }
 for(const q of HISTORY.quakes) for(const h of (q.hit||[]))
   EXO.push({t:q.t, region:h.region, mag:h.mag, dur:h.dur||1, cap:q.name+" earthquake"});
-const eng = createEngine(MODEL, {rivals:true, idleTrim:0.6, jetstream:true, forensics:true, knowledge:true, budgetGate:true, exogenous:EXO, priceCap:300});
+const eng = createEngine(MODEL, {rivals:true, idleTrim:0.6, jetstream:true, forensics:true, knowledge:true, budgetGate:true, exogenous:EXO, priceCap:300, scrutiny:true, grainSupply:true, priceElasticity:3.0, rivalEras:true, shadow:true});
 const DRVNAME = { ENSO:"the Pacific", IOD:"the Indian Ocean", NATL:"the Atlantic", GLOBAL:"the planet" };
 let SHOW_WIRES=true;             // the known wiring, drawn on the globe
 let newWires=[];                 // wires revealed recently: {di,ri,bornT}
@@ -87,6 +87,9 @@ function fmtDead(n){
 function fmt(n,d=1){ return n.toLocaleString("en-US",
   {minimumFractionDigits:d,maximumFractionDigits:d}); }
 function lastRow(){ return eng.state.rows[t-1]; }
+// PROFIT: what the programme made — homeland revenue over the shadow world where it never acted
+function profitOf(rows){ return rows.reduce((s,r)=>s+r.revenue-(r.baseRevenue==null?85:r.baseRevenue),0); }
+function seasonProfit(r){ return r.revenue-(r.baseRevenue==null?85:r.baseRevenue); }
 function placeName(dl){ return dl.toLowerCase().replace(/(^|[\s\-'])(\S)/g,(m,a,b)=>a+b.toUpperCase()); }
 /* the purse: what is on hand, what is already committed, what is left */
 function funds(){ const r=lastRow(); return r? r.treasury : eng.assumptions.startingTreasury; }

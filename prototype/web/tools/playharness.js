@@ -36,7 +36,7 @@ global.getComputedStyle=()=>({getPropertyValue:()=>"monospace"});
 global.location={reload:noop};
 
 const fs=require('fs');
-const html=fs.readFileSync(__dirname+'/../console.html','utf8');
+const html=fs.readFileSync(process.env.HTML||(__dirname+'/../console.html'),'utf8');
 const script=html.match(/<script>([\s\S]*)<\/script>/)[1];
 const strategyPath=process.argv[2];
 const strategy=require(strategyPath);
@@ -58,7 +58,7 @@ const driver=`
         price:row?+row.price.toFixed(1):100, funds:row?+row.treasury.toFixed(1):90,
         mandate:row?Math.round(row.mandate):28,
         rung:row?eng.ladder.filter(l=>row.dossier>=l.threshold).length:1,
-        ladder:row?row.ladderText:"", profit:+eng.state.rows.reduce((s,r)=>s+r.revenue-85,0).toFixed(1),
+        ladder:row?row.ladderText:"", profit:+profitOf(eng.state.rows).toFixed(1),
         dead:Math.round(cumDead), deadYours:Math.round(cumDeadYours),
         ice:+iceMelt.toFixed(2), dev:+devastation().toFixed(2),
         directive:(curDir()&&dirActive(curDir()))? curDir().title : "none",

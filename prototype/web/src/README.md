@@ -31,4 +31,8 @@ semantics (declarations before first use at load time).
 
 After any edit: `python3 build.py`, then the engine integrity check in
 `docs/graphics-handoff.md` (treasury 302.40), then grep-verify the
-feature list in the night report before publishing.
+feature list in the night report before publishing. Engine opts that must be
+present in `00-setup.js`: `rivals:true, idleTrim:0.6, jetstream:true, forensics:true,
+knowledge:true, budgetGate:true, priceCap:300, scrutiny:true, grainSupply:true,
+priceElasticity:3.0, rivalEras:true, shadow:true`. `model-expanded.json` is the
+console's world for engine-level tests (`HTML=` overrides the harness page).

@@ -22,7 +22,7 @@ EXP = [
  # IOD + = positive dipole; NATL + = warm Atlantic (AMO+); GLOBAL = stress.
  ("California Central Valley","Fruit, nuts and rice",5,1.2,0.9,"",[0.4,0,-0.1,-0.45],[1,1,2,3]),     # El Niño wets the south/central valley winters
  ("Canadian Prairies","Wheat and canola",6,1.0,1.0,"",[-0.25,0,-0.2,-0.35],[1,1,2,3]),              # El Niño: warm, dry prairie winters; AMO+ drought reaches north
- ("Gulf Coast Refineries","Refined fuels and petrochemicals",3,1.3,1.0,"hub",[0.3,0,0.5,-0.3],[1,1,1,3]),  # El Niño wets the Gulf; a warm Atlantic means surge and storm
+ ("Gulf Coast Refineries","Refined fuels, petrochemicals and the Mississippi grain terminals",3,1.3,1.0,"hub",[0.3,0,0.5,-0.3],[1,1,1,3]),  # El Niño wets the Gulf; a warm Atlantic means surge and storm
  ("North China Plain","Wheat and maize",9,1.1,0.9,"",[-0.35,-0.1,-0.1,-0.45],[1,2,3,3]),           # El Niño weakens the East Asian monsoon: north China dries
  ("Yangtze Basin","Rice",9,1.0,1.0,"",[0.6,0.15,0,-0.4],[2,2,1,3]),                                 # the decaying El Niño summer floods the Yangtze (1954, 1998)
  ("Manchurian Plain","Soy and maize",4,1.1,1.1,"",[-0.25,0,-0.1,-0.5],[1,1,3,3]),                   # cool El Niño summers in the northeast
@@ -51,13 +51,36 @@ LATS = {"North American Plains":41.5,"Black Sea Steppe":48,"La Plata Basin":-31,
  "Mediterranean Basin":40,"Danube Basin":46.5,"Nile Delta":30.5,"Japan (Kanto–Kansai)":35.7,
  "Mekong Delta":10,"Cerrado":-15.8,"Southern African Maize Belt":-27,"Kazakh Virgin Lands":51,
  "Panama Canal":9.1,"Malacca Strait":2.5,"Pilbara Iron Belt":-20.3,"Murray–Darling Basin":-34.5,"Hawaiian Islands":21.3}
+# Hubs that factually ship grain (ADR-0021): the Mississippi terminals are
+# the world's largest grain export gateway; grain is the Panama Canal's
+# largest cargo by tonnage; Australian and Black Sea wheat reaches Asia
+# through Malacca. Only these hubs count in the grain supply index.
+GRAIN_HUBS = {"Gulf Coast Refineries","Panama Canal","Malacca Strait"}
+# Share of each region's output that reaches the traded market (ADR-0021).
+# Only ~20% of the world's grain is ever traded, so the price is made by the
+# exporters: a shortfall on the Steppe or the Plains moves Chicago; a
+# shortfall in a self-consuming giant moves it only through import demand.
+# Broad-brush 1946–present: net exporters ~1, importers/self-sufficient
+# producers low, subsistence regions near zero (their failures are aid).
+EXPORT = {"North American Plains":1.0,"Black Sea Steppe":0.9,"La Plata Basin":1.0,
+ "South Asia":0.4,"Southeast Asia":0.8,"Eastern Australia":1.0,"Sahel":0.1,
+ "Horn of Africa":0.1,"California Central Valley":0.4,"Canadian Prairies":1.0,
+ "North China Plain":0.3,"Yangtze Basin":0.2,"Manchurian Plain":0.5,
+ "Northern European Plain":0.8,"Mediterranean Basin":0.3,"Danube Basin":0.6,
+ "Nile Delta":0.1,"Mekong Delta":0.8,"Cerrado":0.9,"Southern African Maize Belt":0.4,
+ "Kazakh Virgin Lands":0.8,"Murray–Darling Basin":0.8,
+ "Gulf Coast Refineries":1.0,"Panama Canal":0.7,"Malacca Strait":0.5}
 for (name,com,wt,sens,sig,kind,co,lg) in EXP:
     reg={"name":name,"crop":com,"weight":wt,"sens":sens,"sigma":sig,"homeland":False}
     if kind: reg["kind"]=kind
+    if name in GRAIN_HUBS: reg["grain"]=True
+    if name in EXPORT: reg["export"]=EXPORT[name]
     M["regions"].append(reg)
     for di in range(4):
         M["coeff"][di].append(co[di]); M["lags"][di].append(lg[di])
-for r in M["regions"]: r["lat"] = LATS.get(r["name"], 0)
+for r in M["regions"]:
+    r["lat"] = LATS.get(r["name"], 0)
+    if r["name"] in EXPORT and "export" not in r: r["export"]=EXPORT[r["name"]]
 total = sum(r["weight"] for r in M["regions"])
 for r in M["regions"]: r["weight"] = round(r["weight"]*100.0/total, 4)
 # deterministic weather noise for the new regions
@@ -120,5 +143,6 @@ out = (tpl.replace("__MODEL__", json.dumps(M, separators=(",",":")))
           .replace("__SMOKE__", b64("smoke.b64"))
           .replace("__HISTORY__", (d / "history.json").read_text()))
 (d / "console.html").write_text(out)
+(d / "model-expanded.json").write_text(json.dumps(M, separators=(",",":")))  # the console's world, for engine tests
 print(f"console.html: {len(out):,} bytes · {len(M['regions'])} regions · "
       f"{len(M['capabilities'])-1} tools · {len(js_parts)} js parts")

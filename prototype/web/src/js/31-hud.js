@@ -62,7 +62,7 @@ function updateHUD(row, prev){
   if(hd.textContent!==newDead && cumDead>0){
     hd.classList.remove("tick"); void hd.offsetWidth; hd.classList.add("tick"); }
   hd.textContent=newDead;
-  const profit=eng.state.rows.reduce((s2,r2)=>s2+r2.revenue-85,0);
+  const profit=profitOf(eng.state.rows);
   $("hProfit").textContent=(profit>=0?"+$":"−$")+fmt(Math.abs(profit))+"M";
   $("hProfit").style.color=profit>=0?"var(--green)":"var(--red)";
   $("ladder").textContent=row.ladderText;
@@ -70,7 +70,7 @@ function updateHUD(row, prev){
   const rung = eng.ladder.filter(l=>row.dossier>=l.threshold).length-1;
   [...$("sigmeter").children].forEach((el,i)=>el.className = i<rung? "on":"");
   $("sigmeter").classList.toggle("hunted", rung>=4);
-  $("dosnum").textContent = `dossier ${fmt(row.dossier)} / 200`;
+  $("dosnum").textContent = `dossier ${fmt(row.dossier)} / 200`+(row.dossierFloor>0? ` · floor ${fmt(row.dossierFloor)}`:"");
   spark($("tspark"), eng.state.rows.map(r=>r.treasury), "rgb(83,217,123)", "$");
   spark($("pspark"), eng.state.rows.map(r=>r.price), "rgb(200,230,207)", "");
   renderInflight();

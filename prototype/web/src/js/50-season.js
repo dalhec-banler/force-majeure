@@ -257,7 +257,7 @@ async function runSeasonInner(auto){
   }
   const recentLanding=eng.state.ops.some(o=>o.owner==="player"&&o.sig>0&&o.t+o.lag>=t-1&&o.t+o.lag<=t);
   if(row.price>108 && row.yields[REG.findIndex(r=>r.homeland)]>=93 && recentLanding)
-    wire(pick("windfall", t).split("{AMT}").join(fmt(row.revenue-85)),"op");
+    wire(pick("windfall", t).split("{AMT}").join(fmt(seasonProfit(row))),"op");
   await phaseShow(4);
   const prevRung = prev? eng.ladder.filter(l=>prev.dossier>=l.threshold).length:1;
   const rung = eng.ladder.filter(l=>row.dossier>=l.threshold).length;
@@ -274,7 +274,16 @@ async function runSeasonInner(auto){
     const h=headlines[rung];
     if(h) news(h[0],h[1],h[2]);
     if(rung>=3) alertStrip("SOMEONE IS ASKING QUESTIONS");
+    // the ladder has teeth (ADR-0020): every rung is more eyes on the next op
+    const teeth=[null,null,null,
+      "Legal office: every operation now lands in front of a journalist. Whatever we do next carries further than it used to.",
+      "Legal office: the consortium is measuring the envelope. Anything that lands outside it is now evidence, and hush money buys less every season.",
+      "Counterintelligence: the Eastern Program has our file. They know what we are, and they know where the harvest is. Expect them at home. The file does not close below ninety now — not ever.",
+      "Legal office: inspectors are on the ground. Nothing we do is quiet any more. Nothing."];
+    if(teeth[rung]) wire(`MEMO — ${teeth[rung]}`,"memo");
   }
+  else if(prev && row.dossierFloor>0 && row.dossier<=row.dossierFloor+0.01 && prev.dossier>row.dossierFloor+0.01)
+    wire(`MEMO — Legal office: the file has gone as quiet as it will ever go. Someone keeps a copy.`,"memo");
   else if(row.landed.some(e=>e.sig>0 && e.owner==="player")){
     wire(pick("filed", t),"op");
     filedCount++;
