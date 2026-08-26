@@ -8,11 +8,18 @@ async function runSeason(auto){
   const cmd={ opA:slots[0]?.cap||"— none —", targetA:slots[0]?.target,
               opB:slots[1]?.cap||"— none —", targetB:slots[1]?.target,
               containment:+$("containment").value,
-              grant:pendingGrant,
+              grant:pendingGrant, clawback:pendingClaw,
               prediction:$("predict").value.trim() };
-  pendingGrant=0;
+  // the flagship earmark is drawn the season a flagship op is sealed
+  const drawn = flagship && slots.some(s=>FLAGSHIP_CAPS.includes(s.cap));
+  if(drawn){ cmd.grant+=flagship.amount; }
+  pendingGrant=0; pendingClaw=0;
   t++;
   const row = eng.resolve(t, cmd);
+  if(drawn){
+    wire(`<span class="tag tagd">EARMARK DRAWN</span> $${flagship.amount}M. The demonstration is funded. The committee will want to watch.`,"op");
+    flagship=null;
+  }
   effects = effects.filter(e=> t - e.bornT < e.life);
   for(let i=0;i<VOLCANOES.length;i++)
     if(volcanoActive(i,t) && !volcanoActive(i,t-1))
@@ -179,8 +186,11 @@ async function runSeason(auto){
       wire(`TRACE — not ours. The pattern is too clean to be weather. <b>Someone is operating.</b>`,"att");
       alarm();
       alertStrip("SUSPECTED HOSTILE OPERATION — "+r.name.toUpperCase());
-      if(REG[ri].homeland)
+      if(REG[ri].homeland){
+        lastHostileT=t;
         wire(`MEMO — Counterintelligence: someone is working our watershed. Recommend we return the favor.`,"memo");
+      } else if(eng.state.ops.some(o=>o.owner==="rival"&&o.target===r.name&&o.cap==="Watershed Interference"&&o.t>t-4))
+        wire(`MEMO — Counterintelligence: they hit ${r.name} — the harvest we have been protecting. <b>They are reading our flight logs.</b>`,"memo");
     }
     else if(tr.parts.length && pctYou>0.05)
       wire(`TRACE — trace contribution yours (${tr.parts.join(", ")}). Mostly the planet.`,"op");
@@ -196,6 +206,7 @@ async function runSeason(auto){
       if(share>0.3){
         alarm();
         alertStrip("SUSPECTED HOSTILE OPERATION — HOMELAND");
+        lastHostileT=t;
         wire(`COUNTERINTELLIGENCE — foreign signal in our own weather (~${Math.round(share*100)}% of the anomaly). <b>This was an attack.</b>`,"att");
       }
     }
@@ -252,14 +263,8 @@ async function runSeason(auto){
       wire(rants[Math.floor(filedCount/3-1)%rants.length],"cast");
     }
   }
-  {
-    const d=DIRECTIVES[dirIdx];
-    if(d && (!d.from || t>=d.from) && d.check(row)){
-      wire(`<span class="tag tagd">DIRECTIVE COMPLETE</span><b>${d.title.toUpperCase()}</b> — +$${d.reward}M appropriated next quarter. The committee is pleased. For now.`,"op");
-      pendingGrant=d.reward; dirIdx++; sfxChime();
-    }
-    renderDirective();
-  }
+  directiveStep(row);
+  flagshipStep(row);
   memos(row);
   updateHUD(row, prev);
   $("phasename").textContent="FORECAST";

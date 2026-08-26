@@ -122,6 +122,10 @@ function memos(row){
     out.push("Budget office: the committee sees a calm world. Calm worlds do not fund directorates.");
   if(row.treasury>=0 && row.treasury<25)
     out.push("Budget office: at current burn this programme fails within the year.");
+  if(flagship && flagship.deadline-t<=1)
+    out.unshift(`Budget office: the flagship earmark lapses ${flagship.deadline-t===0?"this season":"next season"}. Sixty million dollars, and nothing to show the committee.`);
+  if(lapses>=2 && t%3===0)
+    out.push("Chief of staff: two lapsed directives on the record. The committee has started using the word 'review'.");
   if(t%9===5)
     out.push("██████ ██ ███████ cleared through legal. Do not discuss on this channel.");
   for(const m of out.slice(0,2)) wire(`MEMO — ${m}`,"memo");

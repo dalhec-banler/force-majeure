@@ -61,7 +61,9 @@ const driver=`
         ladder:row?row.ladderText:"", profit:+eng.state.rows.reduce((s,r)=>s+r.revenue-85,0).toFixed(1),
         dead:Math.round(cumDead), deadYours:Math.round(cumDeadYours),
         ice:+iceMelt.toFixed(2), dev:+devastation().toFixed(2),
-        directive:DIRECTIVES[dirIdx]? DIRECTIVES[dirIdx].title : "none",
+        directive:(curDir()&&dirActive(curDir()))? curDir().title : "none",
+        directiveLeft:(curDir()&&dirActive(curDir()))? curDir().window-(t-(curDir().standing?curDir().issued:Math.max(dirIssued,curDir().from||0))) : 0,
+        flagship: flagship? flagship.deadline-t : 0, lapses,
         inflight:eng.state.ops.filter(o=>o.owner==="player"&&o.t+o.lag>t).length,
         status:row?row.status:"running" };
     },

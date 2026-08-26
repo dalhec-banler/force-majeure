@@ -97,7 +97,36 @@ function createEngine(MODEL, opts) {
       plan.push({ cap: "Watershed Interference",
                   target: "North American Plains" });
     if (tt === 22) plan.push({ cap: "Ocean Thermal Forcing" });
+    // From season 21 the Eastern Program reads our flight logs: every
+    // seventh season it works whichever harvest we have been protecting
+    // hardest. A programme that has gone quiet for eight seasons gets its
+    // own watershed hit again, off-cycle. The world does not wait for you.
+    if (tt > 20 && (tt - 6) % 7 === 1) {
+      const loved = playerFavourite(tt);
+      if (loved) plan.push({ cap: "Watershed Interference", target: loved });
+      const passive = !state.ops.some(
+        (o) => o.owner === "player" && o.sig > 0 && o.t > tt - 8);
+      if (passive) plan.push({ cap: "Watershed Interference",
+                               target: "North American Plains" });
+    }
     return plan;
+  }
+  // the non-homeland region the player has relieved or hardened most in
+  // the last 16 seasons (the rival never sabotages its own steppe).
+  // Deterministic: ties resolve by first commitment.
+  function playerFavourite(tt) {
+    const home = REGIONS.find((r) => r.homeland).name;
+    const score = {};
+    for (const o of state.ops) {
+      if (o.owner !== "player" || o.t <= tt - 16) continue;
+      if (o.cap !== "Cloud Seeding" && o.cap !== "Adaptation Investment") continue;
+      if (o.target === home || o.target === "Black Sea Steppe") continue;
+      score[o.target] = (score[o.target] || 0)
+                      + (o.cap === "Adaptation Investment" ? 2 : 1);
+    }
+    let best = null, bs = 0;
+    for (const k of Object.keys(score)) if (score[k] > bs) { best = k; bs = score[k]; }
+    return best;
   }
 
   /* Resolve season t (must be rows.length+1). cmd = {opA, opB, targetA,
@@ -222,7 +251,8 @@ function createEngine(MODEL, opts) {
     const trimmed = t > 4 && !recentOp && idleTrim < 1;
     const budgetIn = revenue * P.budgetFromRevenue
                    + mandate * P.budgetFromMandate * (trimmed ? idleTrim : 1)
-                   + Math.max(0, cmd.grant || 0);   // directive appropriations
+                   + Math.max(0, cmd.grant || 0)    // directive appropriations
+                   - Math.max(0, cmd.clawback || 0); // lapsed-directive clawback
     const prevTreasury = prev ? prev.treasury : P.startingTreasury;
     const treasury = prevTreasury + budgetIn - opsSpend - containment
                    - P.overhead;

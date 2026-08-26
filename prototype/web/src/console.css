@@ -93,6 +93,9 @@
   .tool:hover{border-color:var(--ink-dim)}
   .tool.sel{border-color:var(--green);background:#12251a}
   .tool.off{opacity:.35;cursor:default}
+  .tool.funded{border-color:var(--amber);box-shadow:0 0 10px rgba(224,164,88,.35);animation:funded 1.6s ease-in-out infinite}
+  .tool.funded .pr{color:var(--amber);font-weight:600}
+  @keyframes funded{50%{box-shadow:0 0 16px rgba(224,164,88,.6)}}
 
   /* right rail: the news is the interface */
   #rail{border-left:1px solid var(--line);background:var(--panel);

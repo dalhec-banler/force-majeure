@@ -53,6 +53,9 @@ function renderTray(){
   for(const b of $("toolbar").children){
     b.classList.toggle("sel", b.dataset.cap===pendingTool);
     b.classList.toggle("off", slots.length>=2 && b.dataset.cap!==pendingTool);
+    const funded=!!flagship && FLAGSHIP_CAPS.includes(b.dataset.cap);
+    b.classList.toggle("funded", funded);
+    const pr=b.querySelector(".pr"); if(pr) pr.textContent=funded? "FUNDED" : "$"+CAPS.find(c=>c.name===b.dataset.cap).cost+"M";
   }
   $("armed").innerHTML = slots.map((s,i)=>
     `<span class="pill">${s.cap.toUpperCase()}${s.target? " · "+s.target:""}
