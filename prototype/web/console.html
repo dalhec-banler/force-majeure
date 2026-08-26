@@ -2926,7 +2926,7 @@ function earmarkLine(){
 function renderDirective(){
   const d=curDir();
   if(!d || gated(d)){
-    $("dirtext").innerHTML="The committee is drafting language. Continue operations."+earmarkLine();
+    $("dirtext").innerHTML="The committee is drafting language. Nothing is asked of you this review — <b>if the world is stable, run the year.</b> A seed a year keeps the appropriation whole."+earmarkLine();
     $("dirreward").textContent=""; return; }
   const issuedRv=d.standing? d.issuedRv : dirIssuedRv;
   const left=Math.max(0,d.window-(rv-issuedRv));
