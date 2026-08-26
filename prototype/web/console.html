@@ -1332,12 +1332,6 @@ function drawAmbient(nowMs){
     cx.fillStyle=`rgba(255,150,60,${0.9*fl})`;
     cx.beginPath(); cx.arc(p.x,p.y,1.8,0,7); cx.fill();
     if(volcReady){
-      if(Math.sin(nowMs/97+i*7)>0.985){          // lightning in the column
-        cx.strokeStyle="rgba(255,255,255,.9)"; cx.lineWidth=1.5;
-        cx.beginPath(); cx.moveTo(p.x+2,p.y-k*2);
-        cx.lineTo(p.x-2,p.y-k*1.2); cx.lineTo(p.x+3,p.y-k*0.5);
-        cx.stroke(); cx.lineWidth=1;
-      }
       const vw=k*8*(1+0.05*Math.sin(nowMs/3000+i));
       cx.save();
       cx.translate(p.x+vw*0.1,p.y-vw*0.12);
@@ -1345,8 +1339,50 @@ function drawAmbient(nowMs){
       cx.globalAlpha=0.92;
       cx.drawImage(volcImg,-vw*0.38,-vw*0.62,vw,vw);
       cx.restore();
+      drawVolcanicLightning(p, vw, i, nowMs);
     }
   }
+}
+/* volcanic lightning — violet-white, jagged, branching, inside the column,
+   lit from within, gone in a sixth of a second, and never on a rhythm. */
+function hash01(a,b){ let h=(Math.imul(a,374761393)+Math.imul(b,668265263))|0;
+  h=Math.imul(h^(h>>>13),1274126177); return ((h^(h>>>16))>>>0)/4294967296; }
+function drawVolcanicLightning(p, vw, i, nowMs){
+  const BUCKET=450, LIFE=160;
+  const b=Math.floor(nowMs/BUCKET);
+  if(hash01(b,i*17+3)>0.10) return;                 // most buckets: nothing
+  const age=(nowMs-b*BUCKET)/LIFE; if(age>1) return;
+  const fade=age<0.15? age/0.15 : 1-(age-0.15)/0.85;  // snap on, decay out
+  const h=(n)=>hash01(b*31+n,i);
+  // main channel: from up in the ash column (which rises up-right of the
+  // vent in the sprite) down toward the vent
+  const x0=p.x+vw*(0.14+0.24*h(1)), y0=p.y-vw*(0.30+0.22*h(2));
+  const x1=p.x+vw*0.04, y1=p.y-vw*0.02;
+  const pts=[[x0,y0]], N=9;
+  for(let s=1;s<=N;s++){ const f=s/N;
+    pts.push([x0+(x1-x0)*f+(h(10+s)-0.5)*vw*0.11*(1-0.5*f), y0+(y1-y0)*f+(h(30+s)-0.5)*vw*0.04]); }
+  const lw=Math.max(0.9,vw/170);                       // scale with the plume
+  const path=(arr)=>{ cx.beginPath(); cx.moveTo(arr[0][0],arr[0][1]); for(let q=1;q<arr.length;q++) cx.lineTo(arr[q][0],arr[q][1]); };
+  cx.save(); cx.globalCompositeOperation="lighter"; cx.globalAlpha=fade; cx.lineJoin="round"; cx.lineCap="round";
+  // the column lights from inside
+  const gx=x0*0.5+x1*0.5, gy=y0*0.5+y1*0.5;
+  const g=cx.createRadialGradient(gx,gy,0,gx,gy,vw*0.42);
+  g.addColorStop(0,"rgba(190,160,255,.32)"); g.addColorStop(1,"rgba(190,160,255,0)");
+  cx.fillStyle=g; cx.beginPath(); cx.arc(gx,gy,vw*0.42,0,7); cx.fill();
+  // glow, core, filament
+  path(pts); cx.strokeStyle="rgba(170,130,255,.22)"; cx.lineWidth=5*lw;   cx.stroke();
+  path(pts); cx.strokeStyle="rgba(215,195,255,.6)";  cx.lineWidth=2*lw;   cx.stroke();
+  path(pts); cx.strokeStyle="rgba(255,255,255,.95)"; cx.lineWidth=0.9*lw; cx.stroke();
+  // one or two side branches, thinner, that die in the ash
+  const nb=1+(h(50)<0.45?1:0);
+  for(let k2=0;k2<nb;k2++){
+    const from=pts[2+Math.floor(h(60+k2)*4)], dir=h(70+k2)<0.5?-1:1;
+    const br=[from]; let bx=from[0], by=from[1];
+    for(let s=0;s<3;s++){ bx+=dir*vw*0.05*(0.4+h(80+k2*5+s)); by+=vw*0.05*(0.2+h(90+k2*5+s)); br.push([bx,by]); }
+    path(br); cx.strokeStyle="rgba(200,180,255,.45)"; cx.lineWidth=1.6*lw; cx.stroke();
+    path(br); cx.strokeStyle="rgba(245,240,255,.8)";  cx.lineWidth=0.6*lw; cx.stroke();
+  }
+  cx.restore(); cx.lineWidth=1;
 }
 let stars=null, starsW=0, starsH=0;
 function makeStars(){
