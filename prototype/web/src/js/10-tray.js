@@ -103,6 +103,7 @@ function toolClick(c){
   if(pendingTool===c.name){ pendingTool=null; renderTray();
     $("toolinfo").textContent="Pick a tool. Aim it at the world. Scroll to zoom."; return; }
   const ws=eng.eras? eng.wingStatus(c.name) : null;
+  if(freshWings.has(c.name)){ freshWings.delete(c.name); wingSeen.add(c.name); renderTray(); }
   if(ws && !ws.online){                        // a wing that is not flying
     const i=wingOrders.standup.indexOf(c.name);
     if(i>=0){ wingOrders.standup.splice(i,1); renderTray(); sfxClick(); $("toolinfo").textContent=`${c.name} — the order is withdrawn.`; return; }
@@ -135,6 +136,7 @@ function renderTray(){
     const ordered=wingOrders.standup.includes(cap), moth=wingOrders.mothball.includes(cap);
     const locked=!!ws && !ws.online;
     b.classList.toggle("locked", locked && !ordered);
+    b.classList.toggle("fresh", freshWings.has(cap));
     b.classList.toggle("ordered", ordered||moth);
     b.classList.toggle("wing", !!ws && ws.online && ws.upkeep>0);
     b.classList.toggle("funded", funded && !locked);

@@ -60,6 +60,13 @@ async function runSeasonInner(auto, cmdOverride){
       wire(`<span class="tag" style="color:var(--amber);border-color:var(--amber)">MOTHBALLED</span><b>${nm}</b> — ${w.why==="attrition"?"the chest could not carry it. The planes go to the desert; the crews go to the airlines.":"stood down by order."}${(c&&c.chest)?` It reopens at $${Math.round(c.chest*0.75)}M in the chest.`:""}`,"att");
       sfxAlert(); }
   }
+  // a new capability becomes possible: the tray lights it, the wire and a chyron say so
+  if(eng.eras) for(const c of CAPS){ if(c.type==="NONE"||!c.from||c.from<=MODEL.climate[0].year||freshWings.has(c.name)||wingSeen.has(c.name)) continue;
+    const ws=eng.wingStatus(c.name); if(!ws||!ws.eligible) continue;
+    freshWings.add(c.name); const nm=c.name.replace(" [T3]","").toUpperCase();
+    alertStrip(`NEW CAPABILITY — ${nm} IS POSSIBLE`);
+    wire(`<span class="tag tagd">NEW WING</span><b>${nm}</b> — the century has made it possible. ${ws.canStand? "The chest can carry it: order it up from the tray." : `Stand it up when the chest holds $${Math.round(ws.need)}M; upkeep $${ws.upkeep}M a season.`}`,"op");
+    sfxChime(); }
   for(const g of (row.regionEvents||[])){
     const r=REG[g.ri];
     news(DATELINE[r.name]||r.name.toUpperCase(), `${r.name} is on the board — ${(r.crop||"").toLowerCase()}. ${r.kind==="hub"?"A chokepoint the world now runs through.":r.kind==="ice"?"Sea lanes where the ice used to be.":"A harvest the markets now price."}`, false);

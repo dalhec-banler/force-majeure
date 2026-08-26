@@ -337,6 +337,11 @@
 .arc-actions{display:flex;gap:8px;margin-top:12px} .arc-actions .ghost{background:none;color:var(--ink-dim);border:1px solid var(--line)}
 .arctip{position:absolute;background:rgba(10,15,12,.95);border:1px solid var(--line);padding:5px 8px;font-size:10.5px;max-width:360px;pointer-events:none;z-index:9}
 .sheet.archive .ok{color:var(--green)} .sheet.archive .no{color:var(--red)}
+
+/* a capability the century just made possible: it glows until you look at it */
+.tool.fresh{opacity:1;filter:none;animation:freshwing 1.6s ease-in-out infinite}
+.tool.fresh .pr{color:var(--green)}
+@keyframes freshwing{0%,100%{box-shadow:inset 0 0 0 1px var(--green),0 0 0 0 rgba(83,217,123,0)}50%{box-shadow:inset 0 0 0 1px var(--green),0 0 10px 2px rgba(83,217,123,.45)}}
 </style>
 
 <div id="app">
@@ -1338,6 +1343,7 @@ function nextBatch(){ const s=t+1, tier=tierFor(s), start=tierStartT(tier); retu
 function clockMs(){ return (tierFor(t+1).clock||45)*1000; }
 let rv=0;                        // reviews begun so far — directive fuses count these
 let wingOrders={standup:[],mothball:[]};   // orders for the next review
+const freshWings=new Set(), wingSeen=new Set();   // capabilities newly possible, until the player looks at them
 function isOnline(ri){ const r=lastRow(); return r? !!r.online[ri] : eng.regionOnline(ri,1); }
 let flash = [];                  // travelling arcs
 let shocks = [];                 // expanding event shockwaves
@@ -1500,6 +1506,7 @@ function toolClick(c){
   if(pendingTool===c.name){ pendingTool=null; renderTray();
     $("toolinfo").textContent="Pick a tool. Aim it at the world. Scroll to zoom."; return; }
   const ws=eng.eras? eng.wingStatus(c.name) : null;
+  if(freshWings.has(c.name)){ freshWings.delete(c.name); wingSeen.add(c.name); renderTray(); }
   if(ws && !ws.online){                        // a wing that is not flying
     const i=wingOrders.standup.indexOf(c.name);
     if(i>=0){ wingOrders.standup.splice(i,1); renderTray(); sfxClick(); $("toolinfo").textContent=`${c.name} — the order is withdrawn.`; return; }
@@ -1532,6 +1539,7 @@ function renderTray(){
     const ordered=wingOrders.standup.includes(cap), moth=wingOrders.mothball.includes(cap);
     const locked=!!ws && !ws.online;
     b.classList.toggle("locked", locked && !ordered);
+    b.classList.toggle("fresh", freshWings.has(cap));
     b.classList.toggle("ordered", ordered||moth);
     b.classList.toggle("wing", !!ws && ws.online && ws.upkeep>0);
     b.classList.toggle("funded", funded && !locked);
@@ -3159,6 +3167,13 @@ async function runSeasonInner(auto, cmdOverride){
       wire(`<span class="tag" style="color:var(--amber);border-color:var(--amber)">MOTHBALLED</span><b>${nm}</b> — ${w.why==="attrition"?"the chest could not carry it. The planes go to the desert; the crews go to the airlines.":"stood down by order."}${(c&&c.chest)?` It reopens at $${Math.round(c.chest*0.75)}M in the chest.`:""}`,"att");
       sfxAlert(); }
   }
+  // a new capability becomes possible: the tray lights it, the wire and a chyron say so
+  if(eng.eras) for(const c of CAPS){ if(c.type==="NONE"||!c.from||c.from<=MODEL.climate[0].year||freshWings.has(c.name)||wingSeen.has(c.name)) continue;
+    const ws=eng.wingStatus(c.name); if(!ws||!ws.eligible) continue;
+    freshWings.add(c.name); const nm=c.name.replace(" [T3]","").toUpperCase();
+    alertStrip(`NEW CAPABILITY — ${nm} IS POSSIBLE`);
+    wire(`<span class="tag tagd">NEW WING</span><b>${nm}</b> — the century has made it possible. ${ws.canStand? "The chest can carry it: order it up from the tray." : `Stand it up when the chest holds $${Math.round(ws.need)}M; upkeep $${ws.upkeep}M a season.`}`,"op");
+    sfxChime(); }
   for(const g of (row.regionEvents||[])){
     const r=REG[g.ri];
     news(DATELINE[r.name]||r.name.toUpperCase(), `${r.name} is on the board — ${(r.crop||"").toLowerCase()}. ${r.kind==="hub"?"A chokepoint the world now runs through.":r.kind==="ice"?"Sea lanes where the ice used to be.":"A harvest the markets now price."}`, false);

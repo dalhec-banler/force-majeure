@@ -331,3 +331,8 @@
 .arc-actions{display:flex;gap:8px;margin-top:12px} .arc-actions .ghost{background:none;color:var(--ink-dim);border:1px solid var(--line)}
 .arctip{position:absolute;background:rgba(10,15,12,.95);border:1px solid var(--line);padding:5px 8px;font-size:10.5px;max-width:360px;pointer-events:none;z-index:9}
 .sheet.archive .ok{color:var(--green)} .sheet.archive .no{color:var(--red)}
+
+/* a capability the century just made possible: it glows until you look at it */
+.tool.fresh{opacity:1;filter:none;animation:freshwing 1.6s ease-in-out infinite}
+.tool.fresh .pr{color:var(--green)}
+@keyframes freshwing{0%,100%{box-shadow:inset 0 0 0 1px var(--green),0 0 0 0 rgba(83,217,123,0)}50%{box-shadow:inset 0 0 0 1px var(--green),0 0 10px 2px rgba(83,217,123,.45)}}

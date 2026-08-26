@@ -88,6 +88,7 @@ function nextBatch(){ const s=t+1, tier=tierFor(s), start=tierStartT(tier); retu
 function clockMs(){ return (tierFor(t+1).clock||45)*1000; }
 let rv=0;                        // reviews begun so far — directive fuses count these
 let wingOrders={standup:[],mothball:[]};   // orders for the next review
+const freshWings=new Set(), wingSeen=new Set();   // capabilities newly possible, until the player looks at them
 function isOnline(ri){ const r=lastRow(); return r? !!r.online[ri] : eng.regionOnline(ri,1); }
 let flash = [];                  // travelling arcs
 let shocks = [];                 // expanding event shockwaves
