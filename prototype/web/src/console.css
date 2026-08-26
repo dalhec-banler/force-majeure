@@ -318,7 +318,8 @@
 #homepick{margin:14px 0 12px}
 #homepick .hp-h{font-size:9px;letter-spacing:.22em;color:var(--ink-dim);margin-bottom:8px}
 #homepickrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:8px;align-items:stretch}
-.hp{background:var(--panel2);border:1px solid var(--line);color:var(--ink);font:inherit;text-align:left;padding:10px 12px 11px;cursor:pointer;display:flex;flex-direction:column;gap:5px;min-height:100%}
+.sheet button.hp{background:var(--panel2);border:1px solid var(--line);color:var(--ink);font:inherit;letter-spacing:0;text-align:left;padding:10px 12px 11px;margin:0;cursor:pointer;display:flex;flex-direction:column;gap:5px;min-height:100%}
+.hp .hp-li,.hp .hp-meta{letter-spacing:0}
 .hp .hp-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .hp .hp-nation{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.16em}
 .hp .hp-diff{font-family:var(--mono);font-size:9px;letter-spacing:.2em;border:1px solid;padding:1px 6px;white-space:nowrap}
