@@ -411,15 +411,22 @@
     <div class="cls">CLASSIFICATION: DIRECTOR EYES ONLY</div>
     <p class="q">Is it fun to nudge an invisible system and watch consequences
       arrive four to eight seasons later, in a country you did not target?</p>
-    <p>You direct a national environmental warfare programme, 1946–1955.
-      Homeland: the North American Plains — a wheat and maize exporter. A calm
-      world defunds you. A frightening one earns your appropriation.</p>
+    <p>You direct a national environmental warfare programme from 1946 to
+      2060. Homeland: the North American Plains — a wheat and maize exporter.
+      A calm world defunds you. A frightening one earns your appropriation.
+      You begin as a lab with seeding planes and a budget line: decisions
+      come once a year until the ENMOD era, twice a year after, every season
+      in the situation room from 2030. The board grows with the century —
+      sixteen regions now, thirty-six by 2010 — and so does the arsenal:
+      the dimmed tools in the tray show the year they become possible and
+      the chest you must hold to stand the wing up.</p>
     <ul>
       <li><b>Pick a tool from the tray. Click regions to aim it.</b> As many
-        operations a season as the budget allows — the overhead is reserved,
-        the rest is yours. <b>The clock runs</b> — seasons close on their
-        own; RUN SEASON jumps you forward. Tools act by next season; the
-        knock-on consequences take longer and land somewhere else — watch
+        operations a review as the budget allows, on as many regions as you
+        like — stack a seeding and an adaptation on the same harvest if you
+        want. The overhead is reserved, the rest is yours. <b>RUN THE YEAR</b>
+        commits what is armed; the clock only nags. Tools act by next season;
+        the knock-on consequences take longer and land somewhere else — watch
         the countdown board.</li>
       <li><b>The ring around each region</b> is what nature could plausibly do
         on its own. Stay inside it and you were never here. Break it and
@@ -3495,7 +3502,7 @@ function showArchive(finalRow){
         — “${r.prediction}” <span style="color:var(--ink-dim)">· worst hit that season:
         ${REG[r.anomalies.reduce((m,a,i,ar)=>Math.abs(a)>Math.abs(ar[m])?i:m,0)].name}</span></p>`;
     html+=`<p style="color:var(--ink-dim)">Count the matches yourself. Near zero: the model is noise.
-      Near forty: no tension. The game lives in between.</p>`;
+      Near all of them: no tension. The game lives in between.</p>`;
   }
   {
     const un=histAltered.filter(h=>h.how==="unmade"), wo=histAltered.filter(h=>h.how==="worse");

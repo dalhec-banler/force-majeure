@@ -36,7 +36,7 @@ function showArchive(finalRow){
         — “${r.prediction}” <span style="color:var(--ink-dim)">· worst hit that season:
         ${REG[r.anomalies.reduce((m,a,i,ar)=>Math.abs(a)>Math.abs(ar[m])?i:m,0)].name}</span></p>`;
     html+=`<p style="color:var(--ink-dim)">Count the matches yourself. Near zero: the model is noise.
-      Near forty: no tension. The game lives in between.</p>`;
+      Near all of them: no tension. The game lives in between.</p>`;
   }
   {
     const un=histAltered.filter(h=>h.how==="unmade"), wo=histAltered.filter(h=>h.how==="worse");
