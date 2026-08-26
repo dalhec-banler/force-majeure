@@ -5,8 +5,7 @@ async function runSeason(auto){
   resolving=true; seasonDeadline=null;
   $("resolve").disabled=true;
   const prev=lastRow();
-  const cmd={ opA:slots[0]?.cap||"— none —", targetA:slots[0]?.target,
-              opB:slots[1]?.cap||"— none —", targetB:slots[1]?.target,
+  const cmd={ ops:slots.map(s=>({cap:s.cap,target:s.target})),
               containment:+$("containment").value,
               grant:pendingGrant, clawback:pendingClaw,
               prediction:$("predict").value.trim() };
@@ -54,7 +53,7 @@ async function runSeason(auto){
     return c? `${c.qtr.toLowerCase()} ${c.year}` : "beyond the decade"; };
   const homePos = REGPOS[REG.find(r=>r.homeland).name];
   const PLANES=["Cloud Seeding","Stratospheric Aerosol Inj.","Fire Enablement"];
-  const SHIPS=["Ocean Thermal Forcing","ENSO Forcing"];
+  const SHIPS=["Ocean Thermal Forcing","ENSO Forcing","Polar Destabilization"];   // icebreakers north
   for(const op of row.committed){
     if(!usedCaps.has(op.cap) && PRECEDENT[op.cap]){
       usedCaps.add(op.cap);
@@ -70,8 +69,8 @@ async function runSeason(auto){
           ? [homePos[0]+16, homePos[1]+55] : (REGPOS[op.target]||homePos);
         vehicles.push({kind:"plane",from:homePos,to:dest,
                        start:performance.now(),dur:2600});
-      } else if(SHIPS.includes(op.cap) && DRVPOS[op.target])
-        vehicles.push({kind:"ship",from:homePos,to:DRVPOS[op.target],
+      } else if(SHIPS.includes(op.cap) && (DRVPOS[op.target]||REGPOS[op.target]))
+        vehicles.push({kind:"ship",from:homePos,to:DRVPOS[op.target]||REGPOS[op.target],
                        start:performance.now(),dur:3800});
     }
   }

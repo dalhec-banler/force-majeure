@@ -185,15 +185,14 @@ function nearestRegion(e){
   return best;
 }
 function globeClick(e){
-  if(pendingTool){ const c=CAPS.find(c2=>c2.name===pendingTool);
-    if(c && !canAfford(c)){ toolClick(c); return; } }
   if(!pendingTool) return;
+  const c=CAPS.find(x=>x.name===pendingTool);
+  if(budgetRefuse(c)) return;
   const ri=nearestRegion(e);
   if(ri===null){ $("toolinfo").textContent="Click closer to a region marker."; return; }
   slots.push({cap:pendingTool, target:REG[ri].name});
-  const c=CAPS.find(x=>x.name===pendingTool);
-  $("toolinfo").textContent=`${pendingTool} armed on ${REG[ri].name} — ${c.lag===0?"acts this season":`lands in ${c.lag} season${c.lag===1?"":"s"}`}.`;
-  pendingTool=null; renderTray();
+  clampContainment(); renderTray(); sfxClick();
+  $("toolinfo").textContent=`${pendingTool} armed on ${REG[ri].name} — ${c.lag===0?"acts this season":`lands in ${c.lag} season${c.lag===1?"":"s"}`}. $${fmt(available(),0)}M left. Keep clicking, or put the tool down.`;
 }
 function anomColor(a, alpha){
   if(a<0){ const k=Math.min(1,-a/2);

@@ -34,38 +34,42 @@ function buildTray(){
     bar.appendChild(b);
   }
 }
-function toolClick(c){
-  if(!running || slots.length>=2){
-    $("toolinfo").textContent = slots.length>=2 ? "Two operations sealed per season. Run the season." : "";
-    return; }
-  if(spendable()<6 && !canAfford(c)){
+function budgetRefuse(c){                 // true if the purse says no (and says why)
+  if(canAfford(c)) return false;
+  if(spendable()<6)
     $("toolinfo").innerHTML = `<span style="color:var(--red)">Nothing is in the budget.</span> Overhead is $${eng.assumptions.overhead}M a season. Wait for the committee — or for the world to frighten it.`;
-    sfxAlert(); pendingTool=null; renderTray(); return; }
-  if(!canAfford(c)){
-    $("toolinfo").innerHTML = `<span style="color:var(--red)">Not in the budget</span> — $${capCost(c.name)}M needed, $${fmt(available(),0)}M spendable${armedCost()?" after what is already armed":""} (the $${eng.assumptions.overhead}M overhead is reserved).`;
-    sfxAlert(); pendingTool=null; renderTray(); return; }
+  else
+    $("toolinfo").innerHTML = `<span style="color:var(--red)">Not in the budget</span> — $${capCost(c.name)}M needed, $${fmt(available(),0)}M left${armedCost()?" after what is already armed":""} (the $${eng.assumptions.overhead}M overhead is reserved).`;
+  sfxAlert(); renderTray(); return true;
+}
+function toolClick(c){
+  if(!running) return;
+  if(pendingTool===c.name){ pendingTool=null; renderTray();
+    $("toolinfo").textContent="Pick a tool. Aim it at the world. Scroll to zoom."; return; }
+  if(budgetRefuse(c)) return;
+  if(false){
+  }
   if(c.type==="DRIVER"){                       // aims itself at the ocean
     slots.push({cap:c.name, target:null});
     pendingTool=null; clampContainment(); renderTray();
     $("toolinfo").textContent=`${c.name} armed — ${capInfo(c)}`;
   } else {
-    pendingTool = pendingTool===c.name? null : c.name;
+    pendingTool = c.name;                      // stays lit until you run the season
     renderTray();
-    $("toolinfo").textContent = pendingTool?
-      `${c.name} — click a region on the globe · ${capInfo(c)}` :
-      "Pick a tool. Aim it at the world. Scroll to zoom.";
+    $("toolinfo").textContent=`${c.name} — click regions to target; click the tool again to put it down · ${capInfo(c)}`;
   }
 }
 function renderTray(){
   $("globe").classList.toggle("aiming", !!pendingTool);
   for(const b of $("toolbar").children){
     b.classList.toggle("sel", b.dataset.cap===pendingTool);
-    b.classList.toggle("off", slots.length>=2 && b.dataset.cap!==pendingTool);
+    b.classList.remove("off");
     const funded=!!flagship && FLAGSHIP_CAPS.includes(b.dataset.cap);
     b.classList.toggle("funded", funded);
     b.classList.toggle("poor", !canAfford(CAPS.find(c=>c.name===b.dataset.cap)) && b.dataset.cap!==pendingTool);
     const pr=b.querySelector(".pr"); if(pr) pr.textContent=funded? "FUNDED" : "$"+CAPS.find(c=>c.name===b.dataset.cap).cost+"M";
   }
+  renderTab();
   $("armed").innerHTML = slots.map((s,i)=>
     `<span class="pill">${s.cap.toUpperCase()}${s.target? " · "+s.target:""}
      <button data-i="${i}" aria-label="cancel">✕</button></span>`).join("");

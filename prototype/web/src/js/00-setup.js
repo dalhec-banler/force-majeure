@@ -71,6 +71,14 @@ function armedCost(){ return slots.reduce((s,x)=>s+capCost(x.cap),0); }
 function spendable(){ return Math.max(0, funds()-eng.assumptions.overhead); }   // after the overhead reserve
 function available(){ return Math.max(0, spendable()-armedCost()); }
 function canAfford(c){ return capCost(c.name) <= available(); }
+function renderTab(){
+  const a=armedCost(), el=$("hTab"); if(!el) return;
+  el.style.display = slots.length? "" : "none";
+  $("hTabVal").textContent="$"+fmt(a,0)+"M";
+  $("hTabVal").style.color = a>spendable()*0.8? "var(--amber)" : "var(--green)";
+  $("hTabOf").textContent=`of $${fmt(spendable(),0)}M · ${slots.length} op${slots.length===1?"":"s"}`;
+  $("hTabOf").className="d";
+}
 function clampContainment(){
   const el=$("containment"), mx=Math.max(0, Math.min(40, Math.floor(available())));
   el.max=mx; if(+el.value>mx){ el.value=mx; $("contval").textContent=el.value; }

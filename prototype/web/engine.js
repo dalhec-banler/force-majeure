@@ -200,8 +200,12 @@ function createEngine(MODEL, opts) {
     // the purse reserves this season's overhead: you cannot spend the rent
     let purse = (prev ? prev.treasury : P.startingTreasury) + Math.max(0, cmd.grant || 0)
               - (budgetGate ? P.overhead : 0);
-    for (const [capName, target] of [[cmd.opA, cmd.targetA],
-                                     [cmd.opB, cmd.targetB]]) {
+    // any number of operations a season (author rule 2026-08-25); the sheet's
+    // two-slot cmd shape (opA/opB) is still accepted for conformance
+    const wanted = Array.isArray(cmd.ops)
+      ? cmd.ops.map((o) => [o.cap, o.target])
+      : [[cmd.opA, cmd.targetA], [cmd.opB, cmd.targetB]];
+    for (const [capName, target] of wanted) {
       const op = makeOp(t, capName, target, prevAnom, "player");
       if (!op) continue;
       if (budgetGate && op.cost > purse) { refused.push(op); continue; }

@@ -283,6 +283,7 @@
   <h1>FORCE MAJEURE</h1>
   <span class="stat"><span class="lbl">FUNDS</span><span class="val" id="hFunds">$90.0M</span><span class="d" id="hFundsD"></span></span>
   <span class="stat"><span class="lbl">SPENDABLE</span><span class="val" id="hFree">$58M</span></span>
+  <span class="stat" id="hTab" style="display:none"><span class="lbl">THIS SEASON</span><span class="val" id="hTabVal">$0M</span><span class="d" id="hTabOf"></span></span>
   <span class="stat"><span class="lbl">FEAR</span></span><span id="hMandateWrap"><span id="hMandate" style="width:28%"></span></span>
   <span class="stat"><span class="lbl">GRAIN</span><span class="val" id="hPrice">100.0</span><span class="d" id="hPriceD"></span></span>
   <span class="stat"><span class="lbl">HARVEST</span><span class="val" id="hYield">—</span></span>
@@ -393,8 +394,9 @@
       Homeland: the North American Plains — a wheat and maize exporter. A calm
       world defunds you. A frightening one earns your appropriation.</p>
     <ul>
-      <li><b>Pick a tool from the tray. Click a region to aim it.</b> Up to two
-        operations a season. <b>The clock runs</b> — seasons close on their
+      <li><b>Pick a tool from the tray. Click regions to aim it.</b> As many
+        operations a season as the budget allows — the overhead is reserved,
+        the rest is yours. <b>The clock runs</b> — seasons close on their
         own; RUN SEASON jumps you forward. Tools act by next season; the
         knock-on consequences take longer and land somewhere else — watch
         the countdown board.</li>
@@ -629,8 +631,12 @@ function createEngine(MODEL, opts) {
     // the purse reserves this season's overhead: you cannot spend the rent
     let purse = (prev ? prev.treasury : P.startingTreasury) + Math.max(0, cmd.grant || 0)
               - (budgetGate ? P.overhead : 0);
-    for (const [capName, target] of [[cmd.opA, cmd.targetA],
-                                     [cmd.opB, cmd.targetB]]) {
+    // any number of operations a season (author rule 2026-08-25); the sheet's
+    // two-slot cmd shape (opA/opB) is still accepted for conformance
+    const wanted = Array.isArray(cmd.ops)
+      ? cmd.ops.map((o) => [o.cap, o.target])
+      : [[cmd.opA, cmd.targetA], [cmd.opB, cmd.targetB]];
+    for (const [capName, target] of wanted) {
       const op = makeOp(t, capName, target, prevAnom, "player");
       if (!op) continue;
       if (budgetGate && op.cost > purse) { refused.push(op); continue; }
@@ -928,6 +934,14 @@ function armedCost(){ return slots.reduce((s,x)=>s+capCost(x.cap),0); }
 function spendable(){ return Math.max(0, funds()-eng.assumptions.overhead); }   // after the overhead reserve
 function available(){ return Math.max(0, spendable()-armedCost()); }
 function canAfford(c){ return capCost(c.name) <= available(); }
+function renderTab(){
+  const a=armedCost(), el=$("hTab"); if(!el) return;
+  el.style.display = slots.length? "" : "none";
+  $("hTabVal").textContent="$"+fmt(a,0)+"M";
+  $("hTabVal").style.color = a>spendable()*0.8? "var(--amber)" : "var(--green)";
+  $("hTabOf").textContent=`of $${fmt(spendable(),0)}M · ${slots.length} op${slots.length===1?"":"s"}`;
+  $("hTabOf").className="d";
+}
 function clampContainment(){
   const el=$("containment"), mx=Math.max(0, Math.min(40, Math.floor(available())));
   el.max=mx; if(+el.value>mx){ el.value=mx; $("contval").textContent=el.value; }
@@ -969,38 +983,42 @@ function buildTray(){
     bar.appendChild(b);
   }
 }
-function toolClick(c){
-  if(!running || slots.length>=2){
-    $("toolinfo").textContent = slots.length>=2 ? "Two operations sealed per season. Run the season." : "";
-    return; }
-  if(spendable()<6 && !canAfford(c)){
+function budgetRefuse(c){                 // true if the purse says no (and says why)
+  if(canAfford(c)) return false;
+  if(spendable()<6)
     $("toolinfo").innerHTML = `<span style="color:var(--red)">Nothing is in the budget.</span> Overhead is $${eng.assumptions.overhead}M a season. Wait for the committee — or for the world to frighten it.`;
-    sfxAlert(); pendingTool=null; renderTray(); return; }
-  if(!canAfford(c)){
-    $("toolinfo").innerHTML = `<span style="color:var(--red)">Not in the budget</span> — $${capCost(c.name)}M needed, $${fmt(available(),0)}M spendable${armedCost()?" after what is already armed":""} (the $${eng.assumptions.overhead}M overhead is reserved).`;
-    sfxAlert(); pendingTool=null; renderTray(); return; }
+  else
+    $("toolinfo").innerHTML = `<span style="color:var(--red)">Not in the budget</span> — $${capCost(c.name)}M needed, $${fmt(available(),0)}M left${armedCost()?" after what is already armed":""} (the $${eng.assumptions.overhead}M overhead is reserved).`;
+  sfxAlert(); renderTray(); return true;
+}
+function toolClick(c){
+  if(!running) return;
+  if(pendingTool===c.name){ pendingTool=null; renderTray();
+    $("toolinfo").textContent="Pick a tool. Aim it at the world. Scroll to zoom."; return; }
+  if(budgetRefuse(c)) return;
+  if(false){
+  }
   if(c.type==="DRIVER"){                       // aims itself at the ocean
     slots.push({cap:c.name, target:null});
     pendingTool=null; clampContainment(); renderTray();
     $("toolinfo").textContent=`${c.name} armed — ${capInfo(c)}`;
   } else {
-    pendingTool = pendingTool===c.name? null : c.name;
+    pendingTool = c.name;                      // stays lit until you run the season
     renderTray();
-    $("toolinfo").textContent = pendingTool?
-      `${c.name} — click a region on the globe · ${capInfo(c)}` :
-      "Pick a tool. Aim it at the world. Scroll to zoom.";
+    $("toolinfo").textContent=`${c.name} — click regions to target; click the tool again to put it down · ${capInfo(c)}`;
   }
 }
 function renderTray(){
   $("globe").classList.toggle("aiming", !!pendingTool);
   for(const b of $("toolbar").children){
     b.classList.toggle("sel", b.dataset.cap===pendingTool);
-    b.classList.toggle("off", slots.length>=2 && b.dataset.cap!==pendingTool);
+    b.classList.remove("off");
     const funded=!!flagship && FLAGSHIP_CAPS.includes(b.dataset.cap);
     b.classList.toggle("funded", funded);
     b.classList.toggle("poor", !canAfford(CAPS.find(c=>c.name===b.dataset.cap)) && b.dataset.cap!==pendingTool);
     const pr=b.querySelector(".pr"); if(pr) pr.textContent=funded? "FUNDED" : "$"+CAPS.find(c=>c.name===b.dataset.cap).cost+"M";
   }
+  renderTab();
   $("armed").innerHTML = slots.map((s,i)=>
     `<span class="pill">${s.cap.toUpperCase()}${s.target? " · "+s.target:""}
      <button data-i="${i}" aria-label="cancel">✕</button></span>`).join("");
@@ -1237,15 +1255,14 @@ function nearestRegion(e){
   return best;
 }
 function globeClick(e){
-  if(pendingTool){ const c=CAPS.find(c2=>c2.name===pendingTool);
-    if(c && !canAfford(c)){ toolClick(c); return; } }
   if(!pendingTool) return;
+  const c=CAPS.find(x=>x.name===pendingTool);
+  if(budgetRefuse(c)) return;
   const ri=nearestRegion(e);
   if(ri===null){ $("toolinfo").textContent="Click closer to a region marker."; return; }
   slots.push({cap:pendingTool, target:REG[ri].name});
-  const c=CAPS.find(x=>x.name===pendingTool);
-  $("toolinfo").textContent=`${pendingTool} armed on ${REG[ri].name} — ${c.lag===0?"acts this season":`lands in ${c.lag} season${c.lag===1?"":"s"}`}.`;
-  pendingTool=null; renderTray();
+  clampContainment(); renderTray(); sfxClick();
+  $("toolinfo").textContent=`${pendingTool} armed on ${REG[ri].name} — ${c.lag===0?"acts this season":`lands in ${c.lag} season${c.lag===1?"":"s"}`}. $${fmt(available(),0)}M left. Keep clicking, or put the tool down.`;
 }
 function anomColor(a, alpha){
   if(a<0){ const k=Math.min(1,-a/2);
@@ -2285,8 +2302,7 @@ async function runSeason(auto){
   resolving=true; seasonDeadline=null;
   $("resolve").disabled=true;
   const prev=lastRow();
-  const cmd={ opA:slots[0]?.cap||"— none —", targetA:slots[0]?.target,
-              opB:slots[1]?.cap||"— none —", targetB:slots[1]?.target,
+  const cmd={ ops:slots.map(s=>({cap:s.cap,target:s.target})),
               containment:+$("containment").value,
               grant:pendingGrant, clawback:pendingClaw,
               prediction:$("predict").value.trim() };
@@ -2334,7 +2350,7 @@ async function runSeason(auto){
     return c? `${c.qtr.toLowerCase()} ${c.year}` : "beyond the decade"; };
   const homePos = REGPOS[REG.find(r=>r.homeland).name];
   const PLANES=["Cloud Seeding","Stratospheric Aerosol Inj.","Fire Enablement"];
-  const SHIPS=["Ocean Thermal Forcing","ENSO Forcing"];
+  const SHIPS=["Ocean Thermal Forcing","ENSO Forcing","Polar Destabilization"];   // icebreakers north
   for(const op of row.committed){
     if(!usedCaps.has(op.cap) && PRECEDENT[op.cap]){
       usedCaps.add(op.cap);
@@ -2350,8 +2366,8 @@ async function runSeason(auto){
           ? [homePos[0]+16, homePos[1]+55] : (REGPOS[op.target]||homePos);
         vehicles.push({kind:"plane",from:homePos,to:dest,
                        start:performance.now(),dur:2600});
-      } else if(SHIPS.includes(op.cap) && DRVPOS[op.target])
-        vehicles.push({kind:"ship",from:homePos,to:DRVPOS[op.target],
+      } else if(SHIPS.includes(op.cap) && (DRVPOS[op.target]||REGPOS[op.target]))
+        vehicles.push({kind:"ship",from:homePos,to:DRVPOS[op.target]||REGPOS[op.target],
                        start:performance.now(),dur:3800});
     }
   }
