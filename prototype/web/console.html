@@ -3172,7 +3172,7 @@ async function runSeasonInner(auto, cmdOverride){
     const ws=eng.wingStatus(c.name); if(!ws||!ws.eligible) continue;
     freshWings.add(c.name); const nm=c.name.replace(" [T3]","").toUpperCase();
     alertStrip(`NEW CAPABILITY — ${nm} IS POSSIBLE`);
-    wire(`<span class="tag tagd">NEW WING</span><b>${nm}</b> — the century has made it possible. ${ws.canStand? "The chest can carry it: order it up from the tray." : `Stand it up when the chest holds $${Math.round(ws.need)}M; upkeep $${ws.upkeep}M a season.`}`,"op");
+    wire(`<span class="tag tagd">NEW WING</span><b>${nm}</b> — the century has made it possible. ${(c.upkeep||0)<=1? "The lab stands it up on its own." : ws.canStand? "The chest can carry it: order it up from the tray." : `Stand it up when the chest holds $${Math.round(ws.need)}M; upkeep $${ws.upkeep}M a season.`}`,"op");
     sfxChime(); }
   for(const g of (row.regionEvents||[])){
     const r=REG[g.ri];
