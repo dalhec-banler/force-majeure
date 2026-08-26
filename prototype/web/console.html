@@ -106,7 +106,7 @@
   #toolcard .tc-h span{color:var(--amber);float:right;letter-spacing:.04em}
   #toolcard .tc-f{margin-top:5px;font-size:10px;letter-spacing:.06em;color:var(--ink-faint)}
   #toolcard .tc-f i{font-style:normal;color:var(--ink-dim);margin-right:10px}
-  #toolbar{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;max-width:100%;
+  #toolbar{display:flex;flex-wrap:nowrap;justify-content:center;gap:6px;max-width:100%;
            background:rgba(15,23,18,.94);border:1px solid var(--line);padding:7px}
   .tool{min-width:64px;padding:6px 4px 5px;background:var(--panel2);
         border:1px solid var(--line);color:var(--ink);cursor:pointer;
@@ -255,20 +255,36 @@
   #briefcard .bc-body b{color:var(--ink);font-size:11px;letter-spacing:.08em}
 
   /* --- the pane decides how the instruments over it are laid out --- */
+  @container pane (max-width:980px){
+    .tool{min-width:58px;padding:5px 3px 4px} .tool .ic{font-size:16px} .tool .nm{font-size:7.5px}
+    #briefcard{flex-basis:210px;width:210px} #briefcard img{height:80px}
+    #banner{font-size:10px}
+  }
   @container pane (max-width:820px){
-    .tool{min-width:56px} .tool .ic{font-size:16px}
+    .tool{min-width:52px;padding:4px 2px 4px} .tool .ic{font-size:15px} .tool .nm{font-size:7px;letter-spacing:0}
     #legend .legx{display:none}
+    #briefcard{flex-basis:180px;width:180px} #briefcard img{display:none}
+    #toolbar{gap:4px} #traywrap{bottom:8px}
   }
   @container pane (max-width:640px){
-    .tool{min-width:50px;padding:5px 2px 4px} .tool .nm{font-size:7.5px;min-width:44px}
-    #briefcard{width:200px} #briefcard img{height:80px}
+    .tool{min-width:46px;padding:4px 1px 3px} .tool .nm{font-size:6.5px;min-width:40px} .tool .pr{font-size:8px}
+    #briefcard{display:none!important}
+    #banner{font-size:9px}
   }
   @container pane (max-width:460px){
-    #briefcard{width:170px} #briefcard img{display:none}
-    #toolbar{gap:4px;padding:5px}
+    #toolbar{flex-wrap:wrap;gap:3px;padding:4px}
   }
+  /* --- a short pane: the instruments give the globe its height back --- */
+  @container pane (max-height:560px){
+    #traywrap{bottom:6px} #toolbar{padding:4px 6px} .tool{padding:3px 3px 3px} .tool .ic{font-size:14px} .tool .nm{display:none} .tool .pr{font-size:8px}
+    #toolinfo{display:none} #briefcard{display:none!important}
+  }
+  /* --- rail headers never wrap --- */
+  .panel h2>span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  #wirepanel h2>span:last-child{white-space:nowrap;flex:0 0 auto}
   /* --- the window decides the frame --- */
   @media (max-width:1180px){
+    #wirepanel h2>span:first-child::after{content:none}
     header{gap:4px 11px;padding:6px 12px 5px}
     .stat .val{font-size:13px} #clock{font-size:13px;min-width:0} header h1{font-size:14px}
     #hMandateWrap{width:54px}
@@ -1601,15 +1617,25 @@ function renderTray(){
 const cv = $("globe"), cx = cv.getContext("2d");
 let W=0,H=0,CXp=0,CYp=0,Rp=0,Rbase=0,zoom=1,
     rot = -30, tilt = -18, dragging=false, moved=0, lastX=0;
+/* The globe is sized and centred on the FREE pane — the strip between the
+   top instruments and the tool tray — not on the whole pane, so a short or
+   narrow window shrinks the world instead of burying it under the tray. */
 function sizeGlobe(){
   const rect = cv.parentElement.getBoundingClientRect();
   const dpr = devicePixelRatio||1;
-  cv.width = rect.width*dpr; cv.height = rect.height*dpr;
+  if(cv.width!==Math.round(rect.width*dpr)||cv.height!==Math.round(rect.height*dpr)){
+    cv.width = Math.round(rect.width*dpr); cv.height = Math.round(rect.height*dpr); }
   cx.setTransform(dpr,0,0,dpr,0,0);
-  W=rect.width; H=rect.height; CXp=W/2; CYp=H/2-14;
-  Rbase=Math.min(W,H)*0.40; Rp=Rbase*zoom;
+  W=rect.width; H=rect.height;
+  const ts=$("topstrip"), tw=$("traywrap");
+  const top = ts? Math.max(0,(ts.getBoundingClientRect().bottom-rect.top)) : 0;
+  const bot = tw? Math.max(top+80, tw.getBoundingClientRect().top-rect.top) : H;
+  const free=Math.max(120, bot-top);
+  CXp=W/2; CYp=top+free/2;
+  Rbase=Math.min(W*0.44, free*0.5); Rp=Rbase*zoom;
 }
 addEventListener("resize", sizeGlobe); sizeGlobe();
+if(typeof ResizeObserver!=="undefined"){ const ro=new ResizeObserver(()=>sizeGlobe()); ro.observe(cv.parentElement); const tw=$("traywrap"); if(tw) ro.observe(tw); }
 let lastY=0;
 cv.addEventListener("pointerdown",e=>{dragging=true;moved=0;lastX=e.clientX;lastY=e.clientY;cv.setPointerCapture(e.pointerId)});
 cv.addEventListener("pointerup",e=>{ dragging=false; if(moved<5) globeClick(e); });

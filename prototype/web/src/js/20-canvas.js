@@ -2,15 +2,25 @@
 const cv = $("globe"), cx = cv.getContext("2d");
 let W=0,H=0,CXp=0,CYp=0,Rp=0,Rbase=0,zoom=1,
     rot = -30, tilt = -18, dragging=false, moved=0, lastX=0;
+/* The globe is sized and centred on the FREE pane — the strip between the
+   top instruments and the tool tray — not on the whole pane, so a short or
+   narrow window shrinks the world instead of burying it under the tray. */
 function sizeGlobe(){
   const rect = cv.parentElement.getBoundingClientRect();
   const dpr = devicePixelRatio||1;
-  cv.width = rect.width*dpr; cv.height = rect.height*dpr;
+  if(cv.width!==Math.round(rect.width*dpr)||cv.height!==Math.round(rect.height*dpr)){
+    cv.width = Math.round(rect.width*dpr); cv.height = Math.round(rect.height*dpr); }
   cx.setTransform(dpr,0,0,dpr,0,0);
-  W=rect.width; H=rect.height; CXp=W/2; CYp=H/2-14;
-  Rbase=Math.min(W,H)*0.40; Rp=Rbase*zoom;
+  W=rect.width; H=rect.height;
+  const ts=$("topstrip"), tw=$("traywrap");
+  const top = ts? Math.max(0,(ts.getBoundingClientRect().bottom-rect.top)) : 0;
+  const bot = tw? Math.max(top+80, tw.getBoundingClientRect().top-rect.top) : H;
+  const free=Math.max(120, bot-top);
+  CXp=W/2; CYp=top+free/2;
+  Rbase=Math.min(W*0.44, free*0.5); Rp=Rbase*zoom;
 }
 addEventListener("resize", sizeGlobe); sizeGlobe();
+if(typeof ResizeObserver!=="undefined"){ const ro=new ResizeObserver(()=>sizeGlobe()); ro.observe(cv.parentElement); const tw=$("traywrap"); if(tw) ro.observe(tw); }
 let lastY=0;
 cv.addEventListener("pointerdown",e=>{dragging=true;moved=0;lastX=e.clientX;lastY=e.clientY;cv.setPointerCapture(e.pointerId)});
 cv.addEventListener("pointerup",e=>{ dragging=false; if(moved<5) globeClick(e); });
