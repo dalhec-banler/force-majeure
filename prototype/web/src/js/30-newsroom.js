@@ -22,7 +22,7 @@ function wire(html, cls, id){
   // action, wings, the ladder, memos, and BREAKING world events. Everything
   // else is on the wire but folded until ALL is chosen.
   const lo = cls==="ad" || cls==="cast" || (cls==="news" && !/class="chip"/.test(html)) || (!cls && !/class="tag/.test(html));
-  wireQ.push({html:`<span class="stamp">${stamp}</span> ${cls?`<span class="${cls}">${html}</span>`:html}`, lo, id});
+  wireQ.push({html:`<span class="stamp">${stamp}</span> ${cls?`<span class="${cls}">${html}</span>`:html}`, lo, id, t});
   if(reduced) pumpWire(true);
 }
 let WIRE_PRIORITY=true;
@@ -31,9 +31,9 @@ let WIRE_PRIORITY=true;
    review's worth of feed at a time. */
 function foldWire(label){
   pumpWire(true);
-  const w=$("wire"); const loose=[...w.children].filter(el=>el.tagName==="P");
+  const w=$("wire"); const loose=[...w.children].filter(el=>el.tagName==="P"||el.classList.contains("szn"));
   if(!loose.length) return;
-  const pri=loose.filter(p=>!p.classList.contains("lo"));
+  const pri=loose.flatMap(el=>el.tagName==="P"? [el] : [...el.querySelectorAll("p")]).filter(p=>!p.classList.contains("lo"));
   const dirs=pri.filter(p=>/DIRECTIVE/.test(p.textContent)).length, ops=pri.filter(p=>/SEALED/.test(p.textContent)).length;
   const hot=pri.filter(p=>/INTERCEPT|HOSTILE|EXPOSED|MOTHBALLED|STANDS UP|WING|EARMARK|investigation/i.test(p.textContent)).length;
   const bits=[`${pri.length} line${pri.length===1?"":"s"}`]; if(ops) bits.push(`${ops} op${ops===1?"":"s"}`); if(dirs) bits.push(`${dirs} directive${dirs===1?"":"s"}`); if(hot) bits.push(`${hot} alert${hot===1?"":"s"}`);
@@ -47,7 +47,12 @@ function pumpWire(all){
   const gap = all? 0 : wireQ.length>24? 140 : wireQ.length>10? 300 : (typeof brisk!=="undefined"&&brisk)? 260 : 650;
   while(wireQ.length && (all || now-wireLast>=gap)){
     const it=wireQ.shift(); const p=document.createElement("p"); p.innerHTML=it.html; if(it.lo) p.className="lo"; if(it.id) p.dataset.op=it.id;
-    $("wire").prepend(p); if(!it.lo || !WIRE_PRIORITY) wireLast=now;   // folded lines cost no time on the wire
+    // seasons stack newest-first; inside a season the lines read downward,
+    // in the order they happened — a story is never upside down
+    const w=$("wire"); let blk=w.firstElementChild;
+    if(!(blk && blk.classList && blk.classList.contains("szn") && +blk.dataset.t===it.t)){
+      blk=document.createElement("div"); blk.className="szn"; blk.dataset.t=it.t; w.prepend(blk); }
+    blk.appendChild(p); if(!it.lo || !WIRE_PRIORITY) wireLast=now;   // folded lines cost no time on the wire
     if(!all && (!it.lo || !WIRE_PRIORITY)) break;
   }
 }
