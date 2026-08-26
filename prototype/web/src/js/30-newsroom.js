@@ -1,11 +1,24 @@
 /* --------------------------------------------------------- feed & drama */
+/* The wire is paced: lines arrive one at a time, teletype fashion, rather
+   than thirty at once when a season resolves — a backlog drains faster so
+   it never runs minutes behind. */
+const wireQ=[]; let wireLast=0;
 function wire(html, cls){
   if(typeof replaying!=="undefined" && replaying) return;
-  const row=lastRow(); const p=document.createElement("p");
+  const row=lastRow();
   const stamp = row? `${row.year}·${row.qtr[0]}` : "1946·W";
-  p.innerHTML=`<span class="stamp">${stamp}</span> ${cls?`<span class="${cls}">${html}</span>`:html}`;
-  $("wire").prepend(p);
+  wireQ.push(`<span class="stamp">${stamp}</span> ${cls?`<span class="${cls}">${html}</span>`:html}`);
+  if(reduced) pumpWire(true);
 }
+function pumpWire(all){
+  const now=performance.now();
+  const gap = all? 0 : wireQ.length>24? 140 : wireQ.length>10? 300 : (typeof brisk!=="undefined"&&brisk)? 260 : 650;
+  while(wireQ.length && (all || now-wireLast>=gap)){
+    const p=document.createElement("p"); p.innerHTML=wireQ.shift();
+    $("wire").prepend(p); wireLast=now; if(!all) break;
+  }
+}
+setInterval(()=>pumpWire(false), 80);
 /* The newsroom: authored corpus + deterministic selection. Same event
    context always writes the same headline (replay-stable, no RNG). */
 const POOL={

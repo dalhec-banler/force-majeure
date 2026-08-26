@@ -2473,13 +2473,26 @@ function hoverCheck(e){
 /* kick-off happens in 70-boot.js once every part has run */
 
 /* --------------------------------------------------------- feed & drama */
+/* The wire is paced: lines arrive one at a time, teletype fashion, rather
+   than thirty at once when a season resolves — a backlog drains faster so
+   it never runs minutes behind. */
+const wireQ=[]; let wireLast=0;
 function wire(html, cls){
   if(typeof replaying!=="undefined" && replaying) return;
-  const row=lastRow(); const p=document.createElement("p");
+  const row=lastRow();
   const stamp = row? `${row.year}·${row.qtr[0]}` : "1946·W";
-  p.innerHTML=`<span class="stamp">${stamp}</span> ${cls?`<span class="${cls}">${html}</span>`:html}`;
-  $("wire").prepend(p);
+  wireQ.push(`<span class="stamp">${stamp}</span> ${cls?`<span class="${cls}">${html}</span>`:html}`);
+  if(reduced) pumpWire(true);
 }
+function pumpWire(all){
+  const now=performance.now();
+  const gap = all? 0 : wireQ.length>24? 140 : wireQ.length>10? 300 : (typeof brisk!=="undefined"&&brisk)? 260 : 650;
+  while(wireQ.length && (all || now-wireLast>=gap)){
+    const p=document.createElement("p"); p.innerHTML=wireQ.shift();
+    $("wire").prepend(p); wireLast=now; if(!all) break;
+  }
+}
+setInterval(()=>pumpWire(false), 80);
 /* The newsroom: authored corpus + deterministic selection. Same event
    context always writes the same headline (replay-stable, no RNG). */
 const POOL={
@@ -3376,10 +3389,15 @@ $("containment").addEventListener("input",()=>{ clampContainment(); $("contval")
 function historyBeats(row){
   const canon=!lithoUnlocked();
   if(canon){
-    for(const e of HISTORY.eruptions) if(e.t===t){ news(e.dl, e.line, (e.scale||1)>=1.2); cumDead+=e.toll||0; }
-    for(const q of HISTORY.quakes) if(q.t===t){
-      news(q.dl, q.line, q.mag>=8); cumDead+=q.toll||0;
-      if(q.mag>=8){ alertStrip(`EARTHQUAKE M${q.mag.toFixed(1)} — ${q.name.toUpperCase()}`); shakeNow(); }
+    // the record is drawn in full on the globe (hover any of it); the WIRE
+    // carries only what the century remembers — the famous ones
+    for(const e of HISTORY.eruptions) if(e.t===t){ cumDead+=e.toll||0;
+      if((e.scale||1)>=1.2 || (e.toll||0)>=500 || (e.climate||0)>0) news(e.dl, e.line, (e.scale||1)>=1.3||(e.toll||0)>=2000); }
+    for(const q of HISTORY.quakes) if(q.t===t){ cumDead+=q.toll||0;
+      const famous=q.mag>=7.8 || (q.toll||0)>=5000;
+      if(famous) news(q.dl, q.line, q.mag>=8.5||(q.toll||0)>=20000);
+      if(q.mag>=8 && (q.toll||0)>=1000){ alertStrip(`EARTHQUAKE M${q.mag.toFixed(1)} — ${q.name.toUpperCase()}`); shakeNow(); }
+      else if(q.mag>=8.5) shakeNow();
     }
   } else {
     FICTIONAL_VOLCANOES.forEach((v,i)=>{ if(((t+i*3)%9)<2 && !(((t-1+i*3)%9)<2)) news(v.dl, v.line); });
@@ -3406,14 +3424,14 @@ function historyBeats(row){
     const bs=all.filter(s=>stormShown(s,bf)).sort((a,b)=>b.peak-a.peak||b.track.length-a.track.length);
     if(!bs.length) continue;
     const told=new Set(HISTORY.weather.filter(w=>w.t===t&&/typhoon|cyclone/i.test(w.kind)).map(w=>w.line.toLowerCase()));
-    const show=bs.filter(s=>(s.landfall||s.cat>=3) && !(s.name&&[...told].some(l=>new RegExp("\\b"+word.toLowerCase()+" "+s.name.toLowerCase()+"\\b").test(l)))).slice(0, basin==="WP"?3:2);
+    // famous only: a named storm that came ashore at Category 4 or worse
+    // (the rest spin on the globe, as recorded — hover them)
+    const show=bs.filter(s=>s.name && s.landfall && s.cat>=4 && !([...told].some(l=>new RegExp("\\b"+word.toLowerCase()+" "+s.name.toLowerCase()+"\\b").test(l)))).slice(0, 1);
     for(const s of show){
-      const nm=s.name? `${word} ${s.name}` : `An unnamed ${word.toLowerCase()}`;
-      const where=s.landfall? `landfall near ${placeName(s.dl)}` : "at sea";
-      news(s.dl, `${nm} — ${s.cat? "Category "+s.cat+", " : "strength unrecorded, "}${where}.${s.peak? " "+s.peak+" knots at peak.":""}`, s.cat>=4&&s.landfall);
-      if(s.cat>=4 && s.landfall) alertStrip(`${nm.toUpperCase()} — CATEGORY ${s.cat} LANDFALL`);
+      const nm=`${word} ${s.name}`;
+      news(s.dl, `${nm} — Category ${s.cat}, landfall near ${placeName(s.dl)}.${s.peak? " "+s.peak+" knots at peak.":""}`, s.cat>=5);
+      if(s.cat>=5) alertStrip(`${nm.toUpperCase()} — CATEGORY ${s.cat} LANDFALL`);
     }
-    if(bs.length>show.length) news(bs[0].dl, `${bs.length-show.length} more ${word.toLowerCase()}${bs.length-show.length>1?"s":""} in the basin this quarter, as recorded.`);
     if(bf>=0.7 && bf<=1.3) histAsRecorded+=bs.length;
   }
   // the Atlantic season
@@ -3431,13 +3449,12 @@ function historyBeats(row){
         wire(`TRACE — <b>you warmed the ocean</b>; the season the record remembers is now worse.`,"op");
         histAltered.push({t, what:"the Atlantic hurricane season", how:"worse"});
       }
-      for(const s of ss.slice(0,3)){
+      const famous=ss.filter(s=>s.landfall && Math.min(5, s.cat+(hot?1:0))>=4 && (s.name || s.cat>=5)).slice(0,2);
+      for(const s of famous){
         const nm=s.name? "Hurricane "+s.name : "An unnamed hurricane", c=Math.min(5, s.cat+(hot?1:0));
-        const where=s.landfall? `landfall near ${placeName(s.dl)}` : "at sea";
-        news(s.dl, `${nm} — Category ${c}, ${where}. ${Math.round(s.peak*(hot?1.15:1))} knots at peak.`, c>=4);
-        if(c>=4 && s.landfall) alertStrip(`${nm.toUpperCase()} — CATEGORY ${c} LANDFALL`);
+        news(s.dl, `${nm} — Category ${c}, landfall near ${placeName(s.dl)}. ${Math.round(s.peak*(hot?1.15:1))} knots at peak.`, c>=5);
+        if(c>=5) alertStrip(`${nm.toUpperCase()} — CATEGORY ${c} LANDFALL`);
       }
-      if(ss.length>3) news("MIAMI", `${ss.length-3} more hurricane${ss.length>4?"s":""} this quarter. The season the record remembers.`);
       if(!hot) histAsRecorded+=ss.length;
     }
   }
@@ -3448,7 +3465,7 @@ function historyBeats(row){
     const WET=new Set(["flood","typhoon","cyclone","tornado","blizzard","avalanche","locusts"]);
     const tr=traceFor(ri,row), sign=WET.has(w.kind)? 1 : -1;
     const push=tr.mine*sign;                       // >0 with the record, <0 against it
-    if(w.canon){ news(w.dl, w.line, true); alertStrip(`${w.kind.toUpperCase()} — ${w.region.toUpperCase()}`); histAsRecorded++; cumDead+=w.toll||0; continue; }
+    if(w.canon){ news(w.dl, w.line, (w.toll||0)>=5000); if((w.toll||0)>=5000) alertStrip(`${w.kind.toUpperCase()} — ${w.region.toUpperCase()}`); histAsRecorded++; cumDead+=w.toll||0; continue; }
     if(push<-0.3){
       news(w.dl, w.unmade);
       wire(`TRACE — the record said ${w.kind} in ${w.region}. <b>You unmade it.</b>`,"op");
