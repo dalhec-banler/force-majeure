@@ -38,6 +38,13 @@ function showArchive(finalRow){
     html+=`<p style="color:var(--ink-dim)">Count the matches yourself. Near zero: the model is noise.
       Near forty: no tension. The game lives in between.</p>`;
   }
+  {
+    const un=histAltered.filter(h=>h.how==="unmade"), wo=histAltered.filter(h=>h.how==="worse");
+    html+=`<h2 style="margin-top:14px">HISTORY ON YOUR WATCH</h2>
+      <p><b>${histAsRecorded}</b> recorded disasters occurred as the record has them. <b>${un.length}</b> did not happen; <b>${wo.length}</b> were worse than the record.${
+        un.length? ` Unmade: ${un.map(h=>h.what).join("; ")}.`:""}${wo.length? ` Worse: ${wo.map(h=>h.what).join("; ")}.`:""}${
+        recordStopped? " The geophysical record stopped the day you reached for the lithosphere; nothing after is canon.":" Every earthquake and eruption on your watch is in the textbooks, exactly as it happened."}</p>`;
+  }
   if(eng.knowledge.on){
     const K=eng.knowledge, kc=K.count();
     const never=K.edges.filter(e=>!K.isKnown(e.di,e.ri)).sort((a,b)=>Math.abs(b.coeff)-Math.abs(a.coeff)).slice(0,3);

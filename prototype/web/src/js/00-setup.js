@@ -1,5 +1,6 @@
 const MODEL = __MODEL__;
 const LAND = __LAND__;
+const HISTORY = __HISTORY__;     // the record: real storms, eruptions, quakes, disasters 1946–55 (ADR-0017)
 __ENGINE__
 
 /* ---------------------------------------------------------------- setup */
@@ -7,6 +8,8 @@ const eng = createEngine(MODEL, {rivals:true, idleTrim:0.6, jetstream:true, fore
 const DRVNAME = { ENSO:"the Pacific", IOD:"the Indian Ocean", NATL:"the Atlantic", GLOBAL:"the planet" };
 let SHOW_WIRES=true;             // the known wiring, drawn on the globe
 let newWires=[];                 // wires revealed recently: {di,ri,bornT}
+let recordStopped=false;         // the geophysical record ends with the first lithospheric op
+let histAltered=[], histAsRecorded=0;   // history on your watch
 const REG = eng.regions, DRV = eng.drivers, CAPS = eng.capabilities;
 const ND = DRV.length;
 const REGPOS = { "North American Plains":[41.5,-100], "Black Sea Steppe":[48,34],

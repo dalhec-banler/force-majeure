@@ -1,15 +1,46 @@
 /* ambient life — cosmetic weather; the planet breathes on its own */
-const VOLCANOES=[
-  {name:"Etna", pos:[37.7,15.0], dl:"CATANIA",
-   line:"Etna in full eruption. Ash closes Mediterranean air routes."},
-  {name:"Popocatépetl", pos:[19.0,-98.6], dl:"MEXICO CITY",
-   line:"Popocatépetl sends ash ten kilometres up. The city sweeps grey streets."},
-  {name:"Merapi", pos:[-7.5,110.4], dl:"JAKARTA",
-   line:"Merapi erupting. Villages on the slopes evacuated."},
-  {name:"Kilauea", pos:[19.4,-155.3], dl:"HONOLULU",
-   line:"Kilauea pours new land into the sea. Crowds gather at dusk to watch."},
+/* The record. Eruptions and earthquakes are canon and untouchable — until
+   the first lithospheric operation, after which the historical catalogue
+   stops and a fictional one takes over (brief §19, geophysical exception).
+   Hurricanes are the real HURDAT2 storms of each season, on their real
+   tracks; a player-forced Atlantic makes them stronger or unmakes them. */
+const FICTIONAL_VOLCANOES=[
+  {name:"Etna", pos:[37.7,15.0], dl:"CATANIA", scale:0.9,
+   line:"Etna in full eruption. Ash closes Mediterranean air routes. Cause: undetermined."},
+  {name:"Popocatépetl", pos:[19.0,-98.6], dl:"MEXICO CITY", scale:1.0,
+   line:"Popocatépetl sends ash ten kilometres up. The city sweeps grey streets. Cause: undetermined."},
+  {name:"Merapi", pos:[-7.5,110.4], dl:"JAKARTA", scale:0.8,
+   line:"Merapi erupting. Villages on the slopes evacuated. Cause: undetermined."},
+  {name:"Kilauea", pos:[19.4,-155.3], dl:"HONOLULU", scale:0.6,
+   line:"Kilauea pours new land into the sea. Crowds gather at dusk to watch. Cause: undetermined."},
 ];
-const volcanoActive=(i,ts)=> ((ts + i*3) % 9) < 2;
+const lithoUnlocked=()=>eng.state.ops.some(o=>o.owner==="player"&&o.cap==="Ionospheric Coupling [T3]");
+function activeEruptions(ts){
+  if(!lithoUnlocked()) return HISTORY.eruptions.filter(e=>ts>=e.t && ts<e.t+e.dur);
+  return FICTIONAL_VOLCANOES.filter((v,i)=>((ts+i*3)%9)<2);
+}
+function seasonProgress(nowMs){
+  if(!running || seasonDeadline===null) return 0.5;
+  return Math.max(0,Math.min(1, 1-(seasonDeadline-nowMs)/SEASON_MS));
+}
+function atlanticForcing(){          // what was done to the Atlantic this season, beyond nature
+  const r=lastRow(); if(!r) return 0;
+  const ni=DRV.indexOf("NATL"); return ni<0? 0 : r.driverTotals[ni]-r.driverNat[ni];
+}
+function stormStrength(f){ return Math.max(0.25, Math.min(1.6, 1+0.6*f)); }
+function activeStorms(ts, prog){
+  const f=atlanticForcing(); if(f<-1.0) return [];
+  const out=[];
+  for(const s of HISTORY.storms){
+    if(s.t!==ts) continue;
+    const p0=s.p0, p1=Math.max(s.p1, s.p0+0.15);            // at least a few seconds on screen
+    if(prog<p0 || prog>p1) continue;
+    const tr=s.track, k=((prog-p0)/(p1-p0))*(tr.length-1);
+    const i=Math.min(tr.length-2, Math.floor(k)), fr=k-i, a=tr[i], b=tr[i+1];
+    out.push({s, lat:a[0]+(b[0]-a[0])*fr, lon:a[1]+(b[1]-a[1])*fr, w:a[2]+(b[2]-a[2])*fr, strength:stormStrength(f)});
+  }
+  return out;
+}
 const STORM_SRC="__STORM__";
 const VOLCANO_SRC="__VOLCANO__"; const SMOKE_SRC="__SMOKE__";
 const volcImg=new Image(); let volcReady=false;
@@ -33,24 +64,41 @@ function drawCyclone(p, diaFrac, nowMs, opts){
   cx.restore();
 }
 function drawAmbient(nowMs){
-  const k=Rp*0.055;
-  // slow roaming cyclones, one per basin, drifting west
-  const basins=[[15,-52],[13,138],[-13,72]];
-  for(let i=0;i<3;i++){
-    const lat=basins[i][0]+3*Math.sin(t*1.3+i*2.1);
-    const lon=basins[i][1]-10-8*Math.sin(t*0.9+i*1.7)-6*Math.sin(nowMs*0.00002+i*2.4);
-    const p=project(lat,lon); if(!p.vis) continue;
-    drawCyclone(p, 0.17+i*0.02, nowMs+i*900, {alpha:0.9, lat, variant:i});
+  const k=Rp*0.055, ts=Math.max(1,t);
+  // the season's real hurricanes, on their real tracks
+  const prog=seasonProgress(nowMs);
+  activeStorms(ts, prog).forEach((st,idx)=>{
+    const p=project(st.lat,st.lon); if(!p.vis) return;
+    const dia=(0.09+0.11*Math.min(1,st.w/150))*st.strength;
+    drawCyclone(p, dia, nowMs+idx*900, {alpha:0.92, lat:st.lat, variant:idx});
+    if(zoom>=1.2 || st.s.cat>=3){
+      cx.font="9px "+getComputedStyle(document.body).getPropertyValue("--mono");
+      cx.fillStyle="rgba(230,240,255,.85)";
+      cx.fillText((st.s.name? st.s.name.toUpperCase() : "HURRICANE")+" · C"+st.s.cat, p.x+Rp*dia*0.5+3, p.y+3);
+    }
+  });
+  // earthquakes of the season: rings from the epicentre
+  if(!lithoUnlocked()) for(const q of HISTORY.quakes){
+    if(q.t!==ts) continue;
+    const p=project(...q.pos); if(!p.vis) continue;
+    for(let r=0;r<2;r++){
+      const ph=((nowMs/900)+r*0.5)%1, rad=k*(0.4+ph*2.2*(q.mag-5));
+      cx.strokeStyle=`rgba(255,120,80,${0.7*(1-ph)})`; cx.lineWidth=1.2;
+      cx.beginPath(); cx.arc(p.x,p.y,rad,0,7); cx.stroke();
+    }
+    cx.lineWidth=1; cx.fillStyle="rgba(255,120,80,.95)";
+    cx.beginPath(); cx.arc(p.x,p.y,2.2,0,7); cx.fill();
+    cx.font="9px "+getComputedStyle(document.body).getPropertyValue("--mono");
+    cx.fillStyle="rgba(255,160,120,.9)"; cx.fillText("M"+q.mag.toFixed(1), p.x+6, p.y-5);
   }
-  // volcanoes: vent glow + large slow smoke plume when active
-  for(let i=0;i<VOLCANOES.length;i++){
-    if(!volcanoActive(i, Math.max(1,t))) continue;
-    const p=project(...VOLCANOES[i].pos); if(!p.vis) continue;
+  // volcanoes: vent glow + the ash column
+  activeEruptions(ts).forEach((e,i)=>{
+    const p=project(...e.pos); if(!p.vis) return;
     const fl=0.6+0.4*Math.sin(nowMs/120+i);
     cx.fillStyle=`rgba(255,150,60,${0.9*fl})`;
     cx.beginPath(); cx.arc(p.x,p.y,1.8,0,7); cx.fill();
     if(volcReady){
-      const vw=k*8*(1+0.05*Math.sin(nowMs/3000+i));
+      const vw=k*8*(e.scale||1)*(1+0.05*Math.sin(nowMs/3000+i));
       cx.save();
       cx.translate(p.x+vw*0.1,p.y-vw*0.12);
       cx.rotate(0.05*Math.sin(nowMs/4200+i));
@@ -59,7 +107,7 @@ function drawAmbient(nowMs){
       cx.restore();
       drawVolcanicLightning(p, vw, i, nowMs);
     }
-  }
+  });
 }
 /* volcanic lightning — violet-white, branching, inside the ash column, lit
    from within, gone in a sixth of a second, never on a rhythm. Three

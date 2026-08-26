@@ -36,9 +36,7 @@ async function runSeason(auto){
     flagship=null;
   }
   effects = effects.filter(e=> t - e.bornT < e.life);
-  for(let i=0;i<VOLCANOES.length;i++)
-    if(volcanoActive(i,t) && !volcanoActive(i,t-1))
-      news(VOLCANOES[i].dl, VOLCANOES[i].line);
+  historyBeats(row);
   {
     const ai=REG.findIndex(r=>r.kind==="ice");
     if(ai>=0){
@@ -306,3 +304,67 @@ setInterval(()=>{
 },250);
 $("containment").addEventListener("input",()=>{ clampContainment(); $("contval").textContent=$("containment").value; renderTray(); });
 
+
+/* The record on your watch. Geophysics is canon until the first lithospheric
+   op; storms and disasters happen as recorded unless what YOU did to the
+   region or the ocean pushed against them. */
+function historyBeats(row){
+  const canon=!lithoUnlocked();
+  if(canon){
+    for(const e of HISTORY.eruptions) if(e.t===t) news(e.dl, e.line, (e.scale||1)>=1.2);
+    for(const q of HISTORY.quakes) if(q.t===t){
+      news(q.dl, q.line, q.mag>=8);
+      if(q.mag>=8){ alertStrip(`EARTHQUAKE M${q.mag.toFixed(1)} — ${q.name.toUpperCase()}`); shakeNow(); }
+    }
+  } else {
+    FICTIONAL_VOLCANOES.forEach((v,i)=>{ if(((t+i*3)%9)<2 && !(((t-1+i*3)%9)<2)) news(v.dl, v.line); });
+  }
+  if(!recordStopped && !canon){
+    recordStopped=true;
+    wire(`<span class="tag tagr">ARCHIVE</span> Every earthquake and eruption until today was documented and natural. From here the record is suspect — <b>including the ones you did not cause.</b>`,"att");
+  }
+  // the Atlantic season
+  const f=atlanticForcing();
+  const ss=HISTORY.storms.filter(s=>s.t===t).sort((a,b)=>b.peak-a.peak);
+  if(ss.length){
+    if(f<-1.0){
+      news("MIAMI", `A quiet Atlantic. The ${ss.length===1?"storm":ss.length+" storms"} the almanacs expected did not form.`);
+      wire(`TRACE — the record had hurricanes this quarter. <b>You cooled the ocean they needed.</b>`,"op");
+      histAltered.push({t, what:"the Atlantic hurricane season", how:"unmade"});
+    } else {
+      const hot=f>1.0;
+      if(hot){
+        news("MIAMI", "The Atlantic runs hot this year. Every storm is stronger than the record says it should be.", true);
+        wire(`TRACE — <b>you warmed the ocean</b>; the season the record remembers is now worse.`,"op");
+        histAltered.push({t, what:"the Atlantic hurricane season", how:"worse"});
+      }
+      for(const s of ss.slice(0,3)){
+        const nm=s.name? "Hurricane "+s.name : "An unnamed hurricane", c=Math.min(5, s.cat+(hot?1:0));
+        const where=s.landfall? `landfall near ${s.dl.charAt(0)+s.dl.slice(1).toLowerCase()}` : "at sea";
+        news(s.dl, `${nm} — Category ${c}, ${where}. ${Math.round(s.peak*(hot?1.15:1))} knots at peak.`, c>=4);
+        if(c>=4 && s.landfall) alertStrip(`${nm.toUpperCase()} — CATEGORY ${c} LANDFALL`);
+      }
+      if(ss.length>3) news("MIAMI", `${ss.length-3} more hurricane${ss.length>4?"s":""} this quarter. The season the record remembers.`);
+      histAsRecorded+=ss.length;
+    }
+  }
+  // disasters on the record
+  for(const w of HISTORY.weather){
+    if(w.t!==t) continue;
+    const ri=REG.findIndex(r=>r.name===w.region); if(ri<0) continue;
+    const tr=traceFor(ri,row), sign=(w.kind==="flood")? 1 : -1;
+    const push=tr.mine*sign;                       // >0 with the record, <0 against it
+    if(push<-0.3){
+      news(w.dl, w.unmade);
+      wire(`TRACE — the record said ${w.kind} in ${w.region}. <b>You unmade it.</b>`,"op");
+      histAltered.push({t, what:`the ${w.date} ${w.region} ${w.kind}`, how:"unmade"});
+    } else if(push>0.3){
+      news(w.dl, w.worse, true); alertStrip(`${w.kind.toUpperCase()} — ${w.region.toUpperCase()}`);
+      wire(`TRACE — the record said ${w.kind} in ${w.region}. <b>You made it worse.</b>`,"op");
+      histAltered.push({t, what:`the ${w.date} ${w.region} ${w.kind}`, how:"worse"});
+    } else {
+      news(w.dl, w.line, true); alertStrip(`${w.kind.toUpperCase()} — ${w.region.toUpperCase()}`);
+      histAsRecorded++;
+    }
+  }
+}
