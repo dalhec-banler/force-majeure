@@ -17,15 +17,41 @@ EXP = [
  ("Ganges Delta Ports","Shipping and jute",2,1.4,0.7,"hub",[-0.4,0.45,0.2,-0.5],[1,1,2,4]),
  ("Siberian Gas Fields","Natural gas",2,0.8,1.3,"hub",[0.1,0,0.15,-0.6],[2,2,3,3]),
  ("Arctic Shelf","Sea lanes and ice",1,1.2,1.4,"ice",[0.1,0,0.3,-0.6],[2,2,2,2]),
+ # --- the world's other breadbaskets and chokepoints (2026-08-25, ADR-0018) ---
+ # wiring sign: coeff × driver = wet(+)/dry(−) anomaly. ENSO + = El Niño;
+ # IOD + = positive dipole; NATL + = warm Atlantic (AMO+); GLOBAL = stress.
+ ("California Central Valley","Fruit, nuts and rice",5,1.2,0.9,"",[0.4,0,-0.1,-0.45],[1,1,2,3]),     # El Niño wets the south/central valley winters
+ ("Canadian Prairies","Wheat and canola",6,1.0,1.0,"",[-0.25,0,-0.2,-0.35],[1,1,2,3]),              # El Niño: warm, dry prairie winters; AMO+ drought reaches north
+ ("Gulf Coast Refineries","Refined fuels and petrochemicals",3,1.3,1.0,"hub",[0.3,0,0.5,-0.3],[1,1,1,3]),  # El Niño wets the Gulf; a warm Atlantic means surge and storm
+ ("North China Plain","Wheat and maize",9,1.1,0.9,"",[-0.35,-0.1,-0.1,-0.45],[1,2,3,3]),           # El Niño weakens the East Asian monsoon: north China dries
+ ("Yangtze Basin","Rice",9,1.0,1.0,"",[0.6,0.15,0,-0.4],[2,2,1,3]),                                 # the decaying El Niño summer floods the Yangtze (1954, 1998)
+ ("Manchurian Plain","Soy and maize",4,1.1,1.1,"",[-0.25,0,-0.1,-0.5],[1,1,3,3]),                   # cool El Niño summers in the northeast
+ ("Northern European Plain","Wheat, sugar beet and dairy",8,0.9,0.8,"",[-0.1,0,-0.35,-0.35],[1,1,2,3]),  # a warm Atlantic brings the hot dry summers
+ ("Mediterranean Basin","Olives, wheat and citrus",4,1.1,1.0,"",[0.15,0,-0.4,-0.5],[1,1,2,3]),     # El Niño wets Mediterranean autumns; AMO+ dries and bakes them
+ ("Danube Basin","Wheat and maize",4,1.0,1.0,"",[-0.1,0,-0.3,-0.45],[1,1,2,3]),                     # southeast Europe's summer droughts ride the Atlantic
+ ("Nile Delta","Cotton and wheat",3,1.4,0.9,"",[-0.3,0.15,0.2,-0.5],[2,2,2,4]),                     # El Niño starves the Ethiopian rains and the Nile flood; a wet Sahel feeds it
+ ("Japan (Kanto–Kansai)","Steel, ships and rice",6,1.2,0.9,"hub",[-0.3,0,0,-0.35],[1,1,2,3]),       # El Niño's cool wet summers fail the rice (1993)
+ ("Mekong Delta","Rice",5,1.0,0.9,"",[-0.5,-0.2,0,-0.4],[1,1,2,3]),                                  # El Niño drought and salt intrusion
+ ("Cerrado","Soy, coffee and cattle",6,1.0,1.0,"",[0.2,0,-0.3,-0.4],[2,1,2,3]),                     # a warm north Atlantic pulls the rains north, off central Brazil
+ ("Southern African Maize Belt","Maize",4,1.3,1.2,"",[-0.6,-0.2,0,-0.5],[1,1,2,4]),                 # El Niño summer drought, the region's oldest enemy
+ ("Kazakh Virgin Lands","Spring wheat",4,1.2,1.3,"",[-0.1,0,-0.2,-0.55],[2,1,3,3]),                 # continental, variable; a warm Atlantic dries central Asia
+ ("Panama Canal","Canal transits",2,1.5,0.9,"hub",[-0.6,0,0.2,-0.3],[1,1,2,3]),                     # El Niño drought empties Gatún Lake: draft restrictions
+ ("Malacca Strait","Shipping, rubber and tin",3,1.1,0.9,"hub",[-0.5,-0.3,0,-0.35],[1,1,2,3]),      # El Niño and a positive dipole: drought and the haze
 ]
 LATS = {"North American Plains":41.5,"Black Sea Steppe":48,"La Plata Basin":-31,
  "South Asia":22,"Southeast Asia":12,"Eastern Australia":-29,"Sahel":14,
  "Horn of Africa":8,"Taiwan Strait Industrial":24,"Persian Gulf Terminals":26.5,
  "Andean Copper Belt":-24,"Congo Cobalt Belt":-11,"North Sea Energy Shelf":57,
- "Ganges Delta Ports":22.5,"Siberian Gas Fields":62,"Arctic Shelf":76}
+ "Ganges Delta Ports":22.5,"Siberian Gas Fields":62,"Arctic Shelf":76,
+ "California Central Valley":36.8,"Canadian Prairies":52,"Gulf Coast Refineries":29.7,
+ "North China Plain":36.5,"Yangtze Basin":30.5,"Manchurian Plain":45,"Northern European Plain":50.5,
+ "Mediterranean Basin":40,"Danube Basin":46.5,"Nile Delta":30.5,"Japan (Kanto–Kansai)":35.7,
+ "Mekong Delta":10,"Cerrado":-15.8,"Southern African Maize Belt":-27,"Kazakh Virgin Lands":51,
+ "Panama Canal":9.1,"Malacca Strait":2.5}
 for (name,com,wt,sens,sig,kind,co,lg) in EXP:
-    M["regions"].append({"name":name,"crop":com,"weight":wt,"sens":sens,
-                         "sigma":sig,"homeland":False,"kind":kind})
+    reg={"name":name,"crop":com,"weight":wt,"sens":sens,"sigma":sig,"homeland":False}
+    if kind: reg["kind"]=kind
+    M["regions"].append(reg)
     for di in range(4):
         M["coeff"][di].append(co[di]); M["lags"][di].append(lg[di])
 for r in M["regions"]: r["lat"] = LATS.get(r["name"], 0)

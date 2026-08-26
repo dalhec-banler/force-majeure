@@ -64,7 +64,7 @@ if RAW:
 # with any stratospheric reach). ash: local yield hits on mapped regions. vei: display.
 E=lambda y,m,d,dur,name,lat,lon,dl,line,scale=1.0,vei=2,climate=0,climDur=0,ash=None: dict(t=season(y,m),dur=dur,name=name,pos=[lat,lon],dl=dl,line=line,scale=scale,vei=vei,climate=climate,climDur=climDur,ash=ash or [],date=f"{y}-{m:02d}-{d:02d}")
 eruptions=[
- E(1946,1,1,4,"Sakurajima",31.6,130.7,"KAGOSHIMA","Sakurajima in eruption; lava reaches the sea at Kurokami. Kagoshima sweeps ash.",0.9,3),
+ E(1946,1,1,4,"Sakurajima",31.6,130.7,"KAGOSHIMA","Sakurajima in eruption; lava reaches the sea at Kurokami. Kagoshima sweeps ash.",0.9,3,0,0,[{"region":"Japan (Kanto–Kansai)","mag":-0.05,"dur":1}]),
  E(1946,1,1,25,"Paricutín",19.5,-102.25,"URUAPAN","Paricutín, the volcano that rose in a cornfield in 1943, still building its cone.",0.45,4),
  E(1947,3,29,5,"Hekla",64.0,-19.7,"REYKJAVÍK","Hekla erupts after a century's silence. Ash to thirty kilometres; the column is seen from Scotland.",1.35,4,0.3,3,[{"region":"North Sea Energy Shelf","mag":-0.1,"dur":1}]),
  E(1949,6,24,2,"Cumbre Vieja",28.6,-17.85,"SANTA CRUZ DE LA PALMA","Cumbre Vieja opens on La Palma. Lava reaches the western coast.",0.7,2),
@@ -96,9 +96,12 @@ quakes=[
  Q(1954,9,9,6.7,"Orléansville",36.3,1.5,"ALGIERS","Orléansville earthquake, M6.7. 1,250 dead in the Chélif valley."),
 ]
 # ---- weather disasters on the record (authored), mapped to prototype regions ----
+# kinds: flood/typhoon/cyclone/locusts push WET (+); drought/famine/cold/blizzard/fire/avalanche push DRY (−).
+# epidemic and tornado are canon: they happen as recorded whatever the player did.
 W=lambda y,m,dur,region,kind,dl,line,unmade,worse: dict(t=season(y,m),dur=dur,region=region,kind=kind,dl=dl,line=line,unmade=unmade,worse=worse,date=f"{y}-{m:02d}")
+C=lambda y,m,region,kind,dl,line: dict(t=season(y,m),dur=1,region=region,kind=kind,dl=dl,line=line,canon=True,date=f"{y}-{m:02d}")
 weather=[
- W(1946,7,3,"Black Sea Steppe","drought","KIEV","Drought across the Ukraine and Moldavia. The harvest fails; Moscow keeps exporting grain.",
+ W(1946,7,3,"Black Sea Steppe","famine","KIEV","Drought across the Ukraine and Moldavia. The harvest fails; Moscow keeps exporting grain.",
    "The drought the Ukraine expected did not come. The harvest holds. Moscow exports anyway.",
    "Drought across the Ukraine, worse than any on record. The villages stop reporting."),
  W(1947,1,1,"North Sea Energy Shelf","cold","LONDON","The coldest winter in a century locks Britain in ice. Coal cannot move; the lights go out.",
@@ -122,6 +125,54 @@ weather=[
  W(1954,1,4,"North American Plains","drought","AMARILLO","Third year of drought in Texas and the southern Plains. Worse than the Thirties, the old men say.",
    "The rains return to the southern Plains. The drought the almanacs feared breaks a year early.",
    "The southern Plains drought deepens. Dust over Amarillo again, thirty years on."),
+ # --- Japan's typhoon decade (VERIFY vs JMA) ---
+ W(1947,7,1,"Japan (Kanto–Kansai)","typhoon","TOKYO","Typhoon Kathleen breaks the Tone River levees. The Kanto plain under water; a thousand dead.",
+   "The September typhoon turns east of Honshu. The Tone holds.","Typhoon Kathleen drowns the Kanto plain to the edge of Tokyo. The count passes two thousand."),
+ W(1948,7,1,"Japan (Kanto–Kansai)","typhoon","TOKYO","Typhoon Ione floods the Kanto and Tohoku. Eight hundred dead.",
+   "Typhoon Ione passes offshore. Rain, and nothing more.","Typhoon Ione stalls over Honshu. The rivers of the Kanto go over their banks twice."),
+ W(1949,7,1,"Japan (Kanto–Kansai)","typhoon","TOKYO","Typhoon Kitty crosses Tokyo Bay. The shipyards flooded, the harvest flattened.",
+   "Typhoon Kitty weakens in the Sagami Sea. Tokyo gets a wet night.","Typhoon Kitty comes ashore at full strength on Tokyo Bay. Yokohama's docks are gone."),
+ W(1950,7,1,"Japan (Kanto–Kansai)","typhoon","OSAKA","Typhoon Jane drives a surge into Osaka Bay. Five hundred dead; the Hanshin plants dark for a month.",
+   "Typhoon Jane recurves short of Kansai. Osaka is spared.","Typhoon Jane puts Osaka Bay's surge into the city centre. The Hanshin industrial belt is offline for the quarter."),
+ W(1951,10,1,"Japan (Kanto–Kansai)","typhoon","TOKYO","Typhoon Ruth across Kyushu and Honshu. Nine hundred dead; the rice crop lost on the ground.",
+   "Typhoon Ruth stays at sea. The harvest comes in.","Typhoon Ruth takes the rice harvest of western Japan whole. Rationing tightens."),
+ W(1953,4,1,"Japan (Kanto–Kansai)","flood","FUKUOKA","Torrential rains flood northern Kyushu. Landslides bury villages along the Chikugo.",
+   "A dry June in Kyushu. The rice planted on time.","Northern Kyushu under water for weeks. The Chikugo valley is silt."),
+ W(1954,7,1,"Japan (Kanto–Kansai)","typhoon","HAKODATE","Typhoon Marie sinks the ferry Toya Maru in the Tsugaru Strait. Eleven hundred lost; five ships down in a night.",
+   "Typhoon Marie weakens in the Sea of Japan. The Hakodate ferries sail.","Typhoon Marie crosses Hokkaido at full strength after the Tsugaru Strait takes the ferries. Sapporo's harvest is flattened."),
+ # --- China ---
+ W(1954,4,2,"Yangtze Basin","flood","WUHAN","The Yangtze at its highest in a century. Wuhan holds behind its dikes; the countryside does not. Tens of thousands dead.",
+   "The Yangtze stays in its banks. A wet year, not a fatal one.","The Yangtze breaks the Wuhan dike. The city is an island; the plain a sea."),
+ W(1949,7,1,"Yangtze Basin","flood","NANKING","The Yangtze and the Huai in flood while the armies move. Forty million on the roads, by some counts.",
+   "A low Yangtze the summer the armies cross it.","The Yangtze and the Huai flood together. The famine follows the war."),
+ # --- Europe ---
+ W(1947,1,1,"Northern European Plain","cold","BERLIN","The winter of 1947. Berlin burns its furniture; the Rhine freezes; the potato clamps are ice.",
+   "A mild winter across the plain. The clamps hold.","The winter of 1947, and worse: the canals frozen to April, the seed potatoes lost."),
+ W(1953,1,1,"Northern European Plain","flood","THE HAGUE","The North Sea surge breaks Zeeland's dikes in the night. Eighteen hundred dead in the Netherlands.",
+   "The February gale passes without a surge. Zeeland sleeps.","The surge tops every dike in Zeeland and South Holland. Rotterdam's cellars are under salt water."),
+ W(1954,7,1,"Danube Basin","flood","VIENNA","The Danube at its highest since 1899. Vienna's Prater under water; the Hungarian plain a lake.",
+   "The Danube rises, and stops short of the quays.","The Danube takes the plain from Linz to Budapest. The harvest is under it."),
+ W(1951,1,1,"Mediterranean Basin","avalanche","CHUR","The Winter of Terror: six hundred avalanches across the Alps in three days. Andermatt buried; 265 dead.",
+   "An open Alpine winter. The passes stay clear.","Avalanches every day for a week from the Valais to the Tyrol. Whole villages dug out by hand."),
+ # --- North America ---
+ C(1947,4,"North American Plains","tornado","WOODWARD","A tornado nearly two miles wide runs from the Texas panhandle through Woodward, Oklahoma. 181 dead."),
+ C(1953,4,"North American Plains","tornado","WACO","Waco, Flint, Worcester: three tornadoes in four weeks each kill more than ninety. The deadliest spring on record."),
+ W(1950,4,2,"Canadian Prairies","fire","GRANDE PRAIRIE","The Chinchaga fire, the largest in North American record, burns from June to October. Its smoke darkens the sun over New York and Europe.",
+   "A wet spring in the Peace country. The fire season never starts.","The Chinchaga fire and a dozen more. The northern plains under smoke till the snow."),
+ W(1955,10,1,"California Central Valley","flood","SACRAMENTO","Christmas floods across the Central Valley. Yuba City under the levee break; the levees of the Feather gone.",
+   "A dry December in the valley. The reservoirs wait for snow.","The Feather and the Yuba take the whole north valley at Christmas. Sacramento's levees hold by inches."),
+ C(1952,7,"North American Plains","epidemic","NEW YORK","Polio's worst year: 57,000 cases across the United States. Swimming pools closed; the iron lungs are full."),
+ # --- Africa and the Middle East ---
+ C(1947,7,"Nile Delta","epidemic","CAIRO","Cholera in the Delta. Ten thousand dead by December; the border closed to the pilgrimage."),
+ W(1949,7,8,"Nile Delta","locusts","CAIRO","The desert locust rises from the Red Sea coasts. The plague will run four years, from the Delta to the Punjab.",
+   "The locust breeding grounds are dry. The swarms never form.","Locusts across the Delta, the Sahel and Arabia in numbers no one has recorded. The FAO calls it a plague."),
+ W(1951,7,1,"Sahel","locusts","NIAMEY","Swarms out of the Red Sea breeding grounds reach the Sahel. Millet stripped to the stalk.",
+   "The swarms fail to reach the Sahel. A dry breeding season behind them.","The swarms reach the Sahel in waves. Nothing green from the Niger to Lake Chad."),
+ # --- Asia ---
+ W(1951,7,1,"South Asia","drought","DELHI","Failed monsoon across Bihar and Rajasthan. India asks Washington for two million tons of wheat.",
+   "The monsoon arrives on time in Bihar. The wheat loan is not needed.","The monsoon fails from Rajasthan to Bengal. The ration is cut to the bone."),
+ W(1955,10,1,"South Asia","flood","LAHORE","The Punjab rivers in flood together. Lahore's suburbs under water; the wheat sowing lost.",
+   "The Punjab rivers stay low into October.","The five rivers of the Punjab flood at once. Lahore cut off for a week."),
 ]
 out=dict(note="storms: HURDAT2 (NOAA/NHC, public domain), hurricanes only. eruptions/quakes/weather: authored from general knowledge — VERIFY dates, magnitudes, tolls against Smithsonian GVP, USGS/ISC, and period press before v0.1.",
          storms=storms,eruptions=eruptions,quakes=quakes,weather=weather)

@@ -10,7 +10,7 @@ function initEarth(){
   const fs=`precision mediump float;
     uniform sampler2D uT,uCl;uniform vec2 uC;
     uniform float uR,uRot,uTilt,uClOff,uHasCl;
-    uniform vec3 uRV[16];uniform float uRD[16];uniform float uDV[16];uniform float uRW[16];uniform float uIceEdge,uDevG,uT2,uFlat,uSunLon,uSea;
+    uniform vec3 uRV[40];uniform float uRD[40];uniform float uDV[40];uniform float uRW[40];uniform float uIceEdge,uDevG,uT2,uFlat,uSunLon,uSea;
     float water(vec2 q){ vec3 c=texture2D(uT,q).rgb; return smoothstep(0.02,0.18,c.b-c.r); }
     float flooded(vec2 q, float r){ if(r<=0.0) return 0.0; float m=0.0; for(int i=0;i<8;i++){ float a=float(i)*0.785398; vec2 o=vec2(cos(a),sin(a))*r; m=max(m, water(q+o)); m=max(m, water(q+o*0.5)); } return m; }
     void main(){
@@ -25,7 +25,7 @@ function initEarth(){
         float wat=smoothstep(0.02,0.18,col.b-col.r);
         vec3 ve=vec3(cos(lat)*sin(lon),sin(lat),cos(lat)*cos(lon));
         float dry=0.0; float dev=0.0; float wet=0.0;
-        for(int i=0;i<16;i++){
+        for(int i=0;i<40;i++){
           float dd=acos(clamp(dot(ve,uRV[i]),-1.,1.));
           dry+=uRD[i]*smoothstep(0.40,0.08,dd);
           dev+=uDV[i]*smoothstep(0.42,0.10,dd);
@@ -72,7 +72,7 @@ function initEarth(){
       // drought browns the land itself — green space disappearing
       vec3 ve=vec3(cos(lat)*sin(lon),sin(lat),cos(lat)*cos(lon));
       float dry=0.0; float dev=0.0; float wet=0.0;
-      for(int i=0;i<16;i++){
+      for(int i=0;i<40;i++){
         float dd=acos(clamp(dot(ve,uRV[i]),-1.,1.));
         float fall=smoothstep(0.34,0.08,dd);
         dry+=uRD[i]*fall; wet+=uRW[i]*fall;
@@ -132,7 +132,7 @@ function initEarth(){
         Flat:gl.getUniformLocation(pr,"uFlat"),
         SunLon:gl.getUniformLocation(pr,"uSunLon"),
         IceEdge:gl.getUniformLocation(pr,"uIceEdge") };
-  const rv=new Float32Array(48);
+  const rv=new Float32Array(120);
   REG.forEach((r,i)=>{ const [la,lo]=REGPOS[r.name].map(x=>x*Math.PI/180);
     rv[i*3]=Math.cos(la)*Math.sin(lo); rv[i*3+1]=Math.sin(la);
     rv[i*3+2]=Math.cos(la)*Math.cos(lo); });
@@ -167,8 +167,8 @@ function drawEarth(nowMs){
   gl.uniform1f(glU.ClOff, (nowMs*0.000004)%1);
   gl.uniform1f(glU.HasCl, (texReady&2)?1:0);
   gl.uniform1i(glU.T,0); gl.uniform1i(glU.Cl,1);
-  const row=lastRow(), dry=new Float32Array(16), dv=new Float32Array(16), wet=new Float32Array(16);
-  if(row) for(let i=0;i<Math.min(16,REG.length);i++){
+  const row=lastRow(), dry=new Float32Array(40), dv=new Float32Array(40), wet=new Float32Array(40);
+  if(row) for(let i=0;i<Math.min(40,REG.length);i++){
     dry[i]=Math.max(0,Math.min(1,-row.anomalies[i]/1.4));
     wet[i]=Math.max(0,Math.min(1,row.anomalies[i]/1.2));
     dv[i]=Math.max(0,Math.min(1,(78-row.yields[i])/45));
@@ -176,7 +176,7 @@ function drawEarth(nowMs){
   gl.uniform1fv(glU.RD, dry);
   gl.uniform1fv(glU.DV, dv);
   gl.uniform1fv(glU.RW, wet);
-  gl.uniform1f(glU.Sea, 0.022*Math.pow(iceMelt,0.8));   // the coasts go under as the ice goes
+  gl.uniform1f(glU.Sea, 0.0066*Math.pow(iceMelt,0.8));   // the coasts go under as the ice goes
   gl.uniform1f(glU.DevG, devastation());
   gl.uniform1f(glU.T2, nowMs/1000);
   gl.uniform1f(glU.IceEdge, (66+18*iceMelt)*Math.PI/180);

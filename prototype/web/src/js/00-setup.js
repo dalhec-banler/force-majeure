@@ -24,7 +24,13 @@ const REGPOS = { "North American Plains":[41.5,-100], "Black Sea Steppe":[48,34]
   "Taiwan Strait Industrial":[24,121], "Persian Gulf Terminals":[26.5,52],
   "Andean Copper Belt":[-24,-69], "Congo Cobalt Belt":[-11,26],
   "North Sea Energy Shelf":[57,3], "Ganges Delta Ports":[22.5,90],
-  "Siberian Gas Fields":[62,75], "Arctic Shelf":[76,20] };
+  "Siberian Gas Fields":[62,75], "Arctic Shelf":[76,20],
+  "California Central Valley":[36.8,-119.8], "Canadian Prairies":[52,-106], "Gulf Coast Refineries":[29.7,-93.5],
+  "North China Plain":[36.5,116], "Yangtze Basin":[30.5,114], "Manchurian Plain":[45,126],
+  "Northern European Plain":[50.5,10], "Mediterranean Basin":[40,15], "Danube Basin":[46.5,20],
+  "Nile Delta":[30.5,31], "Japan (Kanto–Kansai)":[35.7,139.7], "Mekong Delta":[10,105.8],
+  "Cerrado":[-15.8,-47.9], "Southern African Maize Belt":[-27,27], "Kazakh Virgin Lands":[51,71],
+  "Panama Canal":[9.1,-79.7], "Malacca Strait":[2.5,101.5] };
 const DRVPOS = { ENSO:[-3,-135], IOD:[-4,68], NATL:[44,-38] };
 const DATELINE = { "North American Plains":"OMAHA","Black Sea Steppe":"ODESSA",
   "La Plata Basin":"BUENOS AIRES","South Asia":"DELHI","Southeast Asia":"BANGKOK",
@@ -32,7 +38,13 @@ const DATELINE = { "North American Plains":"OMAHA","Black Sea Steppe":"ODESSA",
   "Taiwan Strait Industrial":"TAIPEI","Persian Gulf Terminals":"DUBAI",
   "Andean Copper Belt":"ANTOFAGASTA","Congo Cobalt Belt":"LUBUMBASHI",
   "North Sea Energy Shelf":"ABERDEEN","Ganges Delta Ports":"DHAKA",
-  "Siberian Gas Fields":"NOVOSIBIRSK","Arctic Shelf":"LONGYEARBYEN" };
+  "Siberian Gas Fields":"NOVOSIBIRSK","Arctic Shelf":"LONGYEARBYEN",
+  "California Central Valley":"FRESNO","Canadian Prairies":"REGINA","Gulf Coast Refineries":"HOUSTON",
+  "North China Plain":"JINAN","Yangtze Basin":"WUHAN","Manchurian Plain":"HARBIN",
+  "Northern European Plain":"BERLIN","Mediterranean Basin":"ROME","Danube Basin":"BUDAPEST",
+  "Nile Delta":"CAIRO","Japan (Kanto–Kansai)":"TOKYO","Mekong Delta":"SAIGON",
+  "Cerrado":"BRASÍLIA","Southern African Maize Belt":"JOHANNESBURG","Kazakh Virgin Lands":"AKMOLINSK",
+  "Panama Canal":"PANAMA CITY","Malacca Strait":"SINGAPORE" };
 const TOOLICON = { "Climate Research":"🔬", "Cloud Seeding":"☁","Watershed Interference":"🚱",
   "Fire Enablement":"🔥","Adaptation Investment":"🛡","Ocean Thermal Forcing":"🌊",
   "Stratospheric Aerosol Inj.":"✈","ENSO Forcing":"🌀","Ionospheric Coupling [T3]":"⚡",
