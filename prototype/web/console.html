@@ -2782,12 +2782,13 @@ const DIRECTIVES=[
  {title:"Prove the concept", reward:8, window:2, tool:"☁ CLOUD SEEDING — any region",
   text:"Put rain somewhere. Anywhere. Schenectady wants photographs for the appropriations hearing.",
   check:(row)=>eng.state.ops.some(o=>o.owner==="player"&&o.cap==="Cloud Seeding")},
- {title:"Stabilize a drought", reward:12, window:3, tool:"☁ CLOUD SEEDING — the driest region (amber/red marker)",
+ {title:"Stabilize a drought", reward:12, window:3, tool:"☁ CLOUD SEEDING — a strained or failing harvest (amber/red marker)",
+  when:(row)=>row && REG.some((r,ri)=>!r.kind && isOnline(ri) && row.yields[ri]<90),   // the committee waits for a real drought
   text:"Find the driest region on the board and seed it. A fed market is a buying market — and a grateful one.",
   check:(row)=>row.landed.some(e=>e.owner==="player"&&e.first&&e.cap==="Cloud Seeding"&&(()=>{
     const ri=REG.findIndex(r=>r.name===e.target);
     const pr=eng.state.rows[t-2];
-    return ri>=0&&pr&&pr.anomalies[ri]<-0.25;})())},
+    return ri>=0&&pr&&pr.yields[ri]<90;})())},
  {title:"Harden the homeland", reward:10, window:2, tool:"🛡 ADAPTATION INVESTMENT — your homeland (green ring)",
   text:"The committee funds what it can tour. Reservoirs and seed banks photograph well. Invest in Adaptation at home.",
   check:()=>eng.state.ops.some(o=>o.owner==="player"&&o.cap==="Adaptation Investment"&&o.target===REG.find(r=>r.homeland).name)},
@@ -2858,7 +2859,7 @@ let standing=null, standingCount=0, nextStandingRv=99, lapses=0, lastStandingKey
 const ICON={"Watershed Interference":"🚱 WATERSHED","Fire Enablement":"🔥 FIRE","Ionospheric Coupling [T3]":"⚡ IONOSPHERIC","Ocean Thermal Forcing":"🌊 OCEAN THERMAL","Stratospheric Aerosol Inj.":"✈ AEROSOL","ENSO Forcing":"🌀 ENSO FORCING","Polar Destabilization":"❄ POLAR","Climate Research":"🔬 CLIMATE RESEARCH","Cloud Seeding":"☁ CLOUD SEEDING","Adaptation Investment":"🛡 ADAPTATION"};
 function wingUsable(name, standable){ const ws=eng.eras? eng.wingStatus(name) : null; return !ws || ws.online || (standable && ws.canStand); }
 function needsMet(d){ return !d.needs || d.needs.some(n=>wingUsable(n, d.standable)); }
-function gated(d){ return !!(d && ((d.fromYear && curYear()<d.fromYear) || !needsMet(d))); }
+function gated(d){ return !!(d && ((d.fromYear && curYear()<d.fromYear) || !needsMet(d) || (!d.standing && d.when && !d.when(lastRow())))); }
 function useLine(d){                       // the USE line names only wings you can actually fly
   if(!d.needs) return d.tool||"";
   const have=d.needs.filter(n=>wingUsable(n, d.standable)).map(n=>ICON[n]||n.toUpperCase());
