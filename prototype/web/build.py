@@ -1,4 +1,5 @@
-"""Assemble console.html: template + MODEL (expanded), LAND, textures, engine.
+"""Assemble console.html from src/ (head, css, body, js/*.js in name order)
++ MODEL (expanded), LAND, textures, engine.
 model-data.json stays the pristine sheet extraction (conformance target);
 the console plays the EXPANDED world defined here: economic hubs, the
 Arctic Shelf, and the Polar Destabilization capability."""
@@ -64,7 +65,16 @@ for c in M["capabilities"]:
         if isinstance(c.get("dispTo"), str) and c["dispTo"]:
             c["dispExtraLag"] = SHEET_ARRIVAL[c["name"]] - lag
 
-tpl = (d / "template.html").read_text()
+# --- assembly: src/ is the source of truth; console.html is build output.
+# The page script is one closure over shared state, so the js parts are
+# concatenated into a single <script> in filename order (00-, 10-, ...).
+# Keep each part self-contained by *topic*; cross-part references are fine.
+src = d / "src"
+def part(n): return (src / n).read_text()
+js_parts = sorted((src / "js").glob("*.js"), key=lambda q: q.name)
+tpl = (part("head.html") + "<style>\n" + part("console.css") + "</style>\n\n"
+       + part("body.html") + "\n<script>\n"
+       + "".join(q.read_text() for q in js_parts) + "</script>\n")
 land = (d / "land.json").read_text()
 engine = (d / "engine.js").read_text()
 def b64(n): return (d / n).read_text().strip() if (d / n).exists() else ""
@@ -77,4 +87,5 @@ out = (tpl.replace("__MODEL__", json.dumps(M, separators=(",",":")))
           .replace("__VOLCANO__", b64("volcano.b64"))
           .replace("__SMOKE__", b64("smoke.b64")))
 (d / "console.html").write_text(out)
-print(f"console.html: {len(out):,} bytes · {len(M['regions'])} regions · {len(M['capabilities'])-1} tools")
+print(f"console.html: {len(out):,} bytes · {len(M['regions'])} regions · "
+      f"{len(M['capabilities'])-1} tools · {len(js_parts)} js parts")

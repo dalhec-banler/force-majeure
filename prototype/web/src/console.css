@@ -1,0 +1,219 @@
+  /* Single-theme by design: a phosphor ops console commits to one world.
+     Every surface and ink is painted explicitly; no host theme leaks. */
+  :root{
+    --ground:#0a0f0c; --panel:#0f1712; --panel2:#121c15; --line:#1d2b22;
+    --ink:#c8e6cf; --ink-dim:#7fa389; --ink-faint:#48604f;
+    --green:#53d97b; --amber:#e0a458; --red:#e05252; --cyan:#5bc8e8;
+    --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+    --sans:"IBM Plex Sans",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0}
+  html,body{height:100%}
+  body{background:var(--ground);color:var(--ink);font-family:var(--mono);
+       font-size:13px;line-height:1.45;overflow:hidden}
+  #app{display:grid;grid-template-rows:auto 1fr auto;height:100%}
+
+  /* header = the SimCity top bar: identity, funds, fear, grain, date */
+  header{display:flex;align-items:baseline;gap:16px;padding:8px 14px 6px;
+         border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+  header h1{font-size:15px;font-weight:600;letter-spacing:.22em}
+  .stat{display:flex;align-items:baseline;gap:6px;font-variant-numeric:tabular-nums}
+  .stat .lbl{font-size:9px;letter-spacing:.2em;color:var(--ink-faint)}
+  .stat .val{font-size:15px;font-weight:600}
+  .stat .d{font-size:10px}
+  .d.up{color:var(--green)} .d.down{color:var(--red)}
+  #hMandateWrap{width:70px;height:7px;background:var(--panel2);align-self:center;position:relative}
+  #hMandate{position:absolute;inset:0 auto 0 0;background:var(--amber)}
+  #phase{margin-left:auto;font-size:11px;letter-spacing:.18em;color:var(--ink-dim)}
+  #phase b{color:var(--green);font-weight:500}
+  #clock{font-size:15px;font-weight:600;min-width:9.5em;text-align:right}
+
+  main{display:grid;grid-template-columns:1fr 360px;min-height:0}
+  #globe-wrap{position:relative;min-width:0;background:#04070a}
+  #earth{position:absolute;inset:0;width:100%;height:100%}
+  #globe{display:block;width:100%;height:100%;cursor:grab;position:relative;z-index:2}
+  #globe.aiming{cursor:crosshair}
+  #globe:active{cursor:grabbing}
+  #globe.aiming:active{cursor:crosshair}
+
+  #hover{position:absolute;pointer-events:none;background:rgba(10,15,12,.92);
+         border:1px solid var(--line);padding:7px 10px;font-size:11.5px;
+         display:none;max-width:240px;z-index:5}
+  #hover b{color:var(--green);letter-spacing:.06em}
+  #hover .num{font-variant-numeric:tabular-nums}
+  #banner{position:absolute;left:14px;bottom:96px;font-size:11px;
+          color:var(--amber);letter-spacing:.1em;display:none;z-index:4}
+  #legend{position:absolute;left:14px;top:10px;z-index:4;display:flex;gap:12px;
+          font-size:10px;letter-spacing:.08em;color:var(--ink-dim);
+          background:rgba(10,15,12,.7);padding:4px 10px;border:1px solid var(--line)}
+  #legend i{display:inline-block;width:8px;height:8px;transform:rotate(45deg);
+            margin-right:5px;vertical-align:-1px}
+
+  /* alerts — breaking-news chyrons over the globe */
+  #alerts{position:absolute;top:10px;left:50%;transform:translateX(-50%);
+          display:flex;flex-direction:column;gap:6px;align-items:center;
+          z-index:6;pointer-events:none}
+  .alertstrip{background:rgba(26,9,9,.94);border:1px solid var(--red);
+              color:var(--red);padding:6px 20px;font-size:12px;font-weight:600;
+              letter-spacing:.2em;white-space:nowrap;animation:alertin .25s ease-out}
+  @keyframes alertin{from{transform:translateY(-16px);opacity:0}}
+  #alarmflash{position:fixed;inset:0;pointer-events:none;z-index:9;opacity:0;
+    background:radial-gradient(ellipse at center,rgba(224,82,82,0) 40%,rgba(224,82,82,.3))}
+  #alarmflash.on{animation:alarmpulse .9s ease-out}
+  #flashbang{position:fixed;inset:0;pointer-events:none;z-index:9;opacity:0;background:#fff}
+  #flashbang.on{animation:fbpulse .45s ease-out}
+  @keyframes fbpulse{0%{opacity:.85}100%{opacity:0}}
+  @keyframes alarmpulse{0%{opacity:1}100%{opacity:0}}
+  .shake{animation:shake .4s}
+  @keyframes shake{20%{transform:translate(4px,-3px)}40%{transform:translate(-4px,3px)}
+    60%{transform:translate(3px,2px)}80%{transform:translate(-2px,-2px)}}
+  @keyframes blink{50%{opacity:.2}}
+
+  /* the tool tray — SimCity's palette, over the globe */
+  #traywrap{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);
+            display:flex;flex-direction:column;align-items:center;gap:7px;z-index:5}
+  #armed{display:flex;gap:8px}
+  .pill{background:rgba(15,23,18,.95);border:1px solid var(--green);color:var(--green);
+        font-size:10.5px;letter-spacing:.1em;padding:4px 9px;display:flex;gap:8px;
+        align-items:center}
+  .pill button{background:none;border:none;color:var(--red);cursor:pointer;
+               font-size:11px;padding:0;font-family:var(--mono)}
+  #toolinfo{font-size:10.5px;color:var(--ink-dim);background:rgba(10,15,12,.85);
+            padding:2px 10px;min-height:1.4em;max-width:80vw;text-align:center}
+  #toolbar{display:flex;gap:6px;background:rgba(15,23,18,.94);
+           border:1px solid var(--line);padding:7px}
+  .tool{width:64px;padding:6px 2px 5px;background:var(--panel2);
+        border:1px solid var(--line);color:var(--ink);cursor:pointer;
+        display:flex;flex-direction:column;align-items:center;gap:2px;
+        font-family:var(--mono)}
+  .tool .ic{font-size:19px;line-height:1;filter:saturate(.55) brightness(1.05)}
+  .tool .nm{font-size:8px;letter-spacing:.04em;color:var(--ink-dim);text-align:center;
+            line-height:1.25;height:2.4em;overflow:hidden}
+  .tool .pr{font-size:9px;color:var(--amber)}
+  .tool:hover{border-color:var(--ink-dim)}
+  .tool.sel{border-color:var(--green);background:#12251a}
+  .tool.off{opacity:.35;cursor:default}
+
+  /* right rail: the news is the interface */
+  #rail{border-left:1px solid var(--line);background:var(--panel);
+        display:flex;flex-direction:column;min-height:0}
+  .panel{border-bottom:1px solid var(--line);padding:9px 14px}
+  .panel h2{font-size:10px;font-weight:500;letter-spacing:.24em;
+            color:var(--ink-faint);margin-bottom:6px;display:flex;
+            justify-content:space-between}
+  .live{color:var(--red);animation:blink 1.4s steps(2) infinite}
+  #wire{flex:1;min-height:120px;overflow-y:auto;padding:8px 14px;font-size:11.5px}
+  #wire p{margin-bottom:6px;color:var(--ink-dim)}
+  #wire p b{color:var(--ink);font-weight:500}
+  #wire .sev{color:var(--amber)} #wire .att{color:var(--red)}
+  #wire .op{color:var(--green)} #wire .stamp{color:var(--ink-faint)}
+  #wire .memo{color:var(--cyan)} #wire .news{color:var(--ink)}
+  .chip{background:var(--red);color:#140808;font-weight:600;padding:0 5px;
+        font-size:9px;letter-spacing:.12em;margin-right:5px}
+
+  #ladder{font-family:var(--sans);font-size:12.5px;color:var(--ink);
+          min-height:2.5em;border-left:2px solid var(--ink-faint);
+          padding-left:9px;margin:2px 0 6px}
+  #ladder.hot{border-left-color:var(--red)}
+  #sigmeter{display:flex;gap:3px;margin-bottom:4px}
+  #sigmeter i{flex:1;height:5px;background:var(--panel2)}
+  #sigmeter i.on{background:var(--red)}
+  #sigmeter.hunted i.on{animation:blink 1.6s steps(2) infinite}
+  #dosnum{color:var(--ink-faint);font-size:10.5px;display:none}
+  .kv{display:flex;justify-content:space-between;font-size:11px;
+      color:var(--ink-dim);margin-top:2px}
+  .kv .num{color:var(--ink);font-variant-numeric:tabular-nums}
+  input[type=range]{width:100%;accent-color:var(--green);margin-top:4px}
+
+  #inflight .fl{display:flex;justify-content:space-between;gap:8px;
+                font-size:10.5px;color:var(--ink-dim);margin-top:3px}
+  #inflight .fl b{color:var(--ink);font-weight:500}
+  #inflight .tmin{font-variant-numeric:tabular-nums;color:var(--amber);
+                  letter-spacing:.08em;white-space:nowrap}
+  #inflight .fl.t1 .tmin{color:var(--red);animation:blink .8s steps(2) infinite}
+  #inflight .fl.debt{opacity:.7}
+  #inflight .fl.debt .tmin{color:var(--ink-faint)}
+  #inflight .none{font-size:10.5px;color:var(--ink-faint)}
+  canvas.spark{width:100%;height:26px;display:block;margin-top:4px}
+
+  #predict{width:100%;padding:5px 6px;margin-top:2px;font-family:var(--mono);
+           font-size:11.5px;color:var(--ink);background:var(--panel2);
+           border:1px solid var(--line)}
+  #predict::placeholder{color:var(--ink-faint)}
+  #resolve{width:100%;margin-top:8px;padding:10px 0;font-weight:600;
+           letter-spacing:.22em;background:#12251a;border:1px solid var(--green);
+           color:var(--green);cursor:pointer;font-family:var(--mono);font-size:13px}
+  #resolve:hover{background:#173322}
+  #resolve:disabled{opacity:.4;cursor:default}
+  select:focus,input:focus,button:focus{outline:1px solid var(--green);outline-offset:1px}
+
+  footer{display:flex;justify-content:space-between;padding:5px 14px;
+         border-top:1px solid var(--line);font-size:10px;color:var(--ink-faint);
+         letter-spacing:.14em;background:var(--panel)}
+  footer button{border:none;background:none;color:var(--ink-faint);cursor:pointer;
+                font-size:10px;letter-spacing:.14em;padding:0;font-family:var(--mono)}
+  footer button:hover{color:var(--ink-dim)}
+
+  .overlay{position:fixed;inset:0;background:rgba(6,10,8,.9);z-index:10;
+           display:flex;align-items:center;justify-content:center;padding:20px}
+  .sheet{background:var(--panel);border:1px solid var(--line);max-width:620px;
+         max-height:88vh;overflow-y:auto;padding:26px 30px}
+  .sheet h2{font-size:13px;letter-spacing:.24em;font-weight:600;margin-bottom:4px}
+  .sheet .cls{font-size:10px;color:var(--red);letter-spacing:.3em;margin-bottom:14px}
+  .sheet p,.sheet li{font-family:var(--sans);font-size:13.5px;color:var(--ink);
+                     margin-bottom:9px;max-width:62ch}
+  .sheet li{margin-bottom:5px}
+  .sheet ul{padding-left:18px;margin-bottom:10px}
+  .sheet .q{border-left:2px solid var(--green);padding-left:11px;
+            color:var(--ink);font-style:italic}
+  .sheet button{padding:9px 26px;margin-top:8px;letter-spacing:.2em;
+                background:#12251a;border:1px solid var(--green);
+                color:var(--green);cursor:pointer;font-weight:600;
+                font-family:var(--mono)}
+  .sheet table{width:100%;border-collapse:collapse;font-size:11.5px;margin:8px 0}
+  .sheet td,.sheet th{border-top:1px solid var(--line);padding:4px 6px;
+                      text-align:left;font-variant-numeric:tabular-nums}
+  .sheet th{color:var(--ink-faint);font-weight:500;letter-spacing:.1em;font-size:10px}
+  .redact{background:var(--ink-faint);color:var(--ink-faint)}
+  /* boot sequence — CRT power-on */
+  #boot{position:fixed;inset:0;background:#020403;z-index:20;display:flex;
+        align-items:center;justify-content:center;cursor:pointer}
+  #boot::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 1px,transparent 1px 3px)}
+  #bootin{text-align:center;animation:bootflicker 2.2s steps(12)}
+  #bootin h1{font-size:22px;letter-spacing:.4em;color:var(--green);margin-bottom:10px}
+  #bootin .cls{color:var(--red);font-size:11px;letter-spacing:.34em;margin-bottom:22px}
+  #bootin p{color:var(--ink-faint);font-size:11px;letter-spacing:.2em;margin-bottom:4px}
+  @keyframes bootflicker{0%{opacity:0}8%{opacity:.9}12%{opacity:.2}18%{opacity:1}
+    26%{opacity:.5}34%{opacity:1}100%{opacity:1}}
+  /* media voices */
+  #wire .ad{color:#d9c79c;font-family:var(--sans);font-style:italic}
+  #wire .cast{color:#9fd8b7}
+  .tag{font-size:8.5px;font-weight:600;letter-spacing:.14em;padding:0 4px;
+       margin-right:5px;border:1px solid}
+  .tagd{color:var(--green);border-color:var(--green)}
+  .taga{color:var(--amber);border-color:var(--amber)}
+  .tagr{color:var(--red);border-color:var(--red)}
+  #hDead.tick{animation:deadtick .6s ease-out}
+  @keyframes deadtick{0%{transform:scale(1.35);text-shadow:0 0 12px var(--red)}100%{transform:scale(1)}}
+  /* briefing package card */
+  #briefcard{position:absolute;right:14px;bottom:12px;width:250px;z-index:6;
+    background:var(--panel);border:1px solid var(--line);display:none}
+  #briefcard .bc-cls{background:#2a1010;color:var(--red);font-size:9px;
+    letter-spacing:.3em;padding:3px 8px}
+  #briefcard img{width:100%;height:120px;object-fit:cover;display:block;
+    background:#06131f}
+  #briefcard .bc-body{padding:7px 10px;font-size:10.5px;color:var(--ink-dim)}
+  #briefcard .bc-body b{color:var(--ink);font-size:11px;letter-spacing:.08em}
+
+  @media (max-width:900px){
+    main{grid-template-columns:1fr}
+    #globe-wrap{height:52vh}
+    #rail{border-left:none;border-top:1px solid var(--line)}
+    body{overflow:auto}
+    #app{height:auto}
+    .tool{width:52px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important}
+  }

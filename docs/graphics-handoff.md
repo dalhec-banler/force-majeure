@@ -27,7 +27,9 @@ TRACE lines; screen-shake, shockwaves, and alarm flashes.
 
 ```
 prototype/web/
-  template.html     ← EDIT THIS. All UI: CSS, HTML, and the page script.
+  src/              ← EDIT THESE. head.html, console.css, body.html, and
+                      js/NN-topic.js parts concatenated in name order into
+                      one <script> (single shared closure — see src/README.md)
   engine.js         ← DO NOT MODIFY. Exact port of the reference spreadsheet.
   model-data.json   ← DO NOT MODIFY. Game data extracted from the workbook.
   land.json         ← coastline polygons (wireframe fallback only)
@@ -37,7 +39,7 @@ prototype/web/
   console.html      ← BUILD OUTPUT. Never edit by hand.
 ```
 
-Workflow: edit `template.html` (and add new `.b64` assets + `build.py`
+Workflow: edit the relevant `src/` part (and add new `.b64` assets + `build.py`
 injection if needed) → `python3 build.py` → serve with
 `python3 -m http.server 8471` → open `http://localhost:8471/console.html`.
 
