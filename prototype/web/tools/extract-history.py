@@ -53,6 +53,10 @@ if RAW:
         keep=[j for j in range(len(rows)) if j%4==0 or rows[j]['rec']=='L' or rows[j]['w']==peak or j==len(rows)-1]
         track=[[round(rows[j]['lat'],1),round(rows[j]['lon'],1),rows[j]['w'],rows[j]['st'],1 if rows[j]['rec']=='L' else 0] for j in sorted(set(keep))]
         land=[r for r in rows if r['rec']=='L']
+        # consequential only (author rule): it came ashore, or it was a major
+        # hurricane that passed within reach of a coast (a port under 300 km)
+        near=min(min(math.hypot(r['lat']-pa,(r['lon']-po)*math.cos(math.radians(r['lat']))) for n,pa,po in PORTS) for r in rows)
+        if not land and not (peak>=96 and near<2.7): continue
         dl=nearest_port([(r['lat'],r['lon']) for r in (land or rows)])
         storms.append(dict(id=sid,name=None if name=='UNNAMED' else name.title(),year=y0,t=t,
             p0=round(doq(y0,m0,d0),3),p1=round(doq(y1,m1,d1),3) if season(y1,m1)==t else 1.0,
@@ -107,6 +111,8 @@ def ibtracs(basin):
         keep=[j for j in range(len(rows)) if j%4==0 or rows[j]['w']==peak or j==len(rows)-1 or rows[j]['lf']=='0']
         track=[[round(rows[j]['lat'],1),round(rows[j]['lon'],1),int(rows[j]['w']) if rows[j]['w']>0 else 0,rows[j]['nat'],1 if rows[j]['lf']=='0' else 0] for j in sorted(set(keep))]
         land=[r for r in rows if r['lf']=='0']
+        near=min(min(math.hypot(r['lat']-pa,(r['lon']-po)*math.cos(math.radians(r['lat']))) for n,pa,po in BASIN_PORTS[basin]) for r in rows)
+        if not land and not (peak>=96 and near<2.7): continue      # consequential only
         pts=[(r['lat'],r['lon']) for r in (land or rows)]
         best=None
         for la,lo in pts:
@@ -130,7 +136,7 @@ for s in storms:
 E=lambda y,m,d,dur,name,lat,lon,dl,line,scale=1.0,vei=2,climate=0,climDur=0,ash=None: dict(t=season(y,m),dur=dur,name=name,pos=[lat,lon],dl=dl,line=line,scale=scale,vei=vei,climate=climate,climDur=climDur,ash=ash or [],date=f"{y}-{m:02d}-{d:02d}")
 eruptions=[
  E(1946,1,1,4,"Sakurajima",31.6,130.7,"KAGOSHIMA","Sakurajima in eruption; lava reaches the sea at Kurokami. Kagoshima sweeps ash.",0.9,3,0,0,[{"region":"Japan (Kanto–Kansai)","mag":-0.05,"dur":1}]),
- E(1946,1,1,25,"Paricutín",19.5,-102.25,"URUAPAN","Paricutín, the volcano that rose in a cornfield in 1943, still building its cone.",0.45,4),
+ # no consequence (cone-building only by 1946) — dropped per author rule: E(1946,1,1,25,"Paricutín",19.5,-102.25,"URUAPAN","Paricutín, the volcano that rose in a cornfield in 1943, still building its cone.",0.45,4),
  E(1947,3,29,5,"Hekla",64.0,-19.7,"REYKJAVÍK","Hekla erupts after a century's silence. Ash to thirty kilometres; the column is seen from Scotland.",1.35,4,0.3,3,[{"region":"North Sea Energy Shelf","mag":-0.1,"dur":1}]),
  E(1949,6,24,2,"Cumbre Vieja",28.6,-17.85,"SANTA CRUZ DE LA PALMA","The San Juan eruption opens on La Palma's Cumbre Vieja on the saint's day. Thirty-seven days; lava to the western coast.",0.7,2),
  E(1950,6,1,1,"Mauna Loa",19.5,-155.6,"HILO","Mauna Loa's largest eruption in a lifetime. Lava crosses the coast road in three hours.",0.6,0),
@@ -139,12 +145,12 @@ eruptions=[
  E(1952,9,17,2,"Myōjin-shō",31.9,140.0,"TOKYO","A submarine volcano surfaces south of Tokyo and destroys the survey ship sent to study it. No survivors.",0.8,2),
  E(1953,7,9,1,"Mount Spurr",61.3,-152.25,"ANCHORAGE","Spurr erupts; a quarter-inch of ash on Anchorage by afternoon.",0.9,4),
  E(1953,12,24,1,"Ruapehu",-39.3,175.6,"WELLINGTON","Ruapehu's crater lake bursts. The lahar takes the Tangiwai rail bridge with the Wellington express on it.",0.6,2),
- E(1954,1,18,1,"Merapi",-7.5,110.4,"YOGYAKARTA","Merapi's dome collapses; pyroclastic flows down the south flank toward the villages.",0.7,2,0,0,[{"region":"Southeast Asia","mag":-0.06,"dur":1}]),   # 1953–54 eruption per GVP; toll unverified
+ # no consequence (toll unverified) — dropped per author rule: E(1954,1,18,1,"Merapi",-7.5,110.4,"YOGYAKARTA","Merapi's dome collapses; pyroclastic flows down the south flank toward the villages.",0.7,2,0,0,[{"region":"Southeast Asia","mag":-0.06,"dur":1}]),   # 1953–54 eruption per GVP; toll unverified
  E(1955,2,28,2,"Kīlauea",19.4,-155.0,"HILO","Kīlauea's east rift opens through the cane fields of lower Puna — twenty-four vents in eighty-eight days. The coast from Kalapana to Kapoho evacuated.",0.6,0),
- E(1946,11,9,1,"Sarychev Peak",48.1,153.2,"PETROPAVLOVSK","Sarychev Peak erupts in the Kurils, VEI 4. Ash across the Sea of Okhotsk; the Soviet garrisons say nothing.",1.0,4,0.1,2),
+ # no consequence (remote, no damage) — dropped per author rule: E(1946,11,9,1,"Sarychev Peak",48.1,153.2,"PETROPAVLOVSK","Sarychev Peak erupts in the Kurils, VEI 4. Ash across the Sea of Okhotsk; the Soviet garrisons say nothing.",1.0,4,0.1,2),
  E(1951,8,31,1,"Kelud",-7.93,112.3,"SURABAYA","Kelud erupts in East Java, VEI 4. Ash on the rice terraces from Kediri to Malang.",1.0,4,0.08,2,[{"region":"Southeast Asia","mag":-0.1,"dur":1}]),
- E(1952,2,29,2,"Bagana",-6.14,155.2,"RABAUL","Bagana in eruption on Bougainville, VEI 4. Ash on the copra plantations.",0.9,4),
- E(1955,10,22,1,"Bezymianny",55.97,160.6,"PETROPAVLOVSK","A volcano the maps called extinct wakes in Kamchatka. The Soviets say nothing.",1.0,3,0.15,2),
+ # no consequence (remote, no damage) — dropped per author rule: E(1952,2,29,2,"Bagana",-6.14,155.2,"RABAUL","Bagana in eruption on Bougainville, VEI 4. Ash on the copra plantations.",0.9,4),
+ # no consequence (the damaging blast is March 1956) — dropped per author rule: E(1955,10,22,1,"Bezymianny",55.97,160.6,"PETROPAVLOVSK","A volcano the maps called extinct wakes in Kamchatka. The Soviets say nothing.",1.0,3,0.15,2),
 ]
 # hit: canon economic damage to a mapped region (tsunami, collapse) — untouchable
 Q=lambda y,m,d,mag,name,lat,lon,dl,line,hit=None: dict(t=season(y,m),mag=mag,name=name,pos=[lat,lon],dl=dl,line=line,hit=hit or [],date=f"{y}-{m:02d}-{d:02d}")

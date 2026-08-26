@@ -59,7 +59,7 @@ function drawCyclone(p, diaFrac, nowMs, opts){
   const size=Rp*diaFrac*(o.scale||1);
   const sh=(o.lat!==undefined && o.lat<0);
   cx.save(); cx.translate(p.x,p.y);
-  cx.rotate((sh?1:-1)*nowMs/60000 + (o.variant||0)*2.1);
+  cx.rotate((sh?1:-1)*nowMs/700 + (o.variant||0)*2.1);   // a turn every ~4 s — visibly spinning as it travels
   if(sh) cx.scale(-1,1);
   cx.globalAlpha=o.alpha!==undefined?o.alpha:1;
   cx.drawImage(stormImg,-size/2,-size/2,size,size);
