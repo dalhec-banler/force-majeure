@@ -38,9 +38,15 @@ function toolClick(c){
   if(!running || slots.length>=2){
     $("toolinfo").textContent = slots.length>=2 ? "Two operations sealed per season. Run the season." : "";
     return; }
+  if(spendable()<6 && !canAfford(c)){
+    $("toolinfo").innerHTML = `<span style="color:var(--red)">Nothing is in the budget.</span> Overhead is $${eng.assumptions.overhead}M a season. Wait for the committee — or for the world to frighten it.`;
+    sfxAlert(); pendingTool=null; renderTray(); return; }
+  if(!canAfford(c)){
+    $("toolinfo").innerHTML = `<span style="color:var(--red)">Not in the budget</span> — $${capCost(c.name)}M needed, $${fmt(available(),0)}M spendable${armedCost()?" after what is already armed":""} (the $${eng.assumptions.overhead}M overhead is reserved).`;
+    sfxAlert(); pendingTool=null; renderTray(); return; }
   if(c.type==="DRIVER"){                       // aims itself at the ocean
     slots.push({cap:c.name, target:null});
-    pendingTool=null; renderTray();
+    pendingTool=null; clampContainment(); renderTray();
     $("toolinfo").textContent=`${c.name} armed — ${capInfo(c)}`;
   } else {
     pendingTool = pendingTool===c.name? null : c.name;
@@ -57,12 +63,13 @@ function renderTray(){
     b.classList.toggle("off", slots.length>=2 && b.dataset.cap!==pendingTool);
     const funded=!!flagship && FLAGSHIP_CAPS.includes(b.dataset.cap);
     b.classList.toggle("funded", funded);
+    b.classList.toggle("poor", !canAfford(CAPS.find(c=>c.name===b.dataset.cap)) && b.dataset.cap!==pendingTool);
     const pr=b.querySelector(".pr"); if(pr) pr.textContent=funded? "FUNDED" : "$"+CAPS.find(c=>c.name===b.dataset.cap).cost+"M";
   }
   $("armed").innerHTML = slots.map((s,i)=>
     `<span class="pill">${s.cap.toUpperCase()}${s.target? " · "+s.target:""}
      <button data-i="${i}" aria-label="cancel">✕</button></span>`).join("");
   for(const x of $("armed").querySelectorAll("button"))
-    x.addEventListener("click",()=>{ slots.splice(+x.dataset.i,1); renderTray(); });
+    x.addEventListener("click",()=>{ slots.splice(+x.dataset.i,1); clampContainment(); renderTray(); });
 }
 

@@ -16,6 +16,8 @@ async function runSeason(auto){
   pendingGrant=0; pendingClaw=0;
   t++;
   const row = eng.resolve(t, cmd);
+  for(const o of (row.refused||[]))
+    wire(`TREASURY — ${o.cap}${o.target&&o.type!=="DRIVER"?" · "+o.target:""} refused: $${o.cost}M is not in the budget.`,"att");
   newWires=newWires.filter(w=>t-w.bornT<3);
   for(const e of (row.revealed||[])){
     if(e.how==="exhausted"){ wire(`RESEARCH — ${e.region}: nothing left to learn. Every wire into it is on the board.`,"op"); continue; }
@@ -281,7 +283,7 @@ async function runSeason(auto){
   memos(row);
   updateHUD(row, prev);
   $("phasename").textContent="FORECAST";
-  $("predict").value=""; slots=[]; pendingTool=null; renderTray();
+  $("predict").value=""; slots=[]; pendingTool=null; clampContainment(); renderTray();
   $("toolinfo").textContent="Pick a tool. Aim it at the world. Scroll to zoom.";
   if(row.status==="exposed"||row.status==="insolvent"||row.status==="dissolved"||t>=eng.seasons){
     running=false; setTimeout(()=>showArchive(row), reduced?0:900);
@@ -302,5 +304,5 @@ setInterval(()=>{
   el.style.color = sec<=10? "var(--red)" : "";
   if(left<=0 && !resolving) runSeason(true);
 },250);
-$("containment").addEventListener("input",()=>$("contval").textContent=$("containment").value);
+$("containment").addEventListener("input",()=>{ clampContainment(); $("contval").textContent=$("containment").value; renderTray(); });
 

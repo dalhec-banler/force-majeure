@@ -3,7 +3,7 @@ const LAND = __LAND__;
 __ENGINE__
 
 /* ---------------------------------------------------------------- setup */
-const eng = createEngine(MODEL, {rivals:true, idleTrim:0.6, jetstream:true, forensics:true, knowledge:true});
+const eng = createEngine(MODEL, {rivals:true, idleTrim:0.6, jetstream:true, forensics:true, knowledge:true, budgetGate:true});
 const DRVNAME = { ENSO:"the Pacific", IOD:"the Indian Ocean", NATL:"the Atlantic", GLOBAL:"the planet" };
 let SHOW_WIRES=true;             // the known wiring, drawn on the globe
 let newWires=[];                 // wires revealed recently: {di,ri,bornT}
@@ -60,4 +60,16 @@ function fmtDead(n){
 function fmt(n,d=1){ return n.toLocaleString("en-US",
   {minimumFractionDigits:d,maximumFractionDigits:d}); }
 function lastRow(){ return eng.state.rows[t-1]; }
+/* the purse: what is on hand, what is already committed, what is left */
+function funds(){ const r=lastRow(); return r? r.treasury : eng.assumptions.startingTreasury; }
+function capCost(name){ const c=CAPS.find(c2=>c2.name===name); if(!c) return 0;
+  return (typeof flagship!=="undefined" && flagship && FLAGSHIP_CAPS.includes(name))? 0 : c.cost; }
+function armedCost(){ return slots.reduce((s,x)=>s+capCost(x.cap),0); }
+function spendable(){ return Math.max(0, funds()-eng.assumptions.overhead); }   // after the overhead reserve
+function available(){ return Math.max(0, spendable()-armedCost()); }
+function canAfford(c){ return capCost(c.name) <= available(); }
+function clampContainment(){
+  const el=$("containment"), mx=Math.max(0, Math.min(40, Math.floor(available())));
+  el.max=mx; if(+el.value>mx){ el.value=mx; $("contval").textContent=el.value; }
+}
 

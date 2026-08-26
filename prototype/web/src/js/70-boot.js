@@ -1,5 +1,5 @@
 /* --------------------------------------------------------------- misc */
-buildTray(); renderTray(); renderDirective();
+buildTray(); clampContainment(); renderTray(); renderDirective();
 $("begin").addEventListener("click",()=>{ $("intro").style.display="none";
   audioInit(); sfxClick();
   seasonDeadline=performance.now()+SEASON_MS; });

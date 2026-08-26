@@ -14,6 +14,7 @@ f.onload=()=>{ const W=f.contentWindow, d=f.contentDocument;
     d.getElementById('bc-text').textContent='South Asia · anomaly -0.90 vs ±0.73 · harvest 85%';
     const bn=d.getElementById('banner'); bn.style.display='block';
     bn.textContent='▲ NO OPERATIONS IN A YEAR — COMMITTEE ASKING WHAT YOU ARE FOR (2/4 reviews to dissolution)';
+    for(let i=0;i<30;i++) W.wire((i%3?'':'<span class="chip">BREAKING</span>')+'<b>ODESSA</b> — Ministry lowers the wheat estimate again — 85% and falling. Nothing in the record compares. ('+i+')', i%2?'news':'op');
     W.alertStrip('SUSPECTED HOSTILE OPERATION — HOMELAND');
     d.getElementById('armed').innerHTML='<span class="pill">CLOUD SEEDING · Sahel <button>✕</button></span>';
   }catch(e){ console.log('rig',e); } }, 700); };

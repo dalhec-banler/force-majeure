@@ -185,6 +185,8 @@ function nearestRegion(e){
   return best;
 }
 function globeClick(e){
+  if(pendingTool){ const c=CAPS.find(c2=>c2.name===pendingTool);
+    if(c && !canAfford(c)){ toolClick(c); return; } }
   if(!pendingTool) return;
   const ri=nearestRegion(e);
   if(ri===null){ $("toolinfo").textContent="Click closer to a region marker."; return; }

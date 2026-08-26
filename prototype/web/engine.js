@@ -31,6 +31,12 @@ function createEngine(MODEL, opts) {
   // edges are the planet's temperature — public science, always known.
   // Gated (default off): the baseline never asks what is known.
   const knowledgeOn = !!(opts && opts.knowledge);
+  // budget gate (author rule 2026-08-25): the programme can never spend
+  // money it does not have. An operation whose cost exceeds the purse at
+  // commitment is refused; containment is clamped to what remains.
+  // Insolvency is therefore reachable only by attrition (overhead), never
+  // by a purchase. Gated (default off): the baseline commits no ops.
+  const budgetGate = !!(opts && opts.budgetGate);
   const A = {};
   for (const [cell, o] of Object.entries(MODEL.assumptions)) A[cell] = o.value;
   // Named views of the ASSUMPTIONS cells the sheet references.
@@ -190,17 +196,24 @@ function createEngine(MODEL, opts) {
     const prevAnom = prev ? prev.anomalies : new Array(NR).fill(0);
 
     // C — commitment: preconditions bound, ops recorded, costs fixed.
-    const committed = [];
+    const committed = [], refused = [];
+    // the purse reserves this season's overhead: you cannot spend the rent
+    let purse = (prev ? prev.treasury : P.startingTreasury) + Math.max(0, cmd.grant || 0)
+              - (budgetGate ? P.overhead : 0);
     for (const [capName, target] of [[cmd.opA, cmd.targetA],
                                      [cmd.opB, cmd.targetB]]) {
       const op = makeOp(t, capName, target, prevAnom, "player");
-      if (op) { committed.push(op); state.ops.push(op); }
+      if (!op) continue;
+      if (budgetGate && op.cost > purse) { refused.push(op); continue; }
+      purse -= op.cost;
+      committed.push(op); state.ops.push(op);
     }
     for (const r of rivalPlan(t)) {
       const op = makeOp(t, r.cap, r.target, prevAnom, "rival");
       if (op) state.ops.push(op);
     }
-    const containment = Math.max(0, cmd.containment || 0);
+    let containment = Math.max(0, cmd.containment || 0);
+    if (budgetGate) containment = Math.min(containment, Math.max(0, purse));
 
     // R2 — maturation scan: effects landing at t from strictly prior commits.
     const landed = [];
@@ -401,7 +414,7 @@ function createEngine(MODEL, opts) {
                   price, revenue, severity, mandate, opsSpend, containment,
                   budgetIn, trimmed, jetTriggered, jetActive,
                   treasury, attribution, dossier, ladderText,
-                  status, obsStreak, landed, committed, revealed,
+                  status, obsStreak, landed, committed, refused, revealed,
                   prediction: cmd.prediction || "" };
     state.rows.push(row);
     return row;

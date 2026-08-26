@@ -85,10 +85,26 @@ function news(dateline, headline, breaking){
   wire(`${breaking?'<span class="chip">BREAKING</span>':""}<b>${dateline}</b> — ${headline}`,"news");
   if(breaking) sfxTeletype();
 }
+/* chyrons: a queue, not a firehose. At most three on screen, each held
+   long enough to read, spaced apart, fading out; duplicates collapse. */
+const ALERT_MAX=3, ALERT_LIFE=5200, ALERT_GAP=1000, ALERT_FADE=700;
+const alertQ=[]; let alertLive=0, lastAlertAt=-1e9, alertTimer=null;
 function alertStrip(msg){
+  if(alertQ.includes(msg) || [...$("alerts").children].some(d=>d.textContent===msg)) return;
+  alertQ.push(msg); pumpAlerts();
+}
+function pumpAlerts(){
+  if(alertTimer){ clearTimeout(alertTimer); alertTimer=null; }
+  if(!alertQ.length) return;
+  const now=performance.now(), wait=ALERT_GAP-(now-lastAlertAt);
+  if(alertLive>=ALERT_MAX) return;                       // a removal will pump again
+  if(wait>0){ alertTimer=setTimeout(pumpAlerts, wait); return; }
+  const msg=alertQ.shift(); lastAlertAt=now; alertLive++;
   const d=document.createElement("div"); d.className="alertstrip"; d.textContent=msg;
-  $("alerts").appendChild(d); setTimeout(()=>d.remove(), 3000);
-  sfxAlert();
+  $("alerts").prepend(d); sfxAlert();
+  const gone=()=>{ d.remove(); alertLive--; pumpAlerts(); };
+  setTimeout(()=>{ if(reduced){ gone(); return; } d.classList.add("out"); setTimeout(gone, ALERT_FADE); }, ALERT_LIFE);
+  if(alertQ.length) alertTimer=setTimeout(pumpAlerts, ALERT_GAP);
 }
 function shakeNow(){ sfxBoom(); if(reduced) return;
   const w=$("globe-wrap"); w.classList.remove("shake"); void w.offsetWidth;

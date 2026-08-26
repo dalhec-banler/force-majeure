@@ -49,6 +49,8 @@ function updateHUD(row, prev){
   $("hFundsD").textContent=(dt>=0?"+":"−")+"$"+fmt(Math.abs(dt))+"M";
   $("hFundsD").className="d "+(dt>=0?"up":"down");
   $("hMandate").style.width=row.mandate+"%";
+  $("hFree").textContent="$"+fmt(spendable(),0)+"M";
+  $("hFree").style.color = spendable()<6? "var(--red)" : spendable()<20? "var(--amber)" : "";
   $("hPrice").textContent=fmt(row.price);
   const dp=prev? row.price-prev.price:0;
   $("hPriceD").textContent=(dp>=0?"+":"")+fmt(dp);
