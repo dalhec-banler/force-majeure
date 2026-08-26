@@ -739,6 +739,7 @@ function createEngine(MODEL, opts) {
            drivers: DRIVERS, ladder: MODEL.ladder, assumptions: P,
            seasons: MODEL.climate.length,
            eras, regionOnline, wingOnline, wingStatus, wings: wingsSnapshot, yearOf,
+           shadowRows: () => shadow ? shadow.state.rows : null,
            knowledge: { on: knowledgeOn, edges: EDGES, isKnown, forecast,
                         count: () => { const tt = state.rows.length || 1;
                           const live = EDGES.filter((e) => regionOnline(e.ri, tt));

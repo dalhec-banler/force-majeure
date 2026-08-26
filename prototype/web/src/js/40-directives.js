@@ -86,7 +86,7 @@ function clientInNeed(row){
     if(row.anomalies[ri]<0 && row.yields[ri]<88 && (!best||row.yields[ri]<best.y)) best={name:r.name,a:row.anomalies[ri],y:row.yields[ri]}; });
   return best;
 }
-let dirIdx=0, dirIssued=0, dirIssuedRv=0, pendingGrant=0, pendingClaw=0;
+let dirIdx=0, dirIssued=0, dirIssuedRv=0, pendingGrant=0, pendingClaw=0; const dirLog=[];   // the committee's ledger: every ask, met or lapsed
 let standing=null, standingCount=0, nextStandingRv=99, lapses=0, lastStandingKey=null;
 /* The committee never asks for what the programme cannot fly: a directive
    needs its year AND one of its wings online (or, for the onboarding asks
@@ -136,11 +136,11 @@ function directiveStep(row){
       const due=left<=0;
       if(done || (due && d.goal && d.check(row,d))){
         wire(`<span class="tag tagd">DIRECTIVE COMPLETE</span><b>${d.title.toUpperCase()}</b> — +$${d.reward}M appropriated next quarter. The committee is pleased. For now.`,"op");
-        pendingGrant+=d.reward; sfxChime(); advanceDir();
+        pendingGrant+=d.reward; dirLog.push({t, title:d.title, done:true, reward:d.reward}); sfxChime(); advanceDir();
       } else if(broke || due){
         const claw=Math.round(d.reward/2); lapses++;
         wire(`<span class="tag" style="color:var(--red);border-color:var(--red)">DIRECTIVE LAPSED</span><b>${d.title.toUpperCase()}</b> — ${broke?"the line broke.":"the fuse ran out."} The committee withdraws $${claw}M from next quarter's appropriation. Minutes record “a directorate that does not deliver.”`,"att");
-        pendingClaw+=claw; sfxAlert(); advanceDir();
+        pendingClaw+=claw; dirLog.push({t, title:d.title, done:false, claw}); sfxAlert(); advanceDir();
       }
     }
   } else if(rv>=nextStandingRv && t<eng.seasons-4 && isReviewStart(t)) issueStanding(row);
