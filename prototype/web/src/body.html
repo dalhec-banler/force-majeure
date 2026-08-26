@@ -1,8 +1,8 @@
 <div id="app">
 <header>
   <h1>FORCE MAJEURE</h1>
-  <span class="stat"><span class="lbl">FUNDS</span><span class="val" id="hFunds">$90.0M</span><span class="d" id="hFundsD"></span></span>
-  <span class="stat"><span class="lbl">SPENDABLE</span><span class="val" id="hFree">$58M</span></span>
+  <span class="stat" title="Cash on hand at the close of last season. Each season: funds + income − operations − containment − $32M overhead. Income = 12% of homeland revenue + 90% of the mandate appropriation (×0.6 if the committee has seen no operation from you in four seasons) + directive rewards and earmarks − lapse clawbacks."><span class="lbl">FUNDS</span><span class="val" id="hFunds">$90.0M</span><span class="d" id="hFundsD"></span></span>
+  <span class="stat" title="Funds minus this season's $32M overhead — stations, salaries, flights. The overhead is reserved before anything can be armed; the rest is yours."><span class="lbl">SPENDABLE</span><span class="val" id="hFree">$58M</span></span>
   <span class="stat" id="hTab" style="display:none"><span class="lbl">THIS SEASON</span><span class="val" id="hTabVal">$0M</span><span class="d" id="hTabOf"></span></span>
   <span class="stat"><span class="lbl">FEAR</span></span><span id="hMandateWrap"><span id="hMandate" style="width:28%"></span></span>
   <span class="stat"><span class="lbl">GRAIN</span><span class="val" id="hPrice">100.0</span><span class="d" id="hPriceD"></span></span>
@@ -39,6 +39,7 @@
     </div>
     </div>
     <div id="traywrap">
+      <div id="toolcard"></div>
       <div id="armed"></div>
       <div id="toolinfo">Pick a tool. Aim it at the world. Scroll to zoom.</div>
       <div id="toolbar"></div>

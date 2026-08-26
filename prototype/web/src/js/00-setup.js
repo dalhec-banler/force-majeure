@@ -4,7 +4,13 @@ const HISTORY = __HISTORY__;     // the record: real storms, eruptions, quakes, 
 __ENGINE__
 
 /* ---------------------------------------------------------------- setup */
-const eng = createEngine(MODEL, {rivals:true, idleTrim:0.6, jetstream:true, forensics:true, knowledge:true, budgetGate:true});
+// the record's natural forcing: eruptions load the stratosphere and drop ash
+const EXO=[];
+for(const e of HISTORY.eruptions){
+  if(e.climate) EXO.push({t:e.t, driver:"GLOBAL", mag:e.climate, dur:e.climDur||2, decay:0.6, cap:e.name+" (ash veil)"});
+  for(const a of (e.ash||[])) EXO.push({t:e.t, region:a.region, mag:a.mag, dur:a.dur||1, cap:e.name+" (ashfall)"});
+}
+const eng = createEngine(MODEL, {rivals:true, idleTrim:0.6, jetstream:true, forensics:true, knowledge:true, budgetGate:true, exogenous:EXO});
 const DRVNAME = { ENSO:"the Pacific", IOD:"the Indian Ocean", NATL:"the Atlantic", GLOBAL:"the planet" };
 let SHOW_WIRES=true;             // the known wiring, drawn on the globe
 let newWires=[];                 // wires revealed recently: {di,ri,bornT}
@@ -27,7 +33,7 @@ const DATELINE = { "North American Plains":"OMAHA","Black Sea Steppe":"ODESSA",
   "Andean Copper Belt":"ANTOFAGASTA","Congo Cobalt Belt":"LUBUMBASHI",
   "North Sea Energy Shelf":"ABERDEEN","Ganges Delta Ports":"DHAKA",
   "Siberian Gas Fields":"NOVOSIBIRSK","Arctic Shelf":"LONGYEARBYEN" };
-const TOOLICON = { "Signals Research":"📡", "Cloud Seeding":"☁","Watershed Interference":"🚱",
+const TOOLICON = { "Climate Research":"🔬", "Cloud Seeding":"☁","Watershed Interference":"🚱",
   "Fire Enablement":"🔥","Adaptation Investment":"🛡","Ocean Thermal Forcing":"🌊",
   "Stratospheric Aerosol Inj.":"✈","ENSO Forcing":"🌀","Ionospheric Coupling [T3]":"⚡",
   "Polar Destabilization":"🧊" };

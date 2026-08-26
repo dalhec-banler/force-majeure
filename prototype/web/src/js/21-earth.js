@@ -10,7 +10,9 @@ function initEarth(){
   const fs=`precision mediump float;
     uniform sampler2D uT,uCl;uniform vec2 uC;
     uniform float uR,uRot,uTilt,uClOff,uHasCl;
-    uniform vec3 uRV[16];uniform float uRD[16];uniform float uDV[16];uniform float uIceEdge,uDevG,uT2,uFlat,uSunLon;
+    uniform vec3 uRV[16];uniform float uRD[16];uniform float uDV[16];uniform float uRW[16];uniform float uIceEdge,uDevG,uT2,uFlat,uSunLon,uSea;
+    float water(vec2 q){ vec3 c=texture2D(uT,q).rgb; return smoothstep(0.02,0.18,c.b-c.r); }
+    float flooded(vec2 q, float r){ if(r<=0.0) return 0.0; float m=0.0; for(int i=0;i<8;i++){ float a=float(i)*0.785398; vec2 o=vec2(cos(a),sin(a))*r; m=max(m, water(q+o)); m=max(m, water(q+o*0.5)); } return m; }
     void main(){
       vec2 p=(gl_FragCoord.xy-uC)/uR;
       if(uFlat>0.5){
@@ -22,14 +24,17 @@ function initEarth(){
         vec3 col=texture2D(uT,uv).rgb;
         float wat=smoothstep(0.02,0.18,col.b-col.r);
         vec3 ve=vec3(cos(lat)*sin(lon),sin(lat),cos(lat)*cos(lon));
-        float dry=0.0; float dev=0.0;
+        float dry=0.0; float dev=0.0; float wet=0.0;
         for(int i=0;i<16;i++){
           float dd=acos(clamp(dot(ve,uRV[i]),-1.,1.));
-          dry+=uRD[i]*smoothstep(0.34,0.08,dd);
+          dry+=uRD[i]*smoothstep(0.40,0.08,dd);
           dev+=uDV[i]*smoothstep(0.42,0.10,dd);
+          wet+=uRW[i]*smoothstep(0.36,0.08,dd);
         }
-        dry=clamp(dry,0.,1.); dev=clamp(dev,0.,1.);
-        col=mix(col, vec3(dot(col,vec3(.33)))*vec3(1.18,0.92,0.55), dry*0.8);
+        dry=clamp(dry,0.,1.); dev=clamp(dev,0.,1.); wet=clamp(wet,0.,1.);
+        col=mix(col, col*vec3(0.72,1.18,0.66), wet*0.65*(1.0-wat));
+        col=mix(col, vec3(dot(col,vec3(.33)))*vec3(1.22,0.90,0.50), dry*0.95);
+        { float fl=flooded(uv,uSea)*(1.0-wat); col=mix(col, vec3(0.06,0.16,0.30), fl*0.85); }
         col=mix(col, col*vec3(0.32,0.27,0.25), dev*0.8);
         float n=texture2D(uCl, vec2(fract(uv.x*3.0+0.13), fract(uv.y*3.0))).r;
         float ember=dev*smoothstep(0.5,0.85,n)*(0.55+0.45*sin(uT2*2.6+n*23.0));
@@ -66,15 +71,17 @@ function initEarth(){
       float wat=smoothstep(0.02,0.18,col.b-col.r);   // ocean mask, pre-tint
       // drought browns the land itself — green space disappearing
       vec3 ve=vec3(cos(lat)*sin(lon),sin(lat),cos(lat)*cos(lon));
-      float dry=0.0; float dev=0.0;
+      float dry=0.0; float dev=0.0; float wet=0.0;
       for(int i=0;i<16;i++){
         float dd=acos(clamp(dot(ve,uRV[i]),-1.,1.));
         float fall=smoothstep(0.34,0.08,dd);
-        dry+=uRD[i]*fall;
+        dry+=uRD[i]*fall; wet+=uRW[i]*fall;
         dev+=uDV[i]*smoothstep(0.42,0.10,dd);
       }
-      dry=clamp(dry,0.,1.); dev=clamp(dev,0.,1.);
-      col=mix(col, vec3(dot(col,vec3(.33)))*vec3(1.18,0.92,0.55), dry*0.8);
+      dry=clamp(dry,0.,1.); dev=clamp(dev,0.,1.); wet=clamp(wet,0.,1.);
+      col=mix(col, col*vec3(0.72,1.18,0.66), wet*0.65*(1.0-wat));
+      col=mix(col, vec3(dot(col,vec3(.33)))*vec3(1.22,0.90,0.50), dry*0.95);
+      { float fl=flooded(uv,uSea)*(1.0-wat); col=mix(col, vec3(0.06,0.16,0.30), fl*0.85); }
       // devastation: the land chars, then glows from within
       col=mix(col, col*vec3(0.32,0.27,0.25), dev*0.8);
       float n=texture2D(uCl, vec2(fract(uv.x*3.0+0.13), fract(uv.y*3.0))).r;
@@ -120,6 +127,7 @@ function initEarth(){
         T:gl.getUniformLocation(pr,"uT"), Cl:gl.getUniformLocation(pr,"uCl"),
         RV:gl.getUniformLocation(pr,"uRV[0]"), RD:gl.getUniformLocation(pr,"uRD[0]"),
         DV:gl.getUniformLocation(pr,"uDV[0]"), DevG:gl.getUniformLocation(pr,"uDevG"),
+        RW:gl.getUniformLocation(pr,"uRW[0]"), Sea:gl.getUniformLocation(pr,"uSea"),
         T2:gl.getUniformLocation(pr,"uT2"),
         Flat:gl.getUniformLocation(pr,"uFlat"),
         SunLon:gl.getUniformLocation(pr,"uSunLon"),
@@ -159,13 +167,16 @@ function drawEarth(nowMs){
   gl.uniform1f(glU.ClOff, (nowMs*0.000004)%1);
   gl.uniform1f(glU.HasCl, (texReady&2)?1:0);
   gl.uniform1i(glU.T,0); gl.uniform1i(glU.Cl,1);
-  const row=lastRow(), dry=new Float32Array(16), dv=new Float32Array(16);
+  const row=lastRow(), dry=new Float32Array(16), dv=new Float32Array(16), wet=new Float32Array(16);
   if(row) for(let i=0;i<Math.min(16,REG.length);i++){
-    dry[i]=Math.max(0,Math.min(1,-row.anomalies[i]/1.6));
+    dry[i]=Math.max(0,Math.min(1,-row.anomalies[i]/1.4));
+    wet[i]=Math.max(0,Math.min(1,row.anomalies[i]/1.2));
     dv[i]=Math.max(0,Math.min(1,(78-row.yields[i])/45));
   }
   gl.uniform1fv(glU.RD, dry);
   gl.uniform1fv(glU.DV, dv);
+  gl.uniform1fv(glU.RW, wet);
+  gl.uniform1f(glU.Sea, 0.022*Math.pow(iceMelt,0.8));   // the coasts go under as the ice goes
   gl.uniform1f(glU.DevG, devastation());
   gl.uniform1f(glU.T2, nowMs/1000);
   gl.uniform1f(glU.IceEdge, (66+18*iceMelt)*Math.PI/180);

@@ -38,7 +38,7 @@ function drawEffects(nowMs){
         cx.restore();
       }
     } else if(e.type==="fire"){
-      const ks=k*(e.scale||1);
+      const ks=k*1.6*(e.scale||1);
       for(let i=0;i<5;i++){
         const fx=p.x+Math.sin(i*2.1+nowMs/90)*ks*0.5, fy=p.y+Math.cos(i*1.7+nowMs/110)*ks*0.4;
         const fl=0.55+0.45*Math.sin(nowMs/70+i*2.3);

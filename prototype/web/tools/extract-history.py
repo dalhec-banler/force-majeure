@@ -59,21 +59,24 @@ if RAW:
             m0=m0,d0=d0,peak=peak,cat=cat(peak),landfall=bool(land),dl=dl,track=track))
 
 # ---- authored geophysical canon (VERIFY dates/magnitudes vs GVP + USGS) ----
-E=lambda y,m,d,dur,name,lat,lon,dl,line,scale=1.0: dict(t=season(y,m),dur=dur,name=name,pos=[lat,lon],dl=dl,line=line,scale=scale,date=f"{y}-{m:02d}-{d:02d}")
+# climate: stratospheric loading as a GLOBAL harvest-stress forcing (the aerosol
+# tool's natural analogue; 1946–55 had no Pinatubo — Hekla 1947 is the only one
+# with any stratospheric reach). ash: local yield hits on mapped regions. vei: display.
+E=lambda y,m,d,dur,name,lat,lon,dl,line,scale=1.0,vei=2,climate=0,climDur=0,ash=None: dict(t=season(y,m),dur=dur,name=name,pos=[lat,lon],dl=dl,line=line,scale=scale,vei=vei,climate=climate,climDur=climDur,ash=ash or [],date=f"{y}-{m:02d}-{d:02d}")
 eruptions=[
- E(1946,1,1,4,"Sakurajima",31.6,130.7,"KAGOSHIMA","Sakurajima in eruption; lava reaches the sea at Kurokami. Kagoshima sweeps ash.",0.9),
- E(1946,1,1,25,"Paricutín",19.5,-102.25,"URUAPAN","Paricutín, the volcano that rose in a cornfield in 1943, still building its cone.",0.45),
- E(1947,3,29,5,"Hekla",64.0,-19.7,"REYKJAVÍK","Hekla erupts after a century's silence. Ash to thirty kilometres; the column is seen from Scotland.",1.35),
- E(1949,6,24,2,"Cumbre Vieja",28.6,-17.85,"SANTA CRUZ DE LA PALMA","Cumbre Vieja opens on La Palma. Lava reaches the western coast.",0.7),
- E(1950,6,1,1,"Mauna Loa",19.5,-155.6,"HILO","Mauna Loa's largest eruption in a lifetime. Lava crosses the coast road in three hours.",0.6),
- E(1950,11,25,5,"Etna",37.7,15.0,"CATANIA","Etna's longest flank eruption in living memory begins. Milo threatened.",0.9),
- E(1951,1,21,2,"Lamington",-8.95,148.15,"PORT MORESBY","Mount Lamington explodes without warning. The Higaturu district is gone.",1.25),
- E(1952,9,17,2,"Myōjin-shō",31.9,140.0,"TOKYO","A submarine volcano surfaces south of Tokyo and destroys the survey ship sent to study it. No survivors.",0.8),
- E(1953,7,9,1,"Mount Spurr",61.3,-152.25,"ANCHORAGE","Spurr erupts; a quarter-inch of ash on Anchorage by afternoon.",0.9),
- E(1953,12,24,1,"Ruapehu",-39.3,175.6,"WELLINGTON","Ruapehu's crater lake bursts. The lahar takes the Tangiwai rail bridge with the Wellington express on it.",0.6),
- E(1954,1,18,1,"Merapi",-7.5,110.4,"YOGYAKARTA","Merapi's dome collapses. Pyroclastic flows into the villages on the south flank.",0.8),
- E(1955,2,28,2,"Kīlauea",19.4,-155.0,"HILO","Kīlauea's east rift opens through the cane fields of Puna. Twenty-one homes lost.",0.6),
- E(1955,10,22,1,"Bezymianny",55.97,160.6,"PETROPAVLOVSK","A volcano the maps called extinct wakes in Kamchatka. The Soviets say nothing.",1.0),
+ E(1946,1,1,4,"Sakurajima",31.6,130.7,"KAGOSHIMA","Sakurajima in eruption; lava reaches the sea at Kurokami. Kagoshima sweeps ash.",0.9,3),
+ E(1946,1,1,25,"Paricutín",19.5,-102.25,"URUAPAN","Paricutín, the volcano that rose in a cornfield in 1943, still building its cone.",0.45,4),
+ E(1947,3,29,5,"Hekla",64.0,-19.7,"REYKJAVÍK","Hekla erupts after a century's silence. Ash to thirty kilometres; the column is seen from Scotland.",1.35,4,0.3,3,[{"region":"North Sea Energy Shelf","mag":-0.1,"dur":1}]),
+ E(1949,6,24,2,"Cumbre Vieja",28.6,-17.85,"SANTA CRUZ DE LA PALMA","Cumbre Vieja opens on La Palma. Lava reaches the western coast.",0.7,2),
+ E(1950,6,1,1,"Mauna Loa",19.5,-155.6,"HILO","Mauna Loa's largest eruption in a lifetime. Lava crosses the coast road in three hours.",0.6,0),
+ E(1950,11,25,5,"Etna",37.7,15.0,"CATANIA","Etna's longest flank eruption in living memory begins. Milo threatened.",0.9,3),
+ E(1951,1,21,2,"Lamington",-8.95,148.15,"PORT MORESBY","Mount Lamington explodes without warning. The Higaturu district is gone.",1.25,4,0.1,2),
+ E(1952,9,17,2,"Myōjin-shō",31.9,140.0,"TOKYO","A submarine volcano surfaces south of Tokyo and destroys the survey ship sent to study it. No survivors.",0.8,2),
+ E(1953,7,9,1,"Mount Spurr",61.3,-152.25,"ANCHORAGE","Spurr erupts; a quarter-inch of ash on Anchorage by afternoon.",0.9,4),
+ E(1953,12,24,1,"Ruapehu",-39.3,175.6,"WELLINGTON","Ruapehu's crater lake bursts. The lahar takes the Tangiwai rail bridge with the Wellington express on it.",0.6,2),
+ E(1954,1,18,1,"Merapi",-7.5,110.4,"YOGYAKARTA","Merapi's dome collapses. Pyroclastic flows into the villages on the south flank.",0.8,3,0,0,[{"region":"Southeast Asia","mag":-0.12,"dur":1}]),
+ E(1955,2,28,2,"Kīlauea",19.4,-155.0,"HILO","Kīlauea's east rift opens through the cane fields of Puna. Twenty-one homes lost.",0.6,0),
+ E(1955,10,22,1,"Bezymianny",55.97,160.6,"PETROPAVLOVSK","A volcano the maps called extinct wakes in Kamchatka. The Soviets say nothing.",1.0,3,0.15,2),
 ]
 Q=lambda y,m,d,mag,name,lat,lon,dl,line: dict(t=season(y,m),mag=mag,name=name,pos=[lat,lon],dl=dl,line=line,date=f"{y}-{m:02d}-{d:02d}")
 quakes=[

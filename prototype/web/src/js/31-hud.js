@@ -98,7 +98,7 @@ function traceFor(ri, row){
         const c=hit*MODEL.coeff[di][ri];
         if(o.owner==="player"){ mine+=c; parts.push(o.cap);
           if(!eng.knowledge.isKnown(di,ri)) unknown=true; }
-        else theirs+=c;
+        else if(o.owner==="rival") theirs+=c;
       }
     }
   }
@@ -106,7 +106,7 @@ function traceFor(ri, row){
     if(e.kind==="region" && e.target===REG[ri].name){
       if(e.owner==="player"){ mine+=e.mag;
         if(!e.cap.includes("displacement")) parts.push(e.cap); }
-      else theirs+=e.mag;
+      else if(e.owner==="rival") theirs+=e.mag;
     }
   return {mine, theirs, unknown, parts:[...new Set(parts)]};
 }

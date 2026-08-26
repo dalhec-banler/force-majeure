@@ -2,7 +2,7 @@ function drawGlobe(now){
   if(!dragging && !reduced && !FLAT) rot += 0.022;
   const nowMs=now||0;
   cx.clearRect(0,0,W,H);
-  const FC=(running&&eng.knowledge.on&&lastRow())? eng.knowledge.forecast():null;
+  const FC=(running&&eng.knowledge.on&&lastRow())? eng.knowledge.forecast(slots):null;
   drawStars(nowMs);
   const earthOn = drawEarth(nowMs);
   if(!earthOn){
@@ -53,6 +53,16 @@ function drawGlobe(now){
   drawAmbient(nowMs);
   drawEffects(nowMs);
   drawWires(nowMs, row);
+  { const AD=armedDrivers();
+    if(AD.GLOBAL!==undefined){                   // aerosol / polar: the whole board
+      const ph=(nowMs/1600)%1;
+      for(let ri=0;ri<REG.length;ri++){ const p=project(...REGPOS[REG[ri].name]); if(!p.vis) continue;
+        const lag=AD.GLOBAL+MODEL.lags[3][ri];
+        cx.strokeStyle=`rgba(224,164,88,${0.55*(1-ph)})`; cx.lineWidth=1;
+        cx.beginPath(); cx.arc(p.x,p.y,8+ph*18,0,7); cx.stroke();
+        cx.fillStyle="rgba(224,164,88,.9)"; cx.font="8px "+getComputedStyle(document.body).getPropertyValue("--mono");
+        cx.fillText(`▼ +${lag}`, p.x+7, p.y-7); }
+    } }
 
   for(const [d,[la,lo]] of Object.entries(DRVPOS)){
     const p=project(la,lo); if(!p.vis) continue;
@@ -193,27 +203,64 @@ function strokePath(arr){
 }
 /* the wiring you know — amber wires dry a region when their ocean warms,
    cyan wires wet it. Signal runs along a wire while its driver is loud. */
+/* what your armed and in-flight driver operations will reach: {driver: capLag} */
+function armedDrivers(){
+  const out={};
+  for(const s of slots){ const c=CAPS.find(x=>x.name===s.cap); if(c&&c.type==="DRIVER") out[c.fixedTarget]=Math.min(out[c.fixedTarget]??99, c.lag); }
+  for(const o of eng.state.ops){
+    if(o.owner!=="player"||o.type!=="DRIVER") continue;
+    const start=o.t+o.lag, dur=o.dur||1;
+    if(t<start+dur) out[o.target]=Math.min(out[o.target]??99, Math.max(0,start-t));
+  }
+  return out;
+}
 function drawWires(nowMs,row){
   if(!eng.knowledge.on || !SHOW_WIRES) return;
-  const K=eng.knowledge;
+  const K=eng.knowledge, AD=armedDrivers();
+  const researching=pendingTool==="Climate Research" || slots.some(s=>s.cap==="Climate Research");
+  // research: where the world is still dark — dotted stubs from each region
+  // toward the oceans whose wires into it are not on the board
+  if(researching){
+    const targets=new Set(slots.filter(s=>s.cap==="Climate Research").map(s=>s.target));
+    for(const e of K.edges){
+      if(K.isKnown(e.di,e.ri)) continue;
+      const dp=DRVPOS[e.driver]; if(!dp) continue;
+      const a=project(...REGPOS[e.region]), b=project(...dp); if(!a.vis) continue;
+      const armed=targets.has(e.region);
+      const L=armed? 0.35 : 0.16, x1=a.x+(b.x-a.x)*L, y1=a.y+(b.y-a.y)*L;
+      cx.setLineDash([2,4]); cx.strokeStyle=armed? "rgba(200,230,207,.75)" : "rgba(200,230,207,.28)"; cx.lineWidth=armed?1.2:0.8;
+      cx.beginPath(); cx.moveTo(a.x,a.y); cx.lineTo(x1,y1); cx.stroke(); cx.setLineDash([]);
+      if(armed){ cx.fillStyle="rgba(200,230,207,.85)"; cx.font="8px "+getComputedStyle(document.body).getPropertyValue("--mono"); cx.fillText("?", x1+2, y1-2); }
+    }
+    for(const nm of targets){ const p=project(...REGPOS[nm]); if(!p.vis) continue;
+      const ph=(nowMs/1500)%1; cx.strokeStyle=`rgba(200,230,207,${0.6*(1-ph)})`; cx.lineWidth=1;
+      cx.beginPath(); cx.arc(p.x,p.y,6+ph*22,0,7); cx.stroke(); }
+    cx.lineWidth=1;
+  }
   for(const e of K.edges){
     if(!K.isKnown(e.di,e.ri)) continue;
     const dp=DRVPOS[e.driver]; if(!dp) continue;
     const a=project(...dp), b=project(...REGPOS[e.region]);
     if(!a.vis||!b.vis) continue;
     const dv=row? row.driverTotals[e.di] : 0;
-    const live=Math.abs(dv)>=0.8;
+    const armed=AD[e.driver]!==undefined;
+    const live=Math.abs(dv)>=0.8 || armed;
     const fresh=newWires.some(w=>w.di===e.di&&w.ri===e.ri);
     const str=Math.min(1,Math.abs(e.coeff)/0.9);
     const mx=(a.x+b.x)/2, my=(a.y+b.y)/2, dx=b.x-a.x, dy=b.y-a.y;
     const nx=CXp-mx, ny=CYp-my, nl=Math.hypot(nx,ny)||1;
     const cxp=mx-(nx/nl)*Math.hypot(dx,dy)*0.3, cyp=my-(ny/nl)*Math.hypot(dx,dy)*0.3;
-    const al=(fresh? 0.8 : live? 0.45 : 0.16)*(0.5+0.5*str);
+    const al=(fresh||armed? 0.85 : live? 0.45 : 0.16)*(0.5+0.5*str);
     const rgb=e.coeff<0? "224,164,88" : "91,200,232";
     cx.strokeStyle=`rgba(${rgb},${al})`;
-    cx.lineWidth=fresh?1.6:0.8; cx.setLineDash(fresh?[]:[3,5]);
+    cx.lineWidth=(fresh||armed)?1.6:0.8; cx.setLineDash((fresh||armed)?[]:[3,5]);
     cx.beginPath(); cx.moveTo(a.x,a.y); cx.quadraticCurveTo(cxp,cyp,b.x,b.y); cx.stroke();
     cx.setLineDash([]);
+    if(armed){                                     // when it lands, and which way
+      const lag=AD[e.driver]+e.lag;
+      cx.fillStyle=`rgba(${rgb},.95)`; cx.font="8px "+getComputedStyle(document.body).getPropertyValue("--mono");
+      cx.fillText(`${e.coeff<0?"▼":"▲"} +${lag}`, b.x+7, b.y-7);
+    }
     if(live||fresh){
       const tt=((nowMs/1800)+e.ri*0.13)%1;
       const px=(1-tt)*(1-tt)*a.x+2*(1-tt)*tt*cxp+tt*tt*b.x, py=(1-tt)*(1-tt)*a.y+2*(1-tt)*tt*cyp+tt*tt*b.y;
@@ -222,11 +269,33 @@ function drawWires(nowMs,row){
   }
   cx.lineWidth=1;
 }
+function nearestHistory(mx,my){
+  let best=null, bd=18; const ts=Math.max(1,t);
+  const test=(p,obj)=>{ if(!p.vis) return; const d=Math.hypot(p.x-mx,p.y-my); if(d<bd){bd=d;best=obj;} };
+  for(const st of activeStorms(ts, seasonProgress(performance.now()))) test(project(st.lat,st.lon), {type:"storm",st});
+  if(!lithoUnlocked()) for(const q of HISTORY.quakes) if(q.t===ts) test(project(...q.pos), {type:"quake",q});
+  for(const er of activeEruptions(ts)) test(project(...er.pos), {type:"eruption",er});
+  return best;
+}
 function hoverCheck(e){
   const best=nearestRegion(e);
   const h=$("hover");
-  if(best===null){ h.style.display="none"; return; }
   const rect=cv.getBoundingClientRect(), mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  if(best===null){
+    const hh=nearestHistory(mx,my);
+    if(!hh){ h.style.display="none"; return; }
+    if(hh.type==="storm"){ const s=hh.st.s, f=atlanticForcing();
+      h.innerHTML=`<b>${(s.name? "HURRICANE "+s.name : "UNNAMED HURRICANE").toUpperCase()}</b> · ${s.year}<br>
+        Category ${s.cat} · ${s.peak} kt at peak · ${s.landfall? "landfall near "+s.dl.charAt(0)+s.dl.slice(1).toLowerCase() : "at sea"}<br>
+        <span style="color:var(--ink-faint)">the record's storm, on its recorded track${f>1?" — <span style='color:var(--amber)'>stronger: you warmed the Atlantic</span>":""}</span>`; }
+    else if(hh.type==="quake"){ const q=hh.q;
+      h.innerHTML=`<b>EARTHQUAKE M${q.mag.toFixed(1)} — ${q.name.toUpperCase()}</b> · ${q.date}<br>${q.line}<br>
+        <span style="color:var(--ink-faint)">canon. Nothing you do reaches the lithosphere${lithoUnlocked()?"":" — yet"}.</span>`; }
+    else { const er=hh.er, veil=er.climate? `stratospheric veil — harvest stress worldwide for ${er.climDur} seasons` : "no stratospheric reach";
+      h.innerHTML=`<b>${er.name.toUpperCase()} ERUPTING</b>${er.date? " · since "+er.date:""}${er.vei!==undefined?" · VEI "+er.vei:""}<br>${er.line||""}<br>
+        <span style="color:var(--ink-faint)">${veil}${(er.ash||[]).length? " · ashfall: "+er.ash.map(a=>a.region).join(", "):""}</span>`; }
+    h.style.display="block"; h.style.left=Math.min(mx+14,W-250)+"px"; h.style.top=(my+10)+"px"; return;
+  }
   const r=REG[best], row=lastRow();
   const a=row?row.anomalies[best]:0, s=row?row.sigmas[best]:r.sigma;
   const y=row?row.yields[best]:100, res=row?row.resil[best]:0;

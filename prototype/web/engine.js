@@ -37,6 +37,10 @@ function createEngine(MODEL, opts) {
   // Insolvency is therefore reachable only by attrition (overhead), never
   // by a purchase. Gated (default off): the baseline commits no ops.
   const budgetGate = !!(opts && opts.budgetGate);
+  // exogenous natural forcing (ADR-0017): the record's eruptions load the
+  // stratosphere and drop ash on regions. Entries {t, driver|region, mag,
+  // dur, decay, cap}. Landed with owner "nature" — never traced as anyone's.
+  const exogenous = (opts && Array.isArray(opts.exogenous)) ? opts.exogenous : [];
   const A = {};
   for (const [cell, o] of Object.entries(MODEL.assumptions)) A[cell] = o.value;
   // Named views of the ASSUMPTIONS cells the sheet references.
@@ -94,9 +98,11 @@ function createEngine(MODEL, opts) {
    * forecast cannot leak hidden edges) plus the player's own region ops
    * scheduled to land — you know what you did. No noise: the weather itself
    * is never forecast. */
-  function forecast() {
+  function forecast(extra) {   // extra: ops the player is about to commit
     const tn = state.rows.length + 1;
     if (tn > MODEL.climate.length) return null;
+    const prevA = state.rows.length ? state.rows[state.rows.length - 1].anomalies : new Array(NR).fill(0);
+    const pend = (extra || []).map((x) => makeOp(tn, x.cap, x.target, prevA, "player")).filter(Boolean);
     return REGIONS.map((r, ri) => {
       let v = 0, kn = 0, tot = 0;
       for (let di = 0; di < ND; di++) {
@@ -113,6 +119,9 @@ function createEngine(MODEL, opts) {
         const start = op.t + op.lag, dur = op.dur || 1;
         if (tn >= start && tn < start + dur) v += op.mag * Math.pow(op.decay, tn - start);
       }
+      for (const op of pend) if (op.lag === 0 && op.mag !== 0 && op.target === r.name) v += op.mag;
+      for (const x of exogenous)   // the record's ashfall next season
+        if (x.region === r.name && tn >= x.t && tn < x.t + (x.dur || 1)) v += x.mag;
       return { anomaly: v, known: kn, total: tot };
     });
   }
@@ -236,6 +245,15 @@ function createEngine(MODEL, opts) {
         landed.push({ kind: "driver", target: op.disp.to, mag: op.disp.mag,
                       cap: op.cap + " (displacement)", committedT: op.t,
                       sig: 0, first: true, age: 0, owner: op.owner });
+    }
+
+    for (const x of exogenous) {
+      const dur = x.dur || 1;
+      if (t >= x.t && t < x.t + dur && x.mag)
+        landed.push({ kind: x.driver ? "driver" : "region", target: x.driver || x.region,
+                      mag: x.mag * Math.pow(x.decay === undefined ? 1 : x.decay, t - x.t),
+                      cap: x.cap || "nature", committedT: x.t, sig: 0,
+                      first: t === x.t, age: t - x.t, owner: "nature" });
     }
 
     // jet stream check: did a heavy op just land in the high north?

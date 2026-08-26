@@ -91,6 +91,17 @@ function drawAmbient(nowMs){
     cx.font="9px "+getComputedStyle(document.body).getPropertyValue("--mono");
     cx.fillStyle="rgba(255,160,120,.9)"; cx.fillText("M"+q.mag.toFixed(1), p.x+6, p.y-5);
   }
+  // the stratospheric veil of a large eruption: a grey band spreading along its latitude
+  for(const e of HISTORY.eruptions){
+    if(!e.climate || ts<e.t || ts>=e.t+(e.climDur||2)+1) continue;
+    const age=ts-e.t, spread=Math.min(1,(age+1)/3), half=6+14*spread, al=0.16*(e.climate/0.3)*(1-age/((e.climDur||2)+1));
+    cx.fillStyle=`rgba(150,150,150,${al})`;
+    for(let lo=-180;lo<180;lo+=6){
+      const a=project(e.pos[0]+half,lo), b=project(e.pos[0]+half,lo+6), c=project(e.pos[0]-half,lo+6), d=project(e.pos[0]-half,lo);
+      if(!(a.vis&&b.vis&&c.vis&&d.vis)) continue;
+      cx.beginPath(); cx.moveTo(a.x,a.y); cx.lineTo(b.x,b.y); cx.lineTo(c.x,c.y); cx.lineTo(d.x,d.y); cx.closePath(); cx.fill();
+    }
+  }
   // volcanoes: vent glow + the ash column
   activeEruptions(ts).forEach((e,i)=>{
     const p=project(...e.pos); if(!p.vis) return;

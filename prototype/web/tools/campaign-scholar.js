@@ -1,5 +1,5 @@
 // CAMPAIGN 6 — "The Scholar". Follows directives, otherwise spends quiet
-// seasons on Signals Research aimed at the region with the most unknown wires.
+// seasons on Climate Research aimed at the region with the most unknown wires.
 exports.journalFilter = `/RESEARCH|ANALYSIS|DIRECTIVE|Analysis desk|wire not on/.test(j.h)`;
 exports.play = async (api) => {
   const log=[];
@@ -15,7 +15,7 @@ exports.play = async (api) => {
     else if(d==="Move the ocean, not the country"&&v.funds>60){ api.arm("Ocean Thermal Forcing"); did="ocean"; }
     else if(d==="Move a market"&&v.funds>50){ api.arm("Watershed Interference","Black Sea Steppe"); did="watershed"; }
     else if(d==="Answer them"||d==="Answer the Steppe"){ api.arm("Watershed Interference","Black Sea Steppe"); did="answer"; }
-    if(v.funds>40){ api.arm("Signals Research", order[i%order.length]); did+=" +research "+order[i%order.length]; i++; }
+    if(v.funds>40){ api.arm("Climate Research", order[i%order.length]); did+=" +research "+order[i%order.length]; i++; }
     api.containment(v.rung>=3?10:0);
     await api.season();
     const w=api.view();
