@@ -38,6 +38,14 @@ function showArchive(finalRow){
     html+=`<p style="color:var(--ink-dim)">Count the matches yourself. Near zero: the model is noise.
       Near forty: no tension. The game lives in between.</p>`;
   }
+  if(eng.knowledge.on){
+    const K=eng.knowledge, kc=K.count();
+    const never=K.edges.filter(e=>!K.isKnown(e.di,e.ri)).sort((a,b)=>Math.abs(b.coeff)-Math.abs(a.coeff)).slice(0,3);
+    html+=`<h2 style="margin-top:14px">THE WIRING</h2>
+      <p>You left office understanding <b>${kc.known} of ${kc.total}</b> wires in the world.${
+        never.length? ` The strongest you never found: ${never.map(e=>`${DRVNAME[e.driver]} → ${e.region}`).join("; ")}. Some of what you called weather was those.`
+        : " The board was complete. Nothing that happened to you was unexplained — only unforeseen."}</p>`;
+  }
   const rivalOps=eng.state.ops.filter(o=>o.owner==="rival");
   if(rivalOps.length){
     html+=`<h2 style="margin-top:14px">DECLASSIFIED — THE EASTERN PROGRAM</h2>

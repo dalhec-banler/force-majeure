@@ -16,6 +16,19 @@ async function runSeason(auto){
   pendingGrant=0; pendingClaw=0;
   t++;
   const row = eng.resolve(t, cmd);
+  newWires=newWires.filter(w=>t-w.bornT<3);
+  for(const e of (row.revealed||[])){
+    if(e.how==="exhausted"){ wire(`RESEARCH — ${e.region}: nothing left to learn. Every wire into it is on the board.`,"op"); continue; }
+    newWires.push({di:e.di,ri:e.ri,bornT:t});
+    const verb=e.coeff<0?"dries":"wets", lagS=`${e.lag} season${e.lag===1?"":"s"}`;
+    if(e.how==="research")
+      wire(`<span class="tag tagd">RESEARCH</span>${DRVNAME[e.driver]} → <b>${e.region}</b>: the wire is on the board. A warm swing ${verb} it ${lagS} later.`,"op");
+    else
+      wire(`ANALYSIS — ${DRVNAME[e.driver]} explained ${e.region}'s season. <b>Wire recorded</b> — ${verb} it, ${lagS} on.`,"op");
+    sfxTeletype();
+    const kc=eng.knowledge.count();
+    if(kc.known>=kc.total) wire(`ANALYSIS — <b>The board is complete.</b> Every wire in the world is on it. Nothing that happens now is unexplained.`,"op");
+  }
   if(drawn){
     wire(`<span class="tag tagd">EARMARK DRAWN</span> $${flagship.amount}M. The demonstration is funded. The committee will want to watch.`,"op");
     flagship=null;
@@ -178,7 +191,7 @@ async function runSeason(auto){
     const pctYou=Math.abs(a)>1e-9? Math.max(0,Math.min(1,tr.mine/a)):0;
     const pctThem=Math.abs(a)>1e-9? Math.max(0,Math.min(1,tr.theirs/a)):0;
     if(tr.parts.length && pctYou>0.2){
-      wire(`TRACE — ~${Math.round(pctYou*100)}% your signal: ${tr.parts.join(", ")}.`,"op");
+      wire(`TRACE — ~${Math.round(pctYou*100)}% your signal: ${tr.parts.join(", ")}.${tr.unknown?" <b>Part of it ran through a wire not on our board.</b>":""}`,"op");
       if(a<0 && !r.kind && (t+ri)%2===0)
         wire(`ADVERTISEMENT — Halvorsen Yield Assurance: “Weather shouldn't decide a family's future.” Drought-tolerant cultivars, now available across ${r.name}.`,"ad");
     }
@@ -193,7 +206,7 @@ async function runSeason(auto){
         wire(`MEMO — Counterintelligence: they hit ${r.name} — the harvest we have been protecting. <b>They are reading our flight logs.</b>`,"memo");
     }
     else if(tr.parts.length && pctYou>0.05)
-      wire(`TRACE — trace contribution yours (${tr.parts.join(", ")}). Mostly the planet.`,"op");
+      wire(`TRACE — trace contribution yours (${tr.parts.join(", ")}). Mostly the planet.${tr.unknown?" Some of yours came by a wire not on our board.":""}`,"op");
     else if(severe)
       wire(`TRACE — fully natural. Cover, if you want it.`,"op");
   }

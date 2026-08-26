@@ -54,6 +54,8 @@ function updateHUD(row, prev){
   $("hPriceD").textContent=(dp>=0?"+":"")+fmt(dp);
   $("hPriceD").className="d "+(dp>=0?"up":"down");
   $("hYield").textContent=fmt(row.yields[REG.findIndex(r=>r.homeland)],0)+"%";
+  if(eng.knowledge.on){ const kc=eng.knowledge.count(); $("hWires").textContent=kc.known+"/"+kc.total;
+    $("hWires").style.color = kc.known>=kc.total? "var(--green)" : ""; }
   const hd=$("hDead"), newDead=fmtDead(cumDead);
   if(hd.textContent!==newDead && cumDead>0){
     hd.classList.remove("tick"); void hd.offsetWidth; hd.classList.add("tick"); }
@@ -80,7 +82,7 @@ function updateHUD(row, prev){
 /* whose disaster is this? — trace the player's share of an anomaly */
 /* whose disaster is this? — split an anomaly into player / rival / nature */
 function traceFor(ri, row){
-  const parts=[]; let mine=0, theirs=0;
+  const parts=[]; let mine=0, theirs=0, unknown=false;
   for(let di=0; di<ND; di++){
     const ts=t-MODEL.lags[di][ri];
     if(ts>=1){
@@ -92,7 +94,9 @@ function traceFor(ri, row){
         if(o.disp && o.t+o.disp.lag===ts && o.disp.to===DRV[di]) hit+=o.disp.mag;
         if(!hit) continue;
         const c=hit*MODEL.coeff[di][ri];
-        if(o.owner==="player"){ mine+=c; parts.push(o.cap); } else theirs+=c;
+        if(o.owner==="player"){ mine+=c; parts.push(o.cap);
+          if(!eng.knowledge.isKnown(di,ri)) unknown=true; }
+        else theirs+=c;
       }
     }
   }
@@ -102,7 +106,7 @@ function traceFor(ri, row){
         if(!e.cap.includes("displacement")) parts.push(e.cap); }
       else theirs+=e.mag;
     }
-  return {mine, theirs, parts:[...new Set(parts)]};
+  return {mine, theirs, unknown, parts:[...new Set(parts)]};
 }
 
 function s2f(x){ return x.toFixed(2); }
@@ -116,6 +120,15 @@ function memos(row){
   const dryRi=REG.findIndex((r,ri)=>!r.kind && row.anomalies[ri]<eng.assumptions.dryThreshold);
   if(dryRi>=0)
     out.push(`Ops desk: ${REG[dryRi].name} is dry as tinder. Conditions for enablement will not hold.`);
+  if(eng.knowledge.on){                             // the unexplained season
+    let worst=null;
+    REG.forEach((r,ri)=>{ const a=row.anomalies[ri];
+      if(Math.abs(a)<=row.sigmas[ri]*eng.assumptions.severityThreshold) return;
+      let u=0; for(let di=0;di<ND;di++){ if(eng.knowledge.isKnown(di,ri)) continue;
+        const ts=t-MODEL.lags[di][ri]; if(ts>=1) u+=Math.abs(eng.state.rows[ts-1].driverTotals[di]*MODEL.coeff[di][ri]); }
+      if(u>=0.3&&(!worst||u>worst.u)) worst={r,u}; });
+    if(worst) out.push(`Analysis desk: we cannot explain ${worst.r.name}'s season. Something is wired to it that is not on our board.`);
+  }
   if(row.dossier>=25 && row.containment===0)
     out.push("Legal office: we spend nothing on containment while questions accumulate.");
   if(t>4 && row.mandate<=eng.assumptions.mandateBase+1)

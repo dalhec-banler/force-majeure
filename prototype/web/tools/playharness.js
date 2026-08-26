@@ -64,6 +64,7 @@ const driver=`
         directive:(curDir()&&dirActive(curDir()))? curDir().title : "none",
         directiveLeft:(curDir()&&dirActive(curDir()))? curDir().window-(t-(curDir().standing?curDir().issued:Math.max(dirIssued,curDir().from||0))) : 0,
         flagship: flagship? flagship.deadline-t : 0, lapses,
+        wires: eng.knowledge.count(),
         inflight:eng.state.ops.filter(o=>o.owner==="player"&&o.t+o.lag>t).length,
         status:row?row.status:"running" };
     },

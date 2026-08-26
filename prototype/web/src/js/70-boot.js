@@ -13,6 +13,11 @@ $("viewtoggle").addEventListener("click",()=>{
   $("viewtoggle").textContent="VIEW: "+(FLAT?"FLAT MAP":"GLOBE");
   sfxClick();
 });
+$("wiretoggle").addEventListener("click",()=>{
+  SHOW_WIRES=!SHOW_WIRES;
+  $("wiretoggle").textContent="WIRES: "+(SHOW_WIRES?"ON":"OFF");
+  sfxClick();
+});
 $("sndtoggle").addEventListener("click",()=>{
   sndMuted=!sndMuted;
   $("sndtoggle").textContent="SOUND: "+(sndMuted?"OFF":"ON");

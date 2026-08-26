@@ -3,7 +3,10 @@ const LAND = __LAND__;
 __ENGINE__
 
 /* ---------------------------------------------------------------- setup */
-const eng = createEngine(MODEL, {rivals:true, idleTrim:0.6, jetstream:true, forensics:true});
+const eng = createEngine(MODEL, {rivals:true, idleTrim:0.6, jetstream:true, forensics:true, knowledge:true});
+const DRVNAME = { ENSO:"the Pacific", IOD:"the Indian Ocean", NATL:"the Atlantic", GLOBAL:"the planet" };
+let SHOW_WIRES=true;             // the known wiring, drawn on the globe
+let newWires=[];                 // wires revealed recently: {di,ri,bornT}
 const REG = eng.regions, DRV = eng.drivers, CAPS = eng.capabilities;
 const ND = DRV.length;
 const REGPOS = { "North American Plains":[41.5,-100], "Black Sea Steppe":[48,34],
@@ -21,7 +24,7 @@ const DATELINE = { "North American Plains":"OMAHA","Black Sea Steppe":"ODESSA",
   "Andean Copper Belt":"ANTOFAGASTA","Congo Cobalt Belt":"LUBUMBASHI",
   "North Sea Energy Shelf":"ABERDEEN","Ganges Delta Ports":"DHAKA",
   "Siberian Gas Fields":"NOVOSIBIRSK","Arctic Shelf":"LONGYEARBYEN" };
-const TOOLICON = { "Cloud Seeding":"☁","Watershed Interference":"🚱",
+const TOOLICON = { "Signals Research":"📡", "Cloud Seeding":"☁","Watershed Interference":"🚱",
   "Fire Enablement":"🔥","Adaptation Investment":"🛡","Ocean Thermal Forcing":"🌊",
   "Stratospheric Aerosol Inj.":"✈","ENSO Forcing":"🌀","Ionospheric Coupling [T3]":"⚡",
   "Polar Destabilization":"🧊" };

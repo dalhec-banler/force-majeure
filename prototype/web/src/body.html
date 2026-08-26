@@ -5,6 +5,7 @@
   <span class="stat"><span class="lbl">FEAR</span></span><span id="hMandateWrap"><span id="hMandate" style="width:28%"></span></span>
   <span class="stat"><span class="lbl">GRAIN</span><span class="val" id="hPrice">100.0</span><span class="d" id="hPriceD"></span></span>
   <span class="stat"><span class="lbl">HARVEST</span><span class="val" id="hYield">—</span></span>
+  <span class="stat"><span class="lbl">WIRES</span><span class="val" id="hWires">—</span></span>
   <span class="stat"><span class="lbl">PROFIT</span><span class="val" id="hProfit">$0M</span></span>
   <span class="stat"><span class="lbl">DEATH TOLL</span><span class="val" id="hDead" style="color:var(--red)">0</span></span>
   <span class="stat"><span class="lbl">SEASON CLOSES</span><span class="val" id="szclock">—</span></span>
@@ -28,7 +29,8 @@
       <span><i style="background:#53d97b"></i>thriving</span>
       <span><i style="background:#e0a458"></i>strained</span>
       <span><i style="background:#e05252"></i>failing</span>
-      <span style="color:var(--ink-faint)">⚠ famine · ring = natural envelope</span>
+      <span style="color:var(--ink-faint)">⚠ famine · ring = natural envelope · dashed ring = forecast</span>
+      <span style="color:var(--ink-faint)"><i style="background:#e0a458;transform:none;width:10px;height:2px"></i>wire dries <i style="background:#5bc8e8;transform:none;width:10px;height:2px"></i>wets</span>
     </div>
     <div id="traywrap">
       <div id="armed"></div>
@@ -80,6 +82,7 @@
 <footer>
   <span>EYES ONLY // NOFORN // 40-SEASON CORE-LOOP INSTRUMENT</span>
   <button id="viewtoggle">VIEW: GLOBE</button>
+  <button id="wiretoggle">WIRES: ON</button>
   <button id="sndtoggle">SOUND: ON</button>
   <button id="teltoggle">TELEMETRY: LADDER ONLY</button>
 </footer>

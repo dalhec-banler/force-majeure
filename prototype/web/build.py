@@ -39,6 +39,9 @@ def rnd():
     return seed/0x7fffffff
 for row in M["climate"]:
     row["noise"] = row["noise"] + [round((rnd()*2-1)*0.28,3) for _ in EXP]
+M["capabilities"].append({"name":"Signals Research","type":"REGION",
+    "fixedTarget":0,"mag":0,"lag":1,"sig":0,"cost":8,"dispTo":"",
+    "dispFactor":0,"dispExtraLag":0,"needsDrought":False,"resil":0,"research":True})
 M["capabilities"].append({"name":"Polar Destabilization","type":"REGION",
     "fixedTarget":0,"mag":2.2,"lag":4,"sig":16,"cost":38,"dispTo":"GLOBAL",
     "dispFactor":0.35,"dispExtraLag":3,"needsDrought":False,"resil":0})

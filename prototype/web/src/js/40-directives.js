@@ -20,6 +20,9 @@ const DIRECTIVES=[
  {title:"Harden the homeland", reward:10, window:6, tool:"🛡 ADAPTATION INVESTMENT — your homeland (green ring)",
   text:"The committee funds what it can tour. Reservoirs and seed banks photograph well. Invest in Adaptation at home.",
   check:()=>eng.state.ops.some(o=>o.owner==="player"&&o.cap==="Adaptation Investment"&&o.target===REG.find(r=>r.homeland).name)},
+ {title:"Read the wiring", reward:10, window:6, tool:"📡 SIGNALS RESEARCH — a region whose weather you do not understand",
+  text:"Your analysts can see a fifth of how the world is wired. The committee has funded a room of them. Point it somewhere.",
+  check:()=>eng.state.ops.some(o=>o.owner==="player"&&o.research)},
  {title:"Move the ocean, not the country", reward:14, window:6, tool:"🌊 OCEAN THERMAL, ✈ AEROSOL, or 🌀 ENSO FORCING",
   text:"Stop pushing countries. Push the sea that pushes them — commit any ocean or atmospheric driver operation.",
   check:()=>eng.state.ops.some(o=>o.owner==="player"&&o.type==="DRIVER")},
@@ -55,6 +58,10 @@ const STANDING=[
   tool:"🌊 OCEAN THERMAL, ✈ AEROSOL, or larger",
   text:"Appropriations season. The committee funds programmes that do things. Do something they can see from a satellite.",
   check:(row,d)=>eng.state.ops.some(o=>o.owner==="player"&&o.sig>=7&&o.t>d.issued)},
+ {key:"map", title:"Map the world", reward:12, window:5,
+  tool:"📡 SIGNALS RESEARCH — regions whose seasons you cannot explain",
+  text:"Two wires. The committee has read the analysts' estimate of how much of the world we understand, and did not enjoy it.",
+  check:(row,d)=>eng.state.rows.slice(d.issued).reduce((n,r)=>n+(r.revealed||[]).filter(x=>x.how!=="exhausted").length,0)>=2},
  {key:"hold", title:"Hold the line", reward:12, window:4, goal:true,
   tool:"🛡 ADAPTATION or ☁ CLOUD SEEDING — homeland",
   text:"Four seasons. The homeland harvest does not drop below 94%. The Secretary has said as much on television.",
@@ -73,13 +80,13 @@ let standing=null, standingCount=0, nextStandingT=99, lapses=0, lastStandingKey=
 function curDir(){ return DIRECTIVES[dirIdx]||standing; }
 function dirActive(d){ return d && !(d.from && t<d.from); }
 function issueStanding(row){
-  const rot=["price","flag","hold"];
+  const rot=["price","flag","map","hold"];
   // never the same demand twice running — the committee has a memory
   const ok=s=>s.key!==lastStandingKey;
   let src=STANDING.find(s=>s.key==="answer"&&ok(s)&&s.when(row))
        ||STANDING.find(s=>s.key==="client"&&ok(s)&&s.when(row))
-       ||STANDING.find(s=>s.key===rot[standingCount%3]&&ok(s))
-       ||STANDING.find(s=>s.key===rot[(standingCount+1)%3]);
+       ||STANDING.find(s=>s.key===rot[standingCount%4]&&ok(s))
+       ||STANDING.find(s=>s.key===rot[(standingCount+1)%4]);
   lastStandingKey=src.key;
   standing=Object.assign({},src,{issued:t, standing:true});
   if(standing.make) standing.make(row,standing);

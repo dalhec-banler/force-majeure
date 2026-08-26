@@ -1,5 +1,6 @@
 /* ------------------------------------------------------------ tool tray */
 const DESC={
+  "Signals Research":"ship logs, station records, a room of analysts — learn one wire into a region",
   "Cloud Seeding":"silver-iodide flights wring rain from passing clouds",
   "Watershed Interference":"dams, diversions, quiet sabotage — a region's water goes missing",
   "Fire Enablement":"fuel, access roads, delayed ignition — a fire waiting for lightning",
@@ -11,6 +12,7 @@ const DESC={
   "Polar Destabilization":"breaks the polar ice — the melt feeds the planet's fever, and everyone pays",
 };
 function capInfo(c){
+  if(c.research) return `${DESC[c.name]} · $${c.cost}M · the strongest unknown wire is on the board next season · invisible`;
   const bits=[DESC[c.name]||"", `$${c.cost}M`,c.lag===0? "acts this season" : `lands in ${c.lag} season${c.lag===1?"":"s"}`,
     c.sig>=20? "loud signature" : c.sig>=10? "leaves a signature" : c.sig>0? "quiet" : "invisible"];
   if(c.type==="DRIVER") bits.push(`works through the ${c.fixedTarget} system`);

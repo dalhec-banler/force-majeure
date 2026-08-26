@@ -2,6 +2,7 @@ function drawGlobe(now){
   if(!dragging && !reduced && !FLAT) rot += 0.022;
   const nowMs=now||0;
   cx.clearRect(0,0,W,H);
+  const FC=(running&&eng.knowledge.on&&lastRow())? eng.knowledge.forecast():null;
   drawStars(nowMs);
   const earthOn = drawEarth(nowMs);
   if(!earthOn){
@@ -51,6 +52,7 @@ function drawGlobe(now){
   }
   drawAmbient(nowMs);
   drawEffects(nowMs);
+  drawWires(nowMs, row);
 
   for(const [d,[la,lo]] of Object.entries(DRVPOS)){
     const p=project(la,lo); if(!p.vis) continue;
@@ -77,6 +79,10 @@ function drawGlobe(now){
       if(Math.abs(a)>sig){ cx.strokeStyle="rgba(255,244,230,.9)"; cx.lineWidth=1.6;
         cx.beginPath(); cx.arc(p.x,p.y,k*Math.abs(a)+2,0,7); cx.stroke(); cx.lineWidth=1; }
     }
+    // the forecast: what the known wiring says next season looks like
+    if(FC && Math.abs(FC[ri].anomaly)>0.2){ const f=FC[ri].anomaly;
+      cx.setLineDash([2,3]); cx.strokeStyle=anomColor(f,0.8);
+      cx.beginPath(); cx.arc(p.x,p.y,k*Math.abs(f),0,7); cx.stroke(); cx.setLineDash([]); }
     // condition-coded target marker on a dark halo — visible on any terrain
     const yv = row? row.yields[ri] : 100;
     const cond = yv>=90? "#53d97b" : yv>=60? "#e0a458" : "#e05252";
@@ -185,6 +191,37 @@ function strokePath(arr){
     if(p.vis){ pen? cx.lineTo(p.x,p.y): cx.moveTo(p.x,p.y); pen=true; } else pen=false; }
   cx.stroke();
 }
+/* the wiring you know — amber wires dry a region when their ocean warms,
+   cyan wires wet it. Signal runs along a wire while its driver is loud. */
+function drawWires(nowMs,row){
+  if(!eng.knowledge.on || !SHOW_WIRES) return;
+  const K=eng.knowledge;
+  for(const e of K.edges){
+    if(!K.isKnown(e.di,e.ri)) continue;
+    const dp=DRVPOS[e.driver]; if(!dp) continue;
+    const a=project(...dp), b=project(...REGPOS[e.region]);
+    if(!a.vis||!b.vis) continue;
+    const dv=row? row.driverTotals[e.di] : 0;
+    const live=Math.abs(dv)>=0.8;
+    const fresh=newWires.some(w=>w.di===e.di&&w.ri===e.ri);
+    const str=Math.min(1,Math.abs(e.coeff)/0.9);
+    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2, dx=b.x-a.x, dy=b.y-a.y;
+    const nx=CXp-mx, ny=CYp-my, nl=Math.hypot(nx,ny)||1;
+    const cxp=mx-(nx/nl)*Math.hypot(dx,dy)*0.3, cyp=my-(ny/nl)*Math.hypot(dx,dy)*0.3;
+    const al=(fresh? 0.8 : live? 0.45 : 0.16)*(0.5+0.5*str);
+    const rgb=e.coeff<0? "224,164,88" : "91,200,232";
+    cx.strokeStyle=`rgba(${rgb},${al})`;
+    cx.lineWidth=fresh?1.6:0.8; cx.setLineDash(fresh?[]:[3,5]);
+    cx.beginPath(); cx.moveTo(a.x,a.y); cx.quadraticCurveTo(cxp,cyp,b.x,b.y); cx.stroke();
+    cx.setLineDash([]);
+    if(live||fresh){
+      const tt=((nowMs/1800)+e.ri*0.13)%1;
+      const px=(1-tt)*(1-tt)*a.x+2*(1-tt)*tt*cxp+tt*tt*b.x, py=(1-tt)*(1-tt)*a.y+2*(1-tt)*tt*cyp+tt*tt*b.y;
+      cx.fillStyle=`rgba(${rgb},.95)`; cx.beginPath(); cx.arc(px,py,1.8,0,7); cx.fill();
+    }
+  }
+  cx.lineWidth=1;
+}
 function hoverCheck(e){
   const best=nearestRegion(e);
   const h=$("hover");
@@ -199,7 +236,12 @@ function hoverCheck(e){
   h.innerHTML=`<b>${r.name.toUpperCase()}</b>${r.homeland?" · HOMELAND":""}<br>
     ${read}. ${r.crop} ${r.kind?"output":"harvest"} at <span class="num">${y.toFixed(0)}%</span>
     · ${r.weight}% of world supply${res?` · hardened`:""}<br>
-    <span style="color:var(--ink-faint)">anomaly ${a.toFixed(2)} vs natural range ±${s.toFixed(2)}${Math.abs(a)>s?" — outside":""}</span>`;
+    <span style="color:var(--ink-faint)">anomaly ${a.toFixed(2)} vs natural range ±${s.toFixed(2)}${Math.abs(a)>s?" — outside":""}</span>${(()=>{
+      if(!eng.knowledge.on) return "";
+      const fc=eng.knowledge.forecast(); if(!fc) return "";
+      const f=fc[best], unk=f.total-f.known;
+      return `<br><span style="color:var(--ink-faint)">wires: ${f.known} of ${f.total} on the board${unk?` · <span style="color:var(--amber)">${unk} unknown</span>`:""}
+        · next season ${f.anomaly>0.2?"wet ":f.anomaly<-0.2?"dry ":""}${(f.anomaly>=0?"+":"")+f.anomaly.toFixed(2)} by known wiring</span>`; })()}`;
   h.style.display="block";
   h.style.left=Math.min(mx+14,W-250)+"px"; h.style.top=(my+10)+"px";
 }

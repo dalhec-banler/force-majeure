@@ -25,6 +25,12 @@ function createEngine(MODEL, opts) {
   // TARGET's envelope stress rather than the 16-region global average
   // (which diluted the sheet's 8-region amplifier). Default off.
   const forensics = !!(opts && opts.forensics);
+  // knowledge progression (brief §7.5, ADR-0007): the wiring is hidden.
+  // Driver→region edges start ~20% revealed (the homeland's own wires plus
+  // the strongest few); research and observation reveal the rest. GLOBAL
+  // edges are the planet's temperature — public science, always known.
+  // Gated (default off): the baseline never asks what is known.
+  const knowledgeOn = !!(opts && opts.knowledge);
   const A = {};
   for (const [cell, o] of Object.entries(MODEL.assumptions)) A[cell] = o.value;
   // Named views of the ASSUMPTIONS cells the sheet references.
@@ -59,6 +65,52 @@ function createEngine(MODEL, opts) {
 
   const state = { ops: [], rows: [], jetUntil: 0 };  // rows[t-1] = season t
 
+  const EDGES = [];
+  DRIVERS.forEach((d, di) => { if (d === "GLOBAL") return;
+    REGIONS.forEach((r, ri) => { if (MODEL.coeff[di][ri] !== 0)
+      EDGES.push({ di, ri, driver: d, region: r.name,
+                   coeff: MODEL.coeff[di][ri], lag: MODEL.lags[di][ri] }); }); });
+  const known = new Set();
+  const ekey = (di, ri) => di + ":" + ri;
+  const byStrength = (a, b) => Math.abs(b.coeff) - Math.abs(a.coeff) || a.di - b.di || a.ri - b.ri;
+  if (knowledgeOn) {
+    const home = REGIONS.findIndex((r) => r.homeland);
+    for (const e of EDGES) if (e.ri === home) known.add(ekey(e.di, e.ri));
+    const rest = EDGES.filter((e) => e.ri !== home).slice().sort(byStrength);
+    const want = Math.max(0, Math.ceil(EDGES.length * 0.2) - known.size);
+    for (const e of rest.slice(0, want)) known.add(ekey(e.di, e.ri));
+  }
+  function isKnown(di, ri) {
+    return !knowledgeOn || DRIVERS[di] === "GLOBAL" || MODEL.coeff[di][ri] === 0
+        || known.has(ekey(di, ri));
+  }
+  /* Projection of the NEXT season from known wiring only (TDD §2.6 F1: the
+   * forecast cannot leak hidden edges) plus the player's own region ops
+   * scheduled to land — you know what you did. No noise: the weather itself
+   * is never forecast. */
+  function forecast() {
+    const tn = state.rows.length + 1;
+    if (tn > MODEL.climate.length) return null;
+    return REGIONS.map((r, ri) => {
+      let v = 0, kn = 0, tot = 0;
+      for (let di = 0; di < ND; di++) {
+        if (MODEL.coeff[di][ri] === 0) continue;
+        const g = DRIVERS[di] === "GLOBAL";
+        if (!g) tot++;
+        if (!isKnown(di, ri)) continue;
+        if (!g) kn++;
+        const ts = tn - MODEL.lags[di][ri];
+        if (ts >= 1) v += state.rows[ts - 1].driverTotals[di] * MODEL.coeff[di][ri];
+      }
+      for (const op of state.ops) {
+        if (op.owner !== "player" || op.mag === 0 || op.target !== r.name) continue;
+        const start = op.t + op.lag, dur = op.dur || 1;
+        if (tn >= start && tn < start + dur) v += op.mag * Math.pow(op.decay, tn - start);
+      }
+      return { anomaly: v, known: kn, total: tot };
+    });
+  }
+
   function makeOp(t, capName, targetRegion, prevAnomalies, owner) {
     const cap = capByName[capName];
     if (!cap || cap.type === "NONE") return null;
@@ -79,7 +131,7 @@ function createEngine(MODEL, opts) {
     return { t, cap: cap.name, type: cap.type, target, mag, lag: cap.lag,
              dur: cap.dur || 1, decay: cap.decay === undefined ? 1 : cap.decay,
              sig: cap.sig, cost: cap.cost, disp, resil: cap.resil,
-             owner: owner || "player" };
+             owner: owner || "player", research: !!cap.research };
   }
 
   /* The Eastern Program — a rival wheat exporter running its own weather
@@ -208,6 +260,32 @@ function createEngine(MODEL, opts) {
         v += 0.6 * Math.sin(t * 2.399 + ri * 1.73);   // the broken jet meanders
       return v;
     });
+    // K — knowledge: research landing this season reveals the strongest
+    // unknown wire into its target; a large swing that visibly explains a
+    // region's season reveals itself (at most two a season — analysts can
+    // only chase so many leads). Deterministic.
+    const revealed = [];
+    if (knowledgeOn) {
+      for (const op of state.ops) {
+        if (!op.research || op.owner !== "player" || op.t + op.lag !== t) continue;
+        const ri = regionIndex[op.target];
+        const cand = EDGES.filter((e) => e.ri === ri && !known.has(ekey(e.di, e.ri)))
+                          .sort(byStrength);
+        if (cand.length) { known.add(ekey(cand[0].di, cand[0].ri));
+                           revealed.push(Object.assign({ how: "research" }, cand[0])); }
+        else revealed.push({ ri, region: op.target, how: "exhausted" });
+      }
+      const obs = [];
+      for (const e of EDGES) {
+        if (known.has(ekey(e.di, e.ri))) continue;
+        const ts = t - e.lag; if (ts < 1) continue;
+        const dv = state.rows[ts - 1].driverTotals[e.di], c = Math.abs(dv * e.coeff);
+        if (Math.abs(dv) >= 1.1 && c >= 0.55) obs.push({ e, c });
+      }
+      obs.sort((a, b) => b.c - a.c || byStrength(a.e, b.e));
+      for (const o of obs.slice(0, 2)) { known.add(ekey(o.e.di, o.e.ri));
+                                         revealed.push(Object.assign({ how: "observed" }, o.e)); }
+    }
     // Edge reads of season t itself never occur (all lags >= 1) — but the
     // totals computed above are what FUTURE seasons' edge reads will see.
     // Store them via the row commit below.
@@ -323,7 +401,7 @@ function createEngine(MODEL, opts) {
                   price, revenue, severity, mandate, opsSpend, containment,
                   budgetIn, trimmed, jetTriggered, jetActive,
                   treasury, attribution, dossier, ladderText,
-                  status, obsStreak, landed, committed,
+                  status, obsStreak, landed, committed, revealed,
                   prediction: cmd.prediction || "" };
     state.rows.push(row);
     return row;
@@ -332,7 +410,9 @@ function createEngine(MODEL, opts) {
   return { resolve, state,
            capabilities: MODEL.capabilities, regions: REGIONS,
            drivers: DRIVERS, ladder: MODEL.ladder, assumptions: P,
-           seasons: MODEL.climate.length };
+           seasons: MODEL.climate.length,
+           knowledge: { on: knowledgeOn, edges: EDGES, isKnown, forecast,
+                        count: () => ({ known: known.size, total: EDGES.length }) } };
 }
 
 if (typeof module !== "undefined") module.exports = { createEngine };
