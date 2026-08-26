@@ -245,8 +245,7 @@ weather=[
  C(1947,7,"Nile Delta","epidemic","CAIRO","Cholera out of al-Qurayn, through the Delta. A thousand cases a day by October; ten thousand dead by December."),
  W(1949,7,8,"Nile Delta","locusts","CAIRO","The desert locust rises from the Red Sea coasts. The plague will run four years, from the Delta to the Punjab.",
    "The locust breeding grounds are dry. The swarms never form.","Locusts across the Delta, the Sahel and Arabia in numbers no one has recorded. The FAO calls it a plague."),
- W(1951,7,1,"Sahel","locusts","NIAMEY","Swarms out of the Red Sea breeding grounds reach the Sahel. Millet stripped to the stalk.",
-   "The swarms fail to reach the Sahel. A dry breeding season behind them.","The swarms reach the Sahel in waves. Nothing green from the Niger to Lake Chad."),
+ # dropped 2026-08-26: no source for a 1951 Sahel wave (the FAO plague years 1949–63 are confirmed; the Sahel timing was inference)
  # --- Asia ---
  W(1950,10,2,"South Asia","drought","DELHI","Floods, then a failed monsoon, across Bihar and Rajasthan. India tells Washington it must import six million tons of grain and cannot pay for two.",
    "The monsoon arrives on time in Bihar. The wheat loan is not needed.","The monsoon fails from Rajasthan to Bengal. The ration is cut to the bone."),

@@ -326,11 +326,23 @@ function historyBeats(row){
     recordStopped=true;
     wire(`<span class="tag tagr">ARCHIVE</span> Every earthquake and eruption until today was documented and natural. From here the record is suspect — <b>including the ones you did not cause.</b>`,"att");
   }
-  // the other basins: as recorded (no forcing reaches them yet)
+  // the other basins: as recorded, unless the Pacific has been pushed
+  const BASIN_DL={WP:"MANILA",EP:"ACAPULCO",NI:"CALCUTTA",SI:"PORT HEDLAND",SP:"BRISBANE"};
   for(const basin of ["WP","EP","NI","SI","SP"]){
-    const bs=HISTORY.storms.filter(s=>s.t===t&&s.basin===basin).sort((a,b)=>b.peak-a.peak||b.track.length-a.track.length);
+    const all=HISTORY.storms.filter(s=>s.t===t&&s.basin===basin);
+    if(!all.length) continue;
+    const word=STORM_WORD[basin], bf=basinFactor(basin);
+    if(bf<0.7){
+      news(BASIN_DL[basin], `A quiet ${word.toLowerCase()} season. The storms the record has here did not come ashore.`);
+      wire(`TRACE — <b>you leaned on the Pacific</b>; the ${basin==="WP"?"typhoons recurved":"cyclones stayed at sea"}.`,"op");
+      histAltered.push({t, what:`the ${basin} ${word.toLowerCase()} season`, how:"unmade"});
+    } else if(bf>1.3){
+      news(BASIN_DL[basin], `A ${word.toLowerCase()} season worse than the record. Every landfall harder than the almanac says.`, true);
+      wire(`TRACE — <b>you leaned on the Pacific</b>; this basin's season is now worse than the record.`,"op");
+      histAltered.push({t, what:`the ${basin} ${word.toLowerCase()} season`, how:"worse"});
+    }
+    const bs=all.filter(s=>stormShown(s,bf)).sort((a,b)=>b.peak-a.peak||b.track.length-a.track.length);
     if(!bs.length) continue;
-    const word=STORM_WORD[basin];
     const told=new Set(HISTORY.weather.filter(w=>w.t===t&&/typhoon|cyclone/i.test(w.kind)).map(w=>w.line.toLowerCase()));
     const show=bs.filter(s=>(s.landfall||s.cat>=3) && !(s.name&&[...told].some(l=>l.includes(s.name.toLowerCase())))).slice(0, basin==="WP"?3:2);
     for(const s of show){

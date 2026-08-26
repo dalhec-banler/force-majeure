@@ -367,8 +367,14 @@ function createEngine(MODEL, opts) {
                    + Math.max(0, cmd.grant || 0)    // directive appropriations
                    - Math.max(0, cmd.clawback || 0); // lapsed-directive clawback
     const prevTreasury = prev ? prev.treasury : P.startingTreasury;
-    const treasury = prevTreasury + budgetIn - opsSpend - containment
+    let treasury = prevTreasury + budgetIn - opsSpend - containment
                    - P.overhead;
+    // a broke programme is wound up, not bankrupted (author rule 2026-08-26,
+    // budget gate only): when nothing was spent and the rent alone drives the
+    // treasury negative, the committee carries the rent while it deliberates
+    // — the treasury floors at zero and the season counts as obsolescent.
+    const broke = budgetGate && opsSpend === 0 && containment === 0 && treasury < 0;
+    if (broke) treasury = 0;
 
     // A — attribution: signatures of main effects that LANDED this season,
     // amplified by how far outside the envelope the world is.
@@ -424,7 +430,7 @@ function createEngine(MODEL, opts) {
     let status = "running";
     // (recentOp computed above counts PLAYER ops only — rival activity must
     // never shield the player from the committee)
-    const obsolescent = t > 8 && mandate <= P.mandateBase + 1 && !recentOp;
+    const obsolescent = (t > 8 && mandate <= P.mandateBase + 1 && !recentOp) || (broke && !recentOp);
     const obsStreak = obsolescent ? ((prev ? prev.obsStreak : 0) + 1) : 0;
     if (dossier >= 200) status = "exposed";
     else if (treasury < 0) status = "insolvent";

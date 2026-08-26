@@ -46,11 +46,18 @@ Winter of Terror 1951; Chinchaga fire 1950; 1947 Egyptian cholera; Typhoons
 Kathleen, Ione, Kitty, Irma, Jane, Ruth, Tess, Ida, Marie/Tōya Maru; 1954
 Yangtze (33,000); 1954 Danube; 1955 Yuba–Sutter (74); 1955 Punjab; India's
 1950–51 food crisis.
-Not yet verified against a source: 1949 Yangtze–Huai flood; Assam 1950 floods
-(follow the verified earthquake); 1953–57 Texas drought (well documented,
-unchecked here); 1952 US polio year (57,628 cases — well documented);
-1949–63 desert locust plague (FAO; the Sahel 1951 wave is an inference);
-Sahel/Nile locust dates.
+Removed after checking (no source): a 1949 Yangtze–Huai flood; a 1951 Sahel
+locust wave (the FAO plague years 1949–63 stand; the Nile/Red Sea entry
+remains). Verified: 1949–57 Texas drought (worst on the state's record;
+1956, 1954, 1951 its driest years). Still on general knowledge: Assam 1950
+floods (follow the verified earthquake); 1952 US polio year (57,628 cases).
+
+## Consequential only (author rule, 2026-08-26)
+Storms are kept only if they came ashore, or reached major-hurricane
+strength within ~300 km of a coast: 443 of 761 tracked. Eruptions are kept
+only if they damaged something: Sarychev 1946, Bagana 1952, Paricutín's
+cone-building years, Bezymianny's 1955 precursor phase and Merapi 1953–54
+(no recorded toll) are out.
 
 ## What "alterable" means
 Geophysics is canon until the first lithospheric operation. Storms in the

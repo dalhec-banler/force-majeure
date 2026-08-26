@@ -28,6 +28,22 @@ function atlanticForcing(){          // what was done to the Atlantic this seaso
   const ni=DRV.indexOf("NATL"); return ni<0? 0 : r.driverTotals[ni]-r.driverNat[ni];
 }
 function stormStrength(f){ return Math.max(0.25, Math.min(1.6, 1+0.6*f)); }
+/* what was done to the Pacific this season, beyond nature — and what it does
+   to each basin's storm season (El Niño: typhoons recurve away from China
+   and the Philippines, Australia's cyclones stay offshore, the eastern
+   Pacific wakes; La Niña the reverse) */
+function pacificForcing(){ const r=lastRow(); if(!r) return 0; const i=DRV.indexOf("ENSO"); return i<0?0:r.driverTotals[i]-r.driverNat[i]; }
+function basinFactor(basin){
+  if(basin==="NA") return stormStrength(atlanticForcing());
+  const dE=pacificForcing();
+  const f = basin==="WP"? 1-0.45*dE : basin==="EP"? 1+0.4*dE : basin==="NI"? 1-0.3*dE : 1-0.45*dE;   // SI/SP
+  return Math.max(0.3, Math.min(1.6, f));
+}
+function stormShown(s, f){                      // a quiet season loses its weaker storms
+  if(f<0.5 && s.cat<=2) return false;
+  if(f<0.7 && s.cat<=1) return false;
+  return true;
+}
 const STORM_WORD={NA:"Hurricane",EP:"Hurricane",WP:"Typhoon",NI:"Cyclone",SI:"Cyclone",SP:"Cyclone"};
 function activeStorms(ts, prog){
   const f=atlanticForcing();
@@ -35,11 +51,12 @@ function activeStorms(ts, prog){
   for(const s of HISTORY.storms){
     if(s.t!==ts) continue;
     if(s.basin==="NA" && f<-1.0) continue;
+    if(!stormShown(s, basinFactor(s.basin))) continue;
     const p0=s.p0, p1=Math.max(s.p1, s.p0+0.15);            // at least a few seconds on screen
     if(prog<p0 || prog>p1) continue;
     const tr=s.track, k=((prog-p0)/(p1-p0))*(tr.length-1);
     const i=Math.min(tr.length-2, Math.floor(k)), fr=k-i, a=tr[i], b=tr[i+1];
-    out.push({s, lat:a[0]+(b[0]-a[0])*fr, lon:a[1]+(b[1]-a[1])*fr, w:(a[2]+(b[2]-a[2])*fr)||70, strength:s.basin==="NA"? stormStrength(f) : 1});
+    out.push({s, lat:a[0]+(b[0]-a[0])*fr, lon:a[1]+(b[1]-a[1])*fr, w:(a[2]+(b[2]-a[2])*fr)||70, strength:basinFactor(s.basin)});
   }
   return out;
 }
