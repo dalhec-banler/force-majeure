@@ -72,7 +72,48 @@ its own job).
 - Strategist's campaign sweep and high score: see §4.
 
 ## 4. High score
-(filled from the strategist's report below)
+The strategist ran ~60 headless campaigns (files under
+`prototype/web/tools/campaign-*.js`). Pre-fix, the best **valid** score was
+**493** (`campaign-monsoonF.js`: onboarding, then Stratospheric Aerosol
+×3 at S11, ×4 at S25 with the S28 earmark into ENSO, ×6 at S34; price
+231–239 in the last seasons, mandate pinned at 100). A nine-stack reached
+573 and exposed itself on the final row.
+
+That was an exploit (ADR-0019: same-season stacks paid base signature; no
+price ceiling; the mandate flywheel). After the fix the same campaigns
+score:
+
+| campaign | profit | funds | rung | status |
+|---|---|---|---|---|
+| **monsoonF** (three aerosol waves) | **396** | 52 | 6 (dossier 194) | running — the high score |
+| monsoonE | 336 | 151 | 6 | running |
+| researchstrike (research S1–8, then waves) | 283 | 41 | 2 | running |
+| ensoflag (ENSO on both earmarks) | 210 | 108 | 2 | running |
+| fortress (homeland shield) | 197 | 84 | 3 | running |
+| pricehawk (dry the exporters) | 102 | 0 | 1 | wound up S38 |
+| typhoon (14 adaptations + waves) | 357 | 252 | 7 | **exposed S34** |
+| tempest7 / veilshield4 | 286 / 247 | — | 7 | **exposed** |
+| naive (tutorial follower) | 73 | 0 | 1 | running, warned |
+| flagship | 81 | 146 | 2 | running |
+
+**High score to beat: 396**, `campaign-monsoonF.js`, dossier 194 of 200 at
+the final row — the winning line is now a knife-edge, which is the point.
+
+### What the sweep says about the game
+- Cash is the real game and cheap play is unviable: idle income ≈ overhead
+  + $4M; only mandate windfalls and earmarks fund anything. S1–10 is
+  waiting for money; S14–18 and S28–33 are the good part.
+- Single-region drying barely moves the price (~+2% per $14M watershed) —
+  the "wheat exporter" archetype the fiction advertises is the weakest one.
+  Hubs count in the grain supply index (semiconductors move the wheat
+  price) — a model simplification worth fixing at the ladder session.
+- The rival never mattered to a strong player (−10 revenue once vs
+  +50–150/season from a wave). Climate Research has no score effect —
+  its payoff is legibility, by design, but nothing rewards knowing the
+  wiring yet.
+- Protecting your own homeland during a wave is the most suspicious act in
+  the game (repeat seeding compounds the signature) — which is either a bug
+  or the best piece of fiction in it.
 
 ## 5. For the author
 - **The economy is tight at 36 regions.** Income ≈ overhead + $5–9M when

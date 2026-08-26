@@ -21,8 +21,6 @@ async function runSeasonInner(auto){
   pendingGrant=0; pendingClaw=0;
   t++;
   const row = eng.resolve(t, cmd);
-  for(const o of (row.refused||[]))
-    wire(`TREASURY — ${o.cap}${o.target&&o.type!=="DRIVER"?" · "+o.target:""} refused: $${o.cost}M is not in the budget.`,"att");
   newWires=newWires.filter(w=>t-w.bornT<3);
   for(const e of (row.revealed||[])){
     if(e.how==="exhausted"){ wire(`RESEARCH — ${e.region}: nothing left to learn. Every wire into it is on the board.`,"op"); continue; }
@@ -85,6 +83,8 @@ async function runSeasonInner(auto){
                        start:performance.now(),dur:3800});
     }
   }
+  for(const o of (row.refused||[]))
+    wire(`TREASURY — ${o.cap}${o.target&&o.type!=="DRIVER"?" · "+o.target:""} refused: $${o.cost}M is not in the budget.`,"att");
   if(cmd.prediction) wire(`PREDICTION LOGGED — “${escapeHTML(cmd.prediction)}”`);
   await phaseShow(2);
   const nowMs=performance.now();

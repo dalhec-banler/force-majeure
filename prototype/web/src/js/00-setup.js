@@ -12,7 +12,7 @@ for(const e of HISTORY.eruptions){
 }
 for(const q of HISTORY.quakes) for(const h of (q.hit||[]))
   EXO.push({t:q.t, region:h.region, mag:h.mag, dur:h.dur||1, cap:q.name+" earthquake"});
-const eng = createEngine(MODEL, {rivals:true, idleTrim:0.6, jetstream:true, forensics:true, knowledge:true, budgetGate:true, exogenous:EXO});
+const eng = createEngine(MODEL, {rivals:true, idleTrim:0.6, jetstream:true, forensics:true, knowledge:true, budgetGate:true, exogenous:EXO, priceCap:300});
 const DRVNAME = { ENSO:"the Pacific", IOD:"the Indian Ocean", NATL:"the Atlantic", GLOBAL:"the planet" };
 let SHOW_WIRES=true;             // the known wiring, drawn on the globe
 let newWires=[];                 // wires revealed recently: {di,ri,bornT}

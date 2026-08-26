@@ -41,6 +41,9 @@ function createEngine(MODEL, opts) {
   // stratosphere and drop ash on regions. Entries {t, driver|region, mag,
   // dur, decay, cap}. Landed with owner "nature" — never traced as anyone's.
   const exogenous = (opts && Array.isArray(opts.exogenous)) ? opts.exogenous : [];
+  // grain price ceiling (author balance rule 2026-08-26): crisis spikes run
+  // 2–3× baseline, not 5×. Default Infinity keeps the sheet exact.
+  const priceCap = (opts && opts.priceCap) ? opts.priceCap : Infinity;
   const A = {};
   for (const [cell, o] of Object.entries(MODEL.assumptions)) A[cell] = o.value;
   // Named views of the ASSUMPTIONS cells the sheet references.
@@ -265,6 +268,18 @@ function createEngine(MODEL, opts) {
                       first: t === x.t, age: t - x.t, owner: "nature" });
     }
 
+    // stacking: the k-th identical player driver injection landing in the
+    // same season adds 0.65^(k-1) of its magnitude — the sky cannot be
+    // veiled six times over (forensics only)
+    if (forensics) {
+      const seen = {};
+      for (const e of landed) {
+        if (e.owner !== "player" || e.kind !== "driver" || !e.first || e.cap.includes("displacement")) continue;
+        const k = seen[e.cap + "|" + e.target] = (seen[e.cap + "|" + e.target] || 0) + 1;
+        if (k > 1) e.mag *= Math.pow(0.65, k - 1);
+      }
+    }
+
     // jet stream check: did a heavy op just land in the high north?
     let jetTriggered = false;
     if (jetOn) for (const e of landed) {
@@ -353,7 +368,7 @@ function createEngine(MODEL, opts) {
     // R8 — markets.
     const supply = REGIONS.reduce(
       (s, r, ri) => s + yields[ri] * r.weight / 100, 0);
-    const price = 100 * Math.pow(100 / Math.max(1, supply), P.priceElasticity);
+    const price = Math.min(priceCap, 100 * Math.pow(100 / Math.max(1, supply), P.priceElasticity));
     const homelandIdx = REGIONS.findIndex((r) => r.homeland);
     const revenue = yields[homelandIdx] * price / 100 * P.revenueScale;
 
@@ -405,7 +420,11 @@ function createEngine(MODEL, opts) {
         for (const o of state.ops)
           if (o.owner === "player" && o.sig > 0 && o.target === e.target
               && o.t + o.lag < t && o.t + o.lag >= t - 8) repeats++;
-        sig *= 1 + 0.4 * Math.min(4, repeats);
+        // and the ones that landed beside it this season — a stack is a pattern
+        repeats += landed.filter((x) => x !== e && x.owner === "player" && x.sig > 0
+                                      && x.first && x.target === e.target
+                                      && landed.indexOf(x) < landed.indexOf(e)).length;
+        sig *= 1 + 0.4 * Math.min(6, repeats);
         // the TARGET's own envelope stress, not the world average
         const ri = regionIndex[e.target];
         const stress = ri !== undefined
