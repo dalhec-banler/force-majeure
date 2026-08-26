@@ -54,11 +54,15 @@ function activeStorms(ts, prog){
     if(s.t!==ts) continue;
     if(s.basin==="NA" && f<-1.0) continue;
     if(!stormShown(s, basinFactor(s.basin))) continue;
-    const p0=s.p0, p1=Math.max(s.p1, s.p0+0.15);            // at least a few seconds on screen
+    const p0=s.p0, p1=Math.max(s.p1, s.p0+0.3);             // long enough on screen to emerge and dissolve
     if(prog<p0 || prog>p1) continue;
-    const tr=s.track, k=((prog-p0)/(p1-p0))*(tr.length-1);
+    const u=(prog-p0)/(p1-p0), tr=s.track, k=u*(tr.length-1);
     const i=Math.min(tr.length-2, Math.floor(k)), fr=k-i, a=tr[i], b=tr[i+1];
-    out.push({s, lat:a[0]+(b[0]-a[0])*fr, lon:a[1]+(b[1]-a[1])*fr, w:(a[2]+(b[2]-a[2])*fr)||70, strength:basinFactor(s.basin)});
+    // target presence: a slow rise over the first third of its life, a slow
+    // fall over the last third — the storm forms and dissipates, it does not appear
+    const ease=x=>x*x*(3-2*x);
+    const presence=Math.min(ease(Math.min(1,u/0.33)), ease(Math.min(1,(1-u)/0.33)));
+    out.push({s, lat:a[0]+(b[0]-a[0])*fr, lon:a[1]+(b[1]-a[1])*fr, w:(a[2]+(b[2]-a[2])*fr)||70, strength:basinFactor(s.basin), presence});
   }
   return out;
 }
@@ -84,14 +88,34 @@ function drawCyclone(p, diaFrac, nowMs, opts){
   cx.drawImage(stormImg,-size/2,-size/2,size,size);
   cx.restore();
 }
+/* Storm presence is eased per frame, not read off the clock: whatever the
+   season clock does (holds while a review resolves, snaps when a new one
+   begins) a cyclone still fades in over ~1.5 s and dissolves over ~2 s
+   where it was last seen. */
+const stormFade=new Map(); let stormFadeLast=0;
 function drawAmbient(nowMs){
   const k=Rp*0.055, ts=Math.max(1,t);
   // the season's real hurricanes, on their real tracks
   const prog=seasonProgress(nowMs);
-  activeStorms(ts, prog).forEach((st,idx)=>{
+  const dt=Math.min(0.1, Math.max(0, (nowMs-stormFadeLast)/1000)); stormFadeLast=nowMs;
+  const live=new Set();
+  activeStorms(ts, prog).forEach((st)=>{
+    live.add(st.s.id);
+    let f=stormFade.get(st.s.id);
+    if(!f){ f={a:0, lat:st.lat, lon:st.lon, w:st.w, s:st.s, strength:st.strength, target:0, idx:stormFade.size}; stormFade.set(st.s.id,f); }
+    f.lat=st.lat; f.lon=st.lon; f.w=st.w; f.strength=st.strength; f.target=st.presence;
+  });
+  for(const [id,f] of stormFade){
+    if(!live.has(id)) f.target=0;
+    const rate = f.target>f.a ? 1/1.5 : 1/2.0;              // seconds to full, seconds to gone
+    f.a += Math.max(-rate*dt, Math.min(rate*dt, f.target-f.a));
+    if(f.a<=0.01 && f.target===0){ stormFade.delete(id); continue; }
+  }
+  [...stormFade.values()].forEach((st,idx)=>{
     const p=project(st.lat,st.lon); if(!p.vis) return;
-    const dia=(0.09+0.11*Math.min(1,st.w/150))*st.strength;
-    drawCyclone(p, dia, nowMs+idx*900, {alpha:0.92, lat:st.lat, variant:idx});
+    const dia=(0.09+0.11*Math.min(1,st.w/150))*st.strength*(0.55+0.45*st.a);   // it grows as it forms
+    drawCyclone(p, dia, nowMs+st.idx*900, {alpha:0.92*st.a, lat:st.lat, variant:st.idx});
+    if(st.a<0.35) return;                                    // no label until it is a storm
     if(zoom>=1.2 || st.s.cat>=3){
       const label=(st.s.name? st.s.name.toUpperCase() : STORM_WORD[st.s.basin].toUpperCase())+(st.s.cat? " · C"+st.s.cat : "");
       cx.font="9px "+getComputedStyle(document.body).getPropertyValue("--mono");
