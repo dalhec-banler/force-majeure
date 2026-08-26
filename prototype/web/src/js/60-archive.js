@@ -164,11 +164,12 @@ function showArchive(finalRow){
   $("arcTable").addEventListener("click",()=>{ const w=$("arcTableWrap"); w.style.display=w.style.display==="none"?"block":"none"; });
   // the map
   const mc=$("arcMap"), mx=mc.getContext("2d"), MW=mc.width, MH=mc.height;
-  const px=(la,lo)=>[(lo+180)/360*MW, (90-la)/180*MH];
+  const LAT0=78, LAT1=-58;                                   // the inhabited world; no Antarctica
+  const px=(la,lo)=>[(lo+180)/360*MW, (LAT0-la)/(LAT0-LAT1)*MH];
   mx.fillStyle="#07100b"; mx.fillRect(0,0,MW,MH);
   mx.strokeStyle="rgba(200,230,207,.22)"; mx.lineWidth=1;
   for(const ring of LAND){ mx.beginPath(); ring.forEach(([lo,la],i)=>{ const [x,y]=px(la,lo); i?mx.lineTo(x,y):mx.moveTo(x,y); }); mx.closePath(); mx.stroke(); }
-  mx.strokeStyle="rgba(200,230,207,.07)"; for(let lo=-150;lo<180;lo+=30){ const [x]=px(0,lo); mx.beginPath(); mx.moveTo(x,0); mx.lineTo(x,MH); mx.stroke(); } for(let la=-60;la<=60;la+=30){ const [,y]=px(la,0); mx.beginPath(); mx.moveTo(0,y); mx.lineTo(MW,y); mx.stroke(); }
+  mx.strokeStyle="rgba(200,230,207,.07)"; for(let lo=-150;lo<180;lo+=30){ const [x]=px(0,lo); mx.beginPath(); mx.moveTo(x,0); mx.lineTo(x,MH); mx.stroke(); } for(let la=-30;la<=60;la+=30){ const [,y]=px(la,0); mx.beginPath(); mx.moveTo(0,y); mx.lineTo(MW,y); mx.stroke(); }
   const dots=[];
   for(const st of regionStats){ if(!st.online) continue; const [la,lo]=REGPOS[st.r.name]; const [x,y]=px(la,lo);
     const rad=5+2.2*Math.sqrt(st.myOps.length); const col=st.delta>1.5?"#5bc8e8":st.delta<-1.5?"#e0a458":"#7fa389";
@@ -176,7 +177,8 @@ function showArchive(finalRow){
     mx.lineWidth=1.5; mx.strokeStyle="#07100b"; mx.stroke();
     if(st.rv.length){ mx.beginPath(); mx.arc(x,y,rad+3,0,7); mx.strokeStyle="#e05252"; mx.lineWidth=1.6; mx.stroke(); }
     if(st.r.homeland){ mx.beginPath(); mx.arc(x,y,rad+6,0,7); mx.strokeStyle="#53d97b"; mx.lineWidth=1.6; mx.stroke(); }
-    mx.fillStyle="rgba(214,239,220,.8)"; mx.font="9px "+MONO_FONT; mx.fillText(st.r.name.length>16? st.r.name.slice(0,15)+"…" : st.r.name, x+rad+3, y+3);
+    if(st.myOps.length||st.rv.length||st.r.homeland||Math.abs(st.delta)>1.5){   // label what matters; hover the rest
+      mx.fillStyle="rgba(214,239,220,.85)"; mx.font="9px "+MONO_FONT; mx.fillText(st.r.name.length>18? st.r.name.slice(0,17)+"…" : st.r.name, x+rad+3, y+3); }
     dots.push({x,y,rad:rad+6,st}); }
   const info=$("arcMapInfo");
   mc.addEventListener("mousemove",ev=>{ const r=mc.getBoundingClientRect(); const x=(ev.clientX-r.left)*MW/r.width, y=(ev.clientY-r.top)*MH/r.height;
