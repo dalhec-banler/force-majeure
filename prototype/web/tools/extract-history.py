@@ -78,22 +78,25 @@ eruptions=[
  E(1955,2,28,2,"Kīlauea",19.4,-155.0,"HILO","Kīlauea's east rift opens through the cane fields of Puna. Twenty-one homes lost.",0.6,0),
  E(1955,10,22,1,"Bezymianny",55.97,160.6,"PETROPAVLOVSK","A volcano the maps called extinct wakes in Kamchatka. The Soviets say nothing.",1.0,3,0.15,2),
 ]
-Q=lambda y,m,d,mag,name,lat,lon,dl,line: dict(t=season(y,m),mag=mag,name=name,pos=[lat,lon],dl=dl,line=line,date=f"{y}-{m:02d}-{d:02d}")
-quakes=[
- Q(1946,4,1,8.6,"Aleutian Islands",52.8,-163.5,"HILO","Aleutian earthquake, M8.6. The tsunami reaches Hilo five hours later, unannounced. 159 dead."),
- Q(1946,6,23,7.3,"Vancouver Island",49.8,-125.3,"VICTORIA","Vancouver Island earthquake, M7.3. Chimneys down across the strait."),
- Q(1946,8,4,8.0,"Hispaniola",19.3,-69.0,"SANTO DOMINGO","Earthquake M8.0 off the Samaná peninsula. Tsunami at Matanzas."),
- Q(1946,12,21,8.1,"Nankai",33.0,135.6,"OSAKA","Nankai earthquake, M8.1. Tsunami along the Kii coast; 1,300 dead."),
- Q(1948,6,28,7.1,"Fukui",36.2,136.2,"FUKUI","Fukui earthquake, M7.1. The city, rebuilt after the war, is flattened again. 3,700 dead."),
- Q(1948,10,6,7.3,"Ashgabat",37.95,58.3,"ASHKHABAD","Earthquake M7.3 under Ashkhabad. The Soviet press reports damage. The death toll is a state secret."),
- Q(1949,8,5,6.8,"Ambato",-1.2,-78.4,"QUITO","Ambato earthquake, M6.8. Mountain towns buried by landslides; 5,000 dead."),
- Q(1949,8,22,8.1,"Queen Charlotte",53.6,-133.3,"PRINCE RUPERT","Queen Charlotte earthquake, M8.1 — Canada's largest on record."),
- Q(1950,8,15,8.6,"Assam–Tibet",28.4,96.5,"SHILLONG","Assam–Tibet earthquake, M8.6. Whole hillsides into the Brahmaputra; the river dams, then breaks."),
- Q(1951,10,22,7.3,"Hualien",23.9,121.7,"TAIPEI","Earthquake series off Hualien, M7.3. The east-coast rail line cut."),
- Q(1952,7,21,7.3,"Kern County",35.0,-119.0,"BAKERSFIELD","Kern County earthquake, M7.3. Tehachapi in ruins; the Southern Pacific tunnels collapsed."),
- Q(1952,11,4,9.0,"Kamchatka",52.75,159.5,"PETROPAVLOVSK","Kamchatka earthquake, M9.0. Tsunami across the Pacific; Hilo flooded again. Severo-Kurilsk erased — Moscow does not report it."),
- Q(1953,3,18,7.3,"Yenice–Gönen",40.0,27.3,"ISTANBUL","Yenice–Gönen earthquake, M7.3, south of the Marmara."),
- Q(1954,9,9,6.7,"Orléansville",36.3,1.5,"ALGIERS","Orléansville earthquake, M6.7. 1,250 dead in the Chélif valley."),
+# hit: canon economic damage to a mapped region (tsunami, collapse) — untouchable
+Q=lambda y,m,d,mag,name,lat,lon,dl,line,hit=None: dict(t=season(y,m),mag=mag,name=name,pos=[lat,lon],dl=dl,line=line,hit=hit or [],date=f"{y}-{m:02d}-{d:02d}")
+quakes=[   # MAJOR only (author rule): destroyed a city, killed by the thousand, or M8+ with a tsunami.
+           # Verified against the Wikipedia yearly lists (USGS-derived), 2026-08-25.
+ Q(1946,4,1,8.6,"Aleutian Islands",52.8,-163.5,"HILO","Aleutian earthquake, M8.6. The tsunami reaches Hilo five hours later, unannounced. 167 dead — most of them in Hawaii.",[{"region":"Hawaiian Islands","mag":-0.35,"dur":1}]),
+ Q(1946,8,4,8.0,"Samaná Bay",19.3,-69.0,"SANTO DOMINGO","Earthquake M8.0 off the Samaná peninsula. The tsunami takes Matanzas; 1,800 dead."),
+ Q(1946,11,10,7.3,"Ancash",-8.3,-77.8,"LIMA","Ancash earthquake in the Peruvian Andes. Landslides bury the valleys; 1,400 dead.",[{"region":"Andean Copper Belt","mag":-0.05,"dur":1}]),
+ Q(1946,12,21,8.1,"Nankai",33.0,135.6,"OSAKA","Nankai earthquake, M8.1. Tsunami along the Kii coast; 1,362 dead, 36,000 homes gone.",[{"region":"Japan (Kanto–Kansai)","mag":-0.2,"dur":1}]),
+ Q(1948,6,28,6.8,"Fukui",36.2,136.2,"FUKUI","Fukui earthquake, M6.8. The city, rebuilt after the war, is flattened again. 5,131 dead; 63,000 homes.",[{"region":"Japan (Kanto–Kansai)","mag":-0.15,"dur":1}]),
+ Q(1948,10,5,7.3,"Ashgabat",37.95,58.3,"ASHKHABAD","Earthquake M7.3 under Ashkhabad. The Soviet press reports damage. The toll — 110,000 — will be a state secret for forty years."),
+ Q(1949,7,10,7.5,"Khait",39.2,70.8,"STALINABAD","Khait earthquake, M7.5, in the Tajik SSR. Landslides bury the valleys; 12,000 dead. Moscow says nothing."),
+ Q(1949,8,5,6.5,"Ambato",-1.2,-78.4,"QUITO","Ambato earthquake, M6.5. Mountain towns buried by landslides; 6,000 dead.",[{"region":"Andean Copper Belt","mag":-0.05,"dur":1}]),
+ Q(1950,8,15,8.6,"Assam–Tibet",28.4,96.5,"SHILLONG","Assam–Tibet earthquake, M8.6, among the largest ever recorded. Whole hillsides into the Brahmaputra; 1,530 dead. The river dams, then breaks."),
+ Q(1951,5,6,6.5,"Jucuapa",13.5,-88.4,"SAN SALVADOR","Jucuapa earthquake in El Salvador. The town levelled; 1,100 dead."),
+ Q(1952,3,4,8.1,"Tokachi",42.2,143.9,"SAPPORO","Tokachi earthquake, M8.1, off Hokkaido. The tsunami takes 2,400 homes along the coast.",[{"region":"Japan (Kanto–Kansai)","mag":-0.08,"dur":1}]),
+ Q(1952,7,21,7.5,"Kern County",35.0,-119.0,"BAKERSFIELD","Kern County earthquake, M7.5 — the largest in the lower forty-eight in fifty years. Tehachapi in ruins; the Southern Pacific tunnels collapsed.",[{"region":"California Central Valley","mag":-0.12,"dur":1}]),
+ Q(1952,11,4,9.0,"Kamchatka",52.75,159.5,"PETROPAVLOVSK","Kamchatka earthquake, M9.0. Tsunami across the Pacific; Hilo flooded again. Severo-Kurilsk erased, 2,300 dead — Moscow does not report it.",[{"region":"Hawaiian Islands","mag":-0.15,"dur":1}]),
+ Q(1953,3,18,7.3,"Yenice–Gönen",40.0,27.3,"ISTANBUL","Yenice–Gönen earthquake, M7.3, south of the Marmara. 1,070 dead.",[{"region":"Mediterranean Basin","mag":-0.05,"dur":1}]),
+ Q(1954,9,9,6.7,"Orléansville",36.3,1.5,"ALGIERS","Orléansville earthquake, M6.7. 1,243 dead in the Chélif valley.",[{"region":"Mediterranean Basin","mag":-0.06,"dur":1}]),
 ]
 # ---- weather disasters on the record (authored), mapped to prototype regions ----
 # kinds: flood/typhoon/cyclone/locusts push WET (+); drought/famine/cold/blizzard/fire/avalanche push DRY (−).

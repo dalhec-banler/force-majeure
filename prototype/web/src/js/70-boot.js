@@ -8,11 +8,14 @@ const bootT=setTimeout(()=>{ $("boot").style.display="none";
   $("intro").style.display="flex"; }, 2600);
 $("boot").addEventListener("click",()=>{ clearTimeout(bootT);
   $("boot").style.display="none"; $("intro").style.display="flex"; });
-$("viewtoggle").addEventListener("click",()=>{
+function toggleView(){
   FLAT=!FLAT;
   $("viewtoggle").textContent="VIEW: "+(FLAT?"FLAT MAP":"GLOBE");
+  $("viewbtn").textContent = FLAT? "▭ FLAT MAP · ◉ GLOBE" : "◉ GLOBE · ▭ FLAT MAP";
   sfxClick();
-});
+}
+$("viewtoggle").addEventListener("click",toggleView);
+$("viewbtn").addEventListener("click",toggleView);
 $("wiretoggle").addEventListener("click",()=>{
   SHOW_WIRES=!SHOW_WIRES;
   $("wiretoggle").textContent="WIRES: "+(SHOW_WIRES?"ON":"OFF");

@@ -37,6 +37,9 @@ EXP = [
  ("Kazakh Virgin Lands","Spring wheat",4,1.2,1.3,"",[-0.1,0,-0.2,-0.55],[2,1,3,3]),                 # continental, variable; a warm Atlantic dries central Asia
  ("Panama Canal","Canal transits",2,1.5,0.9,"hub",[-0.6,0,0.2,-0.3],[1,1,2,3]),                     # El Niño drought empties Gatún Lake: draft restrictions
  ("Malacca Strait","Shipping, rubber and tin",3,1.1,0.9,"hub",[-0.5,-0.3,0,-0.35],[1,1,2,3]),      # El Niño and a positive dipole: drought and the haze
+ ("Pilbara Iron Belt","Iron ore and port loadings",3,1.1,1.1,"hub",[-0.3,-0.3,0,-0.3],[1,1,2,3]),   # La Niña and a negative dipole bring the cyclones that close Port Hedland
+ ("Murray–Darling Basin","Irrigated cotton, rice and wheat",4,1.3,1.1,"",[-0.6,-0.5,0,-0.45],[1,1,2,3]),  # El Niño and a positive dipole: the basin's droughts
+ ("Hawaiian Islands","Sugar, pineapple and Pacific basing",2,1.2,0.9,"hub",[-0.4,0,0,-0.3],[1,1,2,3]),    # El Niño dries the islands; the tsunamis come from the record
 ]
 LATS = {"North American Plains":41.5,"Black Sea Steppe":48,"La Plata Basin":-31,
  "South Asia":22,"Southeast Asia":12,"Eastern Australia":-29,"Sahel":14,
@@ -47,7 +50,7 @@ LATS = {"North American Plains":41.5,"Black Sea Steppe":48,"La Plata Basin":-31,
  "North China Plain":36.5,"Yangtze Basin":30.5,"Manchurian Plain":45,"Northern European Plain":50.5,
  "Mediterranean Basin":40,"Danube Basin":46.5,"Nile Delta":30.5,"Japan (Kanto–Kansai)":35.7,
  "Mekong Delta":10,"Cerrado":-15.8,"Southern African Maize Belt":-27,"Kazakh Virgin Lands":51,
- "Panama Canal":9.1,"Malacca Strait":2.5}
+ "Panama Canal":9.1,"Malacca Strait":2.5,"Pilbara Iron Belt":-20.3,"Murray–Darling Basin":-34.5,"Hawaiian Islands":21.3}
 for (name,com,wt,sens,sig,kind,co,lg) in EXP:
     reg={"name":name,"crop":com,"weight":wt,"sens":sens,"sigma":sig,"homeland":False}
     if kind: reg["kind"]=kind

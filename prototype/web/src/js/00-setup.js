@@ -10,6 +10,8 @@ for(const e of HISTORY.eruptions){
   if(e.climate) EXO.push({t:e.t, driver:"GLOBAL", mag:e.climate, dur:e.climDur||2, decay:0.6, cap:e.name+" (ash veil)"});
   for(const a of (e.ash||[])) EXO.push({t:e.t, region:a.region, mag:a.mag, dur:a.dur||1, cap:e.name+" (ashfall)"});
 }
+for(const q of HISTORY.quakes) for(const h of (q.hit||[]))
+  EXO.push({t:q.t, region:h.region, mag:h.mag, dur:h.dur||1, cap:q.name+" earthquake"});
 const eng = createEngine(MODEL, {rivals:true, idleTrim:0.6, jetstream:true, forensics:true, knowledge:true, budgetGate:true, exogenous:EXO});
 const DRVNAME = { ENSO:"the Pacific", IOD:"the Indian Ocean", NATL:"the Atlantic", GLOBAL:"the planet" };
 let SHOW_WIRES=true;             // the known wiring, drawn on the globe
@@ -30,7 +32,8 @@ const REGPOS = { "North American Plains":[41.5,-100], "Black Sea Steppe":[48,34]
   "Northern European Plain":[50.5,10], "Mediterranean Basin":[40,15], "Danube Basin":[46.5,20],
   "Nile Delta":[30.5,31], "Japan (Kanto–Kansai)":[35.7,139.7], "Mekong Delta":[10,105.8],
   "Cerrado":[-15.8,-47.9], "Southern African Maize Belt":[-27,27], "Kazakh Virgin Lands":[51,71],
-  "Panama Canal":[9.1,-79.7], "Malacca Strait":[2.5,101.5] };
+  "Panama Canal":[9.1,-79.7], "Malacca Strait":[2.5,101.5],
+  "Pilbara Iron Belt":[-20.3,118.6], "Murray–Darling Basin":[-34.5,143], "Hawaiian Islands":[21.3,-157.8] };
 const DRVPOS = { ENSO:[-3,-135], IOD:[-4,68], NATL:[44,-38] };
 const DATELINE = { "North American Plains":"OMAHA","Black Sea Steppe":"ODESSA",
   "La Plata Basin":"BUENOS AIRES","South Asia":"DELHI","Southeast Asia":"BANGKOK",
@@ -44,7 +47,8 @@ const DATELINE = { "North American Plains":"OMAHA","Black Sea Steppe":"ODESSA",
   "Northern European Plain":"BERLIN","Mediterranean Basin":"ROME","Danube Basin":"BUDAPEST",
   "Nile Delta":"CAIRO","Japan (Kanto–Kansai)":"TOKYO","Mekong Delta":"SAIGON",
   "Cerrado":"BRASÍLIA","Southern African Maize Belt":"JOHANNESBURG","Kazakh Virgin Lands":"AKMOLINSK",
-  "Panama Canal":"PANAMA CITY","Malacca Strait":"SINGAPORE" };
+  "Panama Canal":"PANAMA CITY","Malacca Strait":"SINGAPORE",
+  "Pilbara Iron Belt":"PORT HEDLAND","Murray–Darling Basin":"MILDURA","Hawaiian Islands":"HONOLULU" };
 const TOOLICON = { "Climate Research":"🔬", "Cloud Seeding":"☁","Watershed Interference":"🚱",
   "Fire Enablement":"🔥","Adaptation Investment":"🛡","Ocean Thermal Forcing":"🌊",
   "Stratospheric Aerosol Inj.":"✈","ENSO Forcing":"🌀","Ionospheric Coupling [T3]":"⚡",
