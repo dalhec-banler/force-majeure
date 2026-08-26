@@ -14,21 +14,36 @@ for(const q of HISTORY.quakes) for(const h of (q.hit||[]))
   EXO.push({t:q.t, region:h.region, mag:h.mag, dur:h.dur||1, cap:q.name+" earthquake"});
 /* Nation starts — the superpowers. The choice sets starting position only
    (homeland, the rival's home, the chest); never the systems available. */
+/* Difficulty is the programme you take over. Strengths and weaknesses are
+   read off the numbers: the homeland's weight in the traded index, how
+   much its harvest swings (sigma) and how hard drought bites it (sens),
+   how much of its grain reaches the market (export), the chest, and the
+   committee's generosity (mandate). */
 const STARTS={
- "North American Plains":{nation:"UNITED STATES", rival:"Black Sea Steppe", rivalName:"the Eastern Program", rivalShort:"the Steppe", treasury:90,
-   blurb:"Wheat and maize exporter. The biggest chest; the Soviet programme across the water."},
- "Black Sea Steppe":{nation:"SOVIET UNION", rival:"North American Plains", rivalName:"the Western Program", rivalShort:"the Plains", treasury:80,
-   blurb:"Wheat exporter with a famine in its first year. The Americans across the water."},
- "North China Plain":{nation:"CHINA", rival:"Black Sea Steppe", rivalName:"the Northern Program", rivalShort:"the Steppe", treasury:55,
-   blurb:"Wheat and maize for six hundred million. A thin chest; the Soviet programme to the north."},
- "South Asia":{nation:"INDIA", rival:"North China Plain", rivalName:"the Eastern Program", rivalShort:"the North China Plain", treasury:45,
-   blurb:"Rice and wheat at the monsoon's mercy. The thinnest chest; a programme across the Himalaya."},
- "Northern European Plain":{nation:"WESTERN EUROPE", rival:"Black Sea Steppe", rivalName:"the Eastern Program", rivalShort:"the Steppe", treasury:70,
-   blurb:"Wheat, sugar beet and dairy; a wet Atlantic to work with. The Soviet programme to the east."},
+ "North American Plains":{nation:"UNITED STATES", difficulty:"STANDARD", dcol:"var(--green)", rival:"Black Sea Steppe", rivalName:"the Eastern Program", rivalShort:"the Steppe", treasury:90, mandate:0,
+   blurb:"Wheat and maize exporter; the Soviet programme across the water.",
+   plus:["largest harvest on the board — every price move pays","steady weather (σ 0.8), drought bites least","the biggest chest: $90M"],
+   minus:["the rival works your watershed from 1976","everyone expects you to be the one doing it"]},
+ "Black Sea Steppe":{nation:"SOVIET UNION", difficulty:"STANDARD", dcol:"var(--green)", rival:"North American Plains", rivalName:"the Western Program", rivalShort:"the Plains", treasury:80, mandate:4,
+   blurb:"Wheat exporter with a famine in its first year; the Americans across the water.",
+   plus:["a committee that funds fear generously (+4 mandate)","a big exporter: the market feels your harvest","the Plains are one watershed away"],
+   minus:["the 1946 famine is yours to survive","drought bites harder (sens 1.1) and swings wider (σ 0.9)"]},
+ "Northern European Plain":{nation:"WESTERN EUROPE", difficulty:"HARDER", dcol:"var(--amber)", rival:"Black Sea Steppe", rivalName:"the Eastern Program", rivalShort:"the Steppe", treasury:70, mandate:-2,
+   blurb:"Wheat, sugar beet and dairy; a wet Atlantic to work with; the Soviet programme to the east.",
+   plus:["the most robust harvest (sens 0.9) — hard to hurt","wired to the Atlantic: your own ocean tool reaches home"],
+   minus:["a small harvest (weight 8): price moves pay less","a parsimonious committee (−2 mandate)","the Steppe is next door — and so is its programme"]},
+ "North China Plain":{nation:"CHINA", difficulty:"HARD", dcol:"var(--amber)", rival:"Black Sea Steppe", rivalName:"the Northern Program", rivalShort:"the Steppe", treasury:55, mandate:-2,
+   blurb:"Wheat and maize for six hundred million; the Soviet programme to the north.",
+   plus:["a harvest that feeds itself — the world price hurts you less","El Niño's wire into the plain is known from the start"],
+   minus:["little of your grain is traded (export 0.3): windfalls are small","a thin chest ($55M) and a parsimonious committee","the 1959–61 famine is on the record"]},
+ "South Asia":{nation:"INDIA", difficulty:"HARDEST", dcol:"var(--red)", rival:"North China Plain", rivalName:"the Eastern Program", rivalShort:"the North China Plain", treasury:45, mandate:-4,
+   blurb:"Rice and wheat at the monsoon's mercy; a programme across the Himalaya.",
+   plus:["the second-largest harvest on the board","the steadiest weather (σ 0.7) — when the monsoon comes"],
+   minus:["drought bites hardest (sens 1.2) and the monsoon is El Niño's to take","the thinnest chest ($45M) and the least generous committee (−4)","little of your grain reaches the market (export 0.4)"]},
 };
 let HOMELAND="North American Plains"; try{ const h=localStorage.getItem("fm.homeland"); if(h && STARTS[h]) HOMELAND=h; }catch(e){}
 const START=STARTS[HOMELAND];
-const eng = createEngine(MODEL, {homeland:HOMELAND, rivalHome:START.rival, startingTreasury:START.treasury, rivals:true, idleTrim:0.6, jetstream:true, forensics:true, knowledge:true, budgetGate:true, exogenous:EXO, priceCap:300, scrutiny:true, grainSupply:true, priceElasticity:3.0, rivalEras:true, shadow:true, eras:true, envelopeWidening:0.0006, windfall:2, reserveCap:400});
+const eng = createEngine(MODEL, {homeland:HOMELAND, rivalHome:START.rival, startingTreasury:START.treasury, mandateBonus:START.mandate||0, rivals:true, idleTrim:0.6, jetstream:true, forensics:true, knowledge:true, budgetGate:true, exogenous:EXO, priceCap:300, scrutiny:true, grainSupply:true, priceElasticity:3.0, rivalEras:true, shadow:true, eras:true, envelopeWidening:0.0006, windfall:2, reserveCap:400});
 const DRVNAME = { ENSO:"the Pacific", IOD:"the Indian Ocean", NATL:"the Atlantic", GLOBAL:"the planet" };
 let SHOW_WIRES=true;             // the known wiring, drawn on the globe
 let newWires=[];                 // wires revealed recently: {di,ri,bornT}

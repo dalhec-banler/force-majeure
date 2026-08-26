@@ -302,8 +302,9 @@
 #homepick{margin:12px 0 10px}
 #homepick .hp-h{font-size:9px;letter-spacing:.22em;color:var(--ink-dim);margin-bottom:6px}
 #homepickrow{display:flex;flex-wrap:wrap;gap:6px}
-.hp{background:var(--panel2);border:1px solid var(--line);color:var(--ink);font:inherit;text-align:left;padding:7px 9px;cursor:pointer;flex:1 1 180px;min-width:180px}
-.hp b{display:block;font-size:11px;letter-spacing:.14em}
+.hp{background:var(--panel2);border:1px solid var(--line);color:var(--ink);font:inherit;text-align:left;padding:7px 9px;cursor:pointer;flex:1 1 220px;min-width:220px}
+.hp b{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.14em} .hp b em{font-style:normal;font-size:9px;letter-spacing:.2em}
+.hp .hp-pm{margin-top:4px} .hp .hp-pm i{display:block;font-style:normal;font-size:10px;line-height:1.35} .hp .hp-pm i.p{color:var(--green)} .hp .hp-pm i.m{color:var(--amber)}
 .hp span{display:block;font-size:10.5px;color:var(--ink-dim);margin-top:2px;line-height:1.35}
 .hp.on{border-color:var(--green);box-shadow:inset 0 0 0 1px var(--green)}
 .hp:hover{border-color:var(--ink-dim)}

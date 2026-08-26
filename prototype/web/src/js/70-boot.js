@@ -6,7 +6,8 @@ buildTray(); clampContainment(); renderTray(); renderDirective(); renderReviewBu
   const row=$("homepickrow");
   for(const [region,st] of Object.entries(STARTS)){
     const b=document.createElement("button"); b.className="hp"+(region===HOMELAND?" on":"");
-    b.innerHTML=`<b>${st.nation}</b><span>${region} · chest $${st.treasury}M · rival: ${st.rivalName}<br>${st.blurb}</span>`;
+    b.innerHTML=`<b>${st.nation} <em style="color:${st.dcol}">${st.difficulty}</em></b><span>${region} · chest $${st.treasury}M · rival: ${st.rivalName}</span><span>${st.blurb}</span>
+      <span class="hp-pm">${(st.plus||[]).map(x=>`<i class="p">+ ${x}</i>`).join("")}${(st.minus||[]).map(x=>`<i class="m">− ${x}</i>`).join("")}</span>`;
     b.addEventListener("click",()=>{ if(region===HOMELAND) return; try{ localStorage.setItem("fm.homeland", region); }catch(e){} location.reload(); });
     row.appendChild(b); } }
 requestAnimationFrame(drawGlobe);            // every part has run; the loop may start

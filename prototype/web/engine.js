@@ -84,6 +84,8 @@ function createEngine(MODEL, opts) {
   // the homeland region, the rival programme's own region, the chest
   if (opts && opts.homeland) for (const r of MODEL.regions) r.homeland = (r.name === opts.homeland);
   const HOME = (MODEL.regions.find((r) => r.homeland) || MODEL.regions[0]).name;
+  // the committee's generosity by nation start (a flat lift on the mandate)
+  const mandateBonus = (opts && opts.mandateBonus) || 0;
   const RHOME = (opts && opts.rivalHome) || (HOME === "Black Sea Steppe" ? "North American Plains" : "Black Sea Steppe");
   // the windfall cut (ADR-0023): the programme keeps this share of what it
   // made the homeland this season over the shadow world — the trade desk's
@@ -579,7 +581,7 @@ function createEngine(MODEL, opts) {
       s + (online[ri] ? Math.max(0, Math.abs(anomalies[ri])
                       - sigmas[ri] * P.severityThreshold) * r.weight / sevTot : 0), 0);
     const mandate = Math.min(P.mandateCap,
-                             P.mandateBase + mandateLift(clim.year) + severity * P.mandatePerSeverity);
+                             P.mandateBase + mandateBonus + mandateLift(clim.year) + severity * P.mandatePerSeverity);
     const opsSpend = committed.reduce((s, o) => s + o.cost, 0);
     // the committee's patience is measured in reviews: at an annual cadence
     // the idle windows stretch so a year's silence is not a season's
