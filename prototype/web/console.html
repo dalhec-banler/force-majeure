@@ -3516,7 +3516,9 @@ function historyBeats(row){
     const told=new Set(HISTORY.weather.filter(w=>w.t===t&&/typhoon|cyclone/i.test(w.kind)).map(w=>w.line.toLowerCase()));
     // famous only: a named storm that came ashore at Category 4 or worse
     // (the rest spin on the globe, as recorded — hover them)
-    const show=bs.filter(s=>s.name && s.landfall && s.cat>=4 && !([...told].some(l=>new RegExp("\\b"+word.toLowerCase()+" "+s.name.toLowerCase()+"\\b").test(l)))).slice(0, 1);
+    // the other basins' storms are yours to read only when you have leaned on
+    // the Pacific (the quiet/hot lines above); otherwise they spin on the globe
+    const show=(bf<0.7||bf>1.3)? bs.filter(s=>s.name && s.landfall && s.cat>=4 && !([...told].some(l=>new RegExp("\\b"+word.toLowerCase()+" "+s.name.toLowerCase()+"\\b").test(l)))).slice(0, 1) : [];
     for(const s of show){
       const nm=`${word} ${s.name}`;
       news(s.dl, `${nm} — Category ${s.cat}, landfall near ${placeName(s.dl)}.${s.peak? " "+s.peak+" knots at peak.":""}`, s.cat>=5);
