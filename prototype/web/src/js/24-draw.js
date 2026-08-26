@@ -166,8 +166,8 @@ function drawGlobeInner(now){
     // contrail / wake
     cx.strokeStyle = v.kind==="plane"? "rgba(240,248,244,.5)":"rgba(180,225,240,.45)";
     cx.lineWidth=1.3; cx.beginPath();
-    for(let u=Math.max(0,tt-0.3);u<=tt;u+=0.03){
-      const [px,py]=bz(u); u<=Math.max(0,tt-0.3)+0.001? cx.moveTo(px,py):cx.lineTo(px,py);
+    for(let u=Math.max(0,tt-0.06);u<=tt;u+=0.006){
+      const [px,py]=bz(u); u<=Math.max(0,tt-0.06)+0.0001? cx.moveTo(px,py):cx.lineTo(px,py);
     }
     cx.stroke(); cx.lineWidth=1;
     const [px,py]=bz(tt), [qx,qy]=bz(Math.min(1,tt+0.02));

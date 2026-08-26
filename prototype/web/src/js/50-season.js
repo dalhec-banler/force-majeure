@@ -15,7 +15,10 @@ async function runSeason(auto){
   catch(e){ console.error("season error", e); wire(`<span class="tag tagr">FAULT</span> The season resolved with an error in the instrument: ${escapeHTML(e.message)}. The record stands.`,"att"); }
   finally{ brisk=false; resolving=false; $("resolve").disabled=!running; SEASON_MS=clockMs(); renderReviewButton(); if(running && seasonDeadline===null) seasonDeadline=performance.now()+SEASON_MS; }
 }
+let pendingArchive=null;          // the campaign's final row, waiting for the player to open the archive
+let CLOCK_AUTO=false;             // the review clock counts down; it only runs the review for you if you ask
 function renderReviewButton(){
+  if(pendingArchive){ $("resolve").textContent="OPEN THE ARCHIVE ▸"; $("resolve").disabled=false; return; }
   const n=running? nextBatch() : 0;
   $("resolve").textContent = n>=4? "RUN THE YEAR ▸" : n>=2? "RUN THE HALF-YEAR ▸" : "RUN SEASON ▸";
   const cl=$("szclockLbl"); if(cl) cl.textContent = n>=2? "REVIEW CLOSES" : "SEASON CLOSES";
@@ -114,11 +117,13 @@ async function runSeasonInner(auto, cmdOverride){
       if(PLANES.includes(op.cap)){
         const dest = op.cap==="Stratospheric Aerosol Inj."
           ? [homePos[0]+16, homePos[1]+55] : (REGPOS[op.target]||homePos);
+        // a mission takes minutes, not seconds: the plane is out there
+        // while you think about the next review
         vehicles.push({kind:"plane",from:homePos,to:dest,
-                       start:performance.now(),dur:2600});
+                       start:performance.now(),dur:150000});
       } else if(SHIPS.includes(op.cap) && (DRVPOS[op.target]||REGPOS[op.target]))
         vehicles.push({kind:"ship",from:homePos,to:DRVPOS[op.target]||REGPOS[op.target],
-                       start:performance.now(),dur:3800});
+                       start:performance.now(),dur:240000});
     }
   }
   for(const o of (row.refused||[]))
@@ -343,13 +348,16 @@ async function runSeasonInner(auto, cmdOverride){
   $("predict").value=""; slots=[]; pendingTool=null; clampContainment(); renderTray();
   $("toolinfo").textContent="Pick a tool. Aim it at the world. Scroll to zoom.";
   if(row.status==="exposed"||row.status==="insolvent"||row.status==="dissolved"||t>=eng.seasons){
-    running=false; clearSave(); if(!replaying) setTimeout(()=>showArchive(row), reduced?0:900);
+    // the campaign is over; the archive waits for you — read the last season first
+    running=false; clearSave(); pendingArchive=row;
+    if(!replaying) wire(`<span class="tag tagr">FILE CLOSED</span> ${row.status==="exposed"?"The record is public.":row.status==="dissolved"?"The committee has concluded.":row.status==="insolvent"?"The obligations could not be met.":"Your tenure is over."} Read the season. Open the archive when you are ready.`,"att");
+    renderReviewButton();
   }
   if(auto && row.committed.length===0)
     wire(`The season closed while the directorate deliberated.`);
   $("resolve").disabled=!running;
 }
-$("resolve").addEventListener("click",()=>{ sfxClick(); runSeason(false); });
+$("resolve").addEventListener("click",()=>{ sfxClick(); if(pendingArchive){ const r=pendingArchive; pendingArchive=null; $("resolve").disabled=true; showArchive(r); return; } runSeason(false); });
 
 /* Saves (ADR-0001 in prototype form): the campaign is the list of commands;
    the engine is deterministic, so a save replays in a second. One slot. */
@@ -376,9 +384,9 @@ setInterval(()=>{
   if(!running || seasonDeadline===null){ el.textContent="—"; el.style.color=""; return; }
   const left=Math.max(0, seasonDeadline-performance.now());
   const sec=Math.ceil(left/1000);
-  el.textContent="0:"+String(sec).padStart(2,"0");
+  el.textContent= left<=0 && !CLOCK_AUTO ? "OVERDUE" : "0:"+String(sec).padStart(2,"0");
   el.style.color = sec<=10? "var(--red)" : "";
-  if(left<=0 && !resolving) runSeason(true);
+  if(left<=0 && !resolving && CLOCK_AUTO) runSeason(true);   // manual by default: the clock nags, you advance
 },250);
 $("containment").addEventListener("input",()=>{ clampContainment(); $("contval").textContent=$("containment").value; renderTray(); });
 

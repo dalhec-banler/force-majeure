@@ -32,6 +32,12 @@ $("sndtoggle").addEventListener("click",()=>{
   $("sndtoggle").textContent="SOUND: "+(sndMuted?"OFF":"ON");
   if(!sndMuted){ audioInit(); sfxClick(); }
 });
+$("clocktoggle").addEventListener("click",()=>{
+  CLOCK_AUTO=!CLOCK_AUTO;
+  $("clocktoggle").textContent="CLOCK: "+(CLOCK_AUTO?"AUTO":"MANUAL");
+  if(CLOCK_AUTO && running && seasonDeadline!==null && seasonDeadline<performance.now()) seasonDeadline=performance.now()+SEASON_MS;
+  sfxClick();
+});
 $("teltoggle").addEventListener("click",()=>{
   telemetry=!telemetry;
   $("dosnum").style.display=telemetry?"inline":"none";
