@@ -100,9 +100,12 @@ function initEarth(){
       // the sun: day/night terminator and a glint on the water
       vec3 sun=vec3(cos(0.1)*sin(uSunLon),sin(0.1),cos(0.1)*cos(uSunLon));
       float day=clamp(dot(ve,sun),-1.,1.);
-      col*=0.38+0.62*smoothstep(-0.22,0.3,day);
+      // night is dim, not black: the dark side keeps ~62% of its colour with a
+      // cool cast, the terminator is wide, and the limb falls off gently
+      float dayf=smoothstep(-0.35,0.35,day);
+      col=mix(col*0.62+vec3(0.015,0.03,0.06), col, dayf);
       col+=vec3(1.0,0.95,0.8)*pow(max(day,0.0),24.0)*wat*0.4;
-      col*=0.5+0.5*z;
+      col*=0.72+0.28*z;
       float rim=smoothstep(0.82,1.0,sqrt(r2));
       col=mix(col,vec3(0.55,0.7,0.95),rim*0.28);
       gl_FragColor=vec4(col,1.0);

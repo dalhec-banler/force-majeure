@@ -38,7 +38,7 @@ exports.play = async (api) => {
     api.containment(v.rung>=4? Math.min(30,Math.max(0,T-80)) : v.rung>=3? Math.min(15,Math.max(0,T-80)) : 0);
     await api.review();
     const nv=api.view();
-    log.push({r,year:nv.year,did:did.join("; ")||"held",f:nv.funds,rung:nv.rung,profit:nv.profit,m:nv.mandate,wings:nv.wings.length,ov:nv.overhead,dir:nv.directive,st:nv.status});
+    log.push({r,year:nv.year,did:did.join("; ")||"held",f:nv.funds,rung:nv.rung,profit:nv.profit,m:nv.mandate,wings:nv.wings.length,wn:nv.wings,ov:nv.overhead,dir:nv.directive,st:nv.status});
   }
   return log;
 };

@@ -25,19 +25,19 @@ const DIRECTIVES=[
  {title:"Harden the homeland", reward:10, window:2, tool:"🛡 ADAPTATION INVESTMENT — your homeland (green ring)",
   text:"The committee funds what it can tour. Reservoirs and seed banks photograph well. Invest in Adaptation at home.",
   check:()=>eng.state.ops.some(o=>o.owner==="player"&&o.cap==="Adaptation Investment"&&o.target===REG.find(r=>r.homeland).name)},
- {title:"Read the wiring", reward:10, window:2, fromYear:1950, tool:"🔬 CLIMATE RESEARCH — a region whose weather you do not understand",
+ {title:"Read the wiring", reward:10, window:2, fromYear:1950, needs:["Climate Research"], tool:"🔬 CLIMATE RESEARCH — a region whose weather you do not understand",
   text:"Your analysts can see a fifth of how the world is wired. The committee has funded a room of them. Point it somewhere.",
   check:()=>eng.state.ops.some(o=>o.owner==="player"&&o.research)},
- {title:"Move a market", reward:24, window:3, fromYear:1966, tool:"🚱 WATERSHED INTERFERENCE — a wheat exporter (Black Sea, Australia, the Plata)",
+ {title:"Move a market", reward:24, window:3, fromYear:1966, needs:["Watershed Interference"], standable:true, tool:"🚱 WATERSHED INTERFERENCE — a wheat exporter (Black Sea, Australia, the Plata)",
   text:"Make the weather move a price. Stand the watershed wing up if it is not, and put it on an exporter. The board is watching the wheat number, and your positioning.",
   check:(row)=>row.price>=107&&eng.state.ops.some(o=>o.owner==="player"&&o.sig>0&&o.t+o.lag>=t-2&&o.t+o.lag<=t)},
  {title:"Stay invisible", reward:15, window:3, tool:"CONTAINMENT BUDGET — the slider under ATTRIBUTION",
   text:"Operations are landing and the ladder has not moved. Keep the dossier quiet — that is the craft, not the storm.",
   check:(row)=>row.dossier<40&&eng.state.ops.filter(o=>o.owner==="player"&&o.sig>0&&o.t+o.lag<=t).length>=3},
- {title:"Move the ocean, not the country", reward:30, window:3, fromYear:1975, tool:"🌊 OCEAN THERMAL — the Atlantic",
+ {title:"Move the ocean, not the country", reward:30, window:3, fromYear:1975, needs:["Ocean Thermal Forcing"], standable:true, tool:"🌊 OCEAN THERMAL — the Atlantic",
   text:"Stop pushing countries. Push the sea that pushes them. The ships exist now; stand the wing up and commit an ocean operation.",
   check:()=>eng.state.ops.some(o=>o.owner==="player"&&o.type==="DRIVER")},
- {title:"Answer them", reward:30, window:3, fromYear:1978, tool:"🚱 WATERSHED or 🔥 FIRE — Black Sea Steppe",
+ {title:"Answer them", reward:30, window:3, fromYear:1978, needs:["Watershed Interference","Fire Enablement"], tool:"🚱 WATERSHED or 🔥 FIRE — Black Sea Steppe",
   text:"Counterintelligence is certain enough: the Eastern Program is real and it is working our watershed. The Steppe grows wheat too. Answer them — quietly or otherwise.",
   check:(row,d)=>eng.state.ops.some(o=>o.owner==="player"&&o.t>=(d.issuedT||0)&&o.sig>0&&o.target==="Black Sea Steppe")},
 ];
@@ -46,7 +46,7 @@ const DIRECTIVES=[
    first, a failing client second, then a rotation of demands. */
 let lastHostileT=-99;                 // last season the homeland was worked by a rival
 const STANDING=[
- {key:"answer", when:()=>lastHostileT>=t-3, title:"Answer the Steppe", reward:18, window:2,
+ {key:"answer", when:()=>lastHostileT>=t-3, needs:["Watershed Interference","Fire Enablement","Ionospheric Coupling [T3]"], title:"Answer the Steppe", reward:18, window:2,
   tool:"🚱 WATERSHED, 🔥 FIRE, or ⚡ IONOSPHERIC — Black Sea Steppe",
   text:"They worked our watershed again. The committee wants a reply on the Steppe before the next hearing — it does not care what kind.",
   check:(row,d)=>eng.state.ops.some(o=>o.owner==="player"&&o.sig>0&&o.target==="Black Sea Steppe"&&o.t>d.issued)},
@@ -55,15 +55,15 @@ const STANDING=[
     d.tool=`☁ CLOUD SEEDING — ${r.name}`;
     d.text=`${r.name} is failing, and they buy our wheat with money they will not have. Put rain on it before the ministry stops answering our calls.`; },
   check:(row,d)=>eng.state.ops.some(o=>o.owner==="player"&&o.cap==="Cloud Seeding"&&o.target===d.region&&o.t>d.issued)},
- {key:"price", when:()=>eng.wingOnline("Watershed Interference")||eng.wingOnline("Fire Enablement"), title:"Move the wheat number", reward:16, window:2,
+ {key:"price", needs:["Watershed Interference","Fire Enablement"], title:"Move the wheat number", reward:16, window:2,
   tool:"🚱 WATERSHED or 🔥 FIRE — a competing exporter",
   text:"The board wants wheat above $108 before the fiscal year closes. It does not want to know how.",
   check:(row,d)=>row.price>=108&&eng.state.ops.some(o=>o.owner==="player"&&o.sig>0&&o.t>d.issued)},
- {key:"flag", when:()=>CAPS.some(c=>c.sig>=7&&eng.wingOnline(c.name)), title:"Show the flag", reward:30, window:2,
+ {key:"flag", needs:CAPS.filter(c=>c.sig>=7).map(c=>c.name), title:"Show the flag", reward:30, window:2,
   tool:"🌊 OCEAN THERMAL, ✈ AEROSOL, or larger",
   text:"Appropriations season. The committee funds programmes that do things. Do something they can see from a satellite.",
   check:(row,d)=>eng.state.ops.some(o=>o.owner==="player"&&o.sig>=7&&o.t>d.issued)},
- {key:"map", when:()=>eng.wingOnline("Climate Research"), title:"Map the world", reward:12, window:2,
+ {key:"map", needs:["Climate Research"], title:"Map the world", reward:12, window:2,
   tool:"🔬 CLIMATE RESEARCH — regions whose seasons you cannot explain",
   text:"Two wires. The committee has read the analysts' estimate of how much of the world we understand, and did not enjoy it.",
   check:(row,d)=>eng.state.rows.slice(d.issued).reduce((n,r)=>n+(r.revealed||[]).filter(x=>x.how!=="exhausted").length,0)>=2},
@@ -86,14 +86,26 @@ function clientInNeed(row){
 }
 let dirIdx=0, dirIssued=0, dirIssuedRv=0, pendingGrant=0, pendingClaw=0;
 let standing=null, standingCount=0, nextStandingRv=99, lapses=0, lastStandingKey=null;
-function gated(d){ return !!(d && d.fromYear && curYear()<d.fromYear); }
+/* The committee never asks for what the programme cannot fly: a directive
+   needs its year AND one of its wings online (or, for the onboarding asks
+   that say "stand the wing up", a wing the chest could stand up). */
+const ICON={"Watershed Interference":"🚱 WATERSHED","Fire Enablement":"🔥 FIRE","Ionospheric Coupling [T3]":"⚡ IONOSPHERIC","Ocean Thermal Forcing":"🌊 OCEAN THERMAL","Stratospheric Aerosol Inj.":"✈ AEROSOL","ENSO Forcing":"🌀 ENSO FORCING","Polar Destabilization":"❄ POLAR","Climate Research":"🔬 CLIMATE RESEARCH","Cloud Seeding":"☁ CLOUD SEEDING","Adaptation Investment":"🛡 ADAPTATION"};
+function wingUsable(name, standable){ const ws=eng.eras? eng.wingStatus(name) : null; return !ws || ws.online || (standable && ws.canStand); }
+function needsMet(d){ return !d.needs || d.needs.some(n=>wingUsable(n, d.standable)); }
+function gated(d){ return !!(d && ((d.fromYear && curYear()<d.fromYear) || !needsMet(d))); }
+function useLine(d){                       // the USE line names only wings you can actually fly
+  if(!d.needs) return d.tool||"";
+  const have=d.needs.filter(n=>wingUsable(n, d.standable)).map(n=>ICON[n]||n.toUpperCase());
+  const where=(d.tool||"").split("—").slice(1).join("—").trim();
+  return (have.length? have.join(", ") : (d.tool||"").split("—")[0].trim())+(where? " — "+where : "");
+}
 function curDir(){ const d=DIRECTIVES[dirIdx]; return (d && !gated(d))? d : (standing||d||null); }
 function onboardingGated(){ return gated(DIRECTIVES[dirIdx]); }
 function dirActive(d){ return d && !gated(d); }
 function issueStanding(row){
   const rot=["price","flag","map","relief","hold"];
   // never the same demand twice running — the committee has a memory
-  const ok=s=>s.key!==lastStandingKey;
+  const ok=s=>s.key!==lastStandingKey && needsMet(s);
   let src=STANDING.find(s=>s.key==="answer"&&ok(s)&&s.when(row))
        ||STANDING.find(s=>s.key==="client"&&ok(s)&&s.when(row))
        ||STANDING.find(s=>s.key===rot[standingCount%rot.length]&&ok(s)&&(!s.when||s.when(row)))
@@ -146,13 +158,13 @@ function earmarkLine(){
 }
 function renderDirective(){
   const d=curDir();
-  if(!d || (d.from && t<d.from)){
+  if(!d || gated(d)){
     $("dirtext").innerHTML="The committee is drafting language. Continue operations."+earmarkLine();
     $("dirreward").textContent=""; return; }
   const issuedRv=d.standing? d.issuedRv : dirIssuedRv;
   const left=Math.max(0,d.window-(rv-issuedRv));
   $("dirtext").innerHTML=d.text+(d.tool?
-    `<div style="margin-top:5px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--green)">USE: ${d.tool}</div>`:"")
+    `<div style="margin-top:5px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--green)">USE: ${useLine(d)}</div>`:"")
     +earmarkLine();
   $("dirreward").innerHTML=`+$${d.reward}M <span style="color:${left<=1?"var(--red)":"var(--ink-dim)"}">· ${left} review${left===1?"":"s"}</span>`;
 }
