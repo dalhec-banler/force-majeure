@@ -32,6 +32,13 @@ $("sndtoggle").addEventListener("click",()=>{
   $("sndtoggle").textContent="SOUND: "+(sndMuted?"OFF":"ON");
   if(!sndMuted){ audioInit(); sfxClick(); }
 });
+$("wire").classList.add("priority");
+$("wiremode").addEventListener("click",()=>{
+  WIRE_PRIORITY=!WIRE_PRIORITY;
+  $("wire").classList.toggle("priority", WIRE_PRIORITY);
+  $("wiremode").textContent=WIRE_PRIORITY?"PRIORITY":"ALL";
+  sfxClick();
+});
 $("clocktoggle").addEventListener("click",()=>{
   CLOCK_AUTO=!CLOCK_AUTO;
   $("clocktoggle").textContent="CLOCK: "+(CLOCK_AUTO?"AUTO":"MANUAL");

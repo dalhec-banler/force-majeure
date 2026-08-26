@@ -7,15 +7,21 @@ function wire(html, cls){
   if(typeof replaying!=="undefined" && replaying) return;
   const row=lastRow();
   const stamp = row? `${row.year}·${row.qtr[0]}` : "1946·W";
-  wireQ.push(`<span class="stamp">${stamp}</span> ${cls?`<span class="${cls}">${html}</span>`:html}`);
+  // PRIORITY: the committee, your operations and their traces, hostile
+  // action, wings, the ladder, memos, and BREAKING world events. Everything
+  // else is on the wire but folded until ALL is chosen.
+  const lo = cls==="ad" || cls==="cast" || (cls==="news" && !/class="chip"/.test(html)) || (!cls && !/class="tag/.test(html));
+  wireQ.push({html:`<span class="stamp">${stamp}</span> ${cls?`<span class="${cls}">${html}</span>`:html}`, lo});
   if(reduced) pumpWire(true);
 }
+let WIRE_PRIORITY=true;
 function pumpWire(all){
   const now=performance.now();
   const gap = all? 0 : wireQ.length>24? 140 : wireQ.length>10? 300 : (typeof brisk!=="undefined"&&brisk)? 260 : 650;
   while(wireQ.length && (all || now-wireLast>=gap)){
-    const p=document.createElement("p"); p.innerHTML=wireQ.shift();
-    $("wire").prepend(p); wireLast=now; if(!all) break;
+    const it=wireQ.shift(); const p=document.createElement("p"); p.innerHTML=it.html; if(it.lo) p.className="lo";
+    $("wire").prepend(p); if(!it.lo || !WIRE_PRIORITY) wireLast=now;   // folded lines cost no time on the wire
+    if(!all && (!it.lo || !WIRE_PRIORITY)) break;
   }
 }
 setInterval(()=>pumpWire(false), 80);

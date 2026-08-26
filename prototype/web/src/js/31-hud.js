@@ -42,7 +42,7 @@ function renderInflight(){
     : '<p class="none">Nothing in transit. The world is doing this to itself.</p>';
 }
 
-const wingMemoDone=new Set();
+const wingMemoDone=new Set(); const memoSeen=new Map();
 function updateHUD(row, prev){
   $("clock").textContent = `${row.year} · ${row.qtr.toUpperCase()}  ·  ${tierFor(row.t).name}`;
   $("hFunds").textContent = "$"+fmt(row.treasury)+"M";
@@ -157,6 +157,7 @@ function memos(row){
     out.push("Chief of staff: two lapsed directives on the record. The committee has started using the word 'review'.");
   if(t%9===5)
     out.push("██████ ██ ███████ cleared through legal. Do not discuss on this channel.");
-  for(const m of out.slice(0,2)) wire(`MEMO — ${m}`,"memo");
+  // one memo a season, and never the same memo twice in a year
+  for(const m of out){ const key=m.slice(0,28); if(memoSeen.get(key)>t-4) continue; memoSeen.set(key,t); wire(`MEMO — ${m}`,"memo"); break; }
 }
 
