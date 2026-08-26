@@ -132,15 +132,15 @@ eruptions=[
  E(1946,1,1,4,"Sakurajima",31.6,130.7,"KAGOSHIMA","Sakurajima in eruption; lava reaches the sea at Kurokami. Kagoshima sweeps ash.",0.9,3,0,0,[{"region":"Japan (Kanto–Kansai)","mag":-0.05,"dur":1}]),
  E(1946,1,1,25,"Paricutín",19.5,-102.25,"URUAPAN","Paricutín, the volcano that rose in a cornfield in 1943, still building its cone.",0.45,4),
  E(1947,3,29,5,"Hekla",64.0,-19.7,"REYKJAVÍK","Hekla erupts after a century's silence. Ash to thirty kilometres; the column is seen from Scotland.",1.35,4,0.3,3,[{"region":"North Sea Energy Shelf","mag":-0.1,"dur":1}]),
- E(1949,6,24,2,"Cumbre Vieja",28.6,-17.85,"SANTA CRUZ DE LA PALMA","Cumbre Vieja opens on La Palma. Lava reaches the western coast.",0.7,2),
+ E(1949,6,24,2,"Cumbre Vieja",28.6,-17.85,"SANTA CRUZ DE LA PALMA","The San Juan eruption opens on La Palma's Cumbre Vieja on the saint's day. Thirty-seven days; lava to the western coast.",0.7,2),
  E(1950,6,1,1,"Mauna Loa",19.5,-155.6,"HILO","Mauna Loa's largest eruption in a lifetime. Lava crosses the coast road in three hours.",0.6,0),
  E(1950,11,25,5,"Etna",37.7,15.0,"CATANIA","Etna's longest flank eruption in living memory begins. Milo threatened.",0.9,3),
  E(1951,1,21,2,"Lamington",-8.95,148.15,"PORT MORESBY","Mount Lamington explodes without warning. The Higaturu district is gone; 2,942 dead.",1.25,4,0.1,2),
  E(1952,9,17,2,"Myōjin-shō",31.9,140.0,"TOKYO","A submarine volcano surfaces south of Tokyo and destroys the survey ship sent to study it. No survivors.",0.8,2),
  E(1953,7,9,1,"Mount Spurr",61.3,-152.25,"ANCHORAGE","Spurr erupts; a quarter-inch of ash on Anchorage by afternoon.",0.9,4),
  E(1953,12,24,1,"Ruapehu",-39.3,175.6,"WELLINGTON","Ruapehu's crater lake bursts. The lahar takes the Tangiwai rail bridge with the Wellington express on it.",0.6,2),
- E(1954,1,18,1,"Merapi",-7.5,110.4,"YOGYAKARTA","Merapi's dome collapses. Pyroclastic flows into the villages on the south flank.",0.8,3,0,0,[{"region":"Southeast Asia","mag":-0.12,"dur":1}]),
- E(1955,2,28,2,"Kīlauea",19.4,-155.0,"HILO","Kīlauea's east rift opens through the cane fields of Puna. Twenty-one homes lost.",0.6,0),
+ E(1954,1,18,1,"Merapi",-7.5,110.4,"YOGYAKARTA","Merapi's dome collapses; pyroclastic flows down the south flank toward the villages.",0.7,2,0,0,[{"region":"Southeast Asia","mag":-0.06,"dur":1}]),   # 1953–54 eruption per GVP; toll unverified
+ E(1955,2,28,2,"Kīlauea",19.4,-155.0,"HILO","Kīlauea's east rift opens through the cane fields of lower Puna — twenty-four vents in eighty-eight days. The coast from Kalapana to Kapoho evacuated.",0.6,0),
  E(1946,11,9,1,"Sarychev Peak",48.1,153.2,"PETROPAVLOVSK","Sarychev Peak erupts in the Kurils, VEI 4. Ash across the Sea of Okhotsk; the Soviet garrisons say nothing.",1.0,4,0.1,2),
  E(1951,8,31,1,"Kelud",-7.93,112.3,"SURABAYA","Kelud erupts in East Java, VEI 4. Ash on the rice terraces from Kediri to Malang.",1.0,4,0.08,2,[{"region":"Southeast Asia","mag":-0.1,"dur":1}]),
  E(1952,2,29,2,"Bagana",-6.14,155.2,"RABAUL","Bagana in eruption on Bougainville, VEI 4. Ash on the copra plantations.",0.9,4),
@@ -193,7 +193,7 @@ weather=[
  W(1953,1,1,"North Sea Energy Shelf","flood","THE HAGUE","The North Sea storm surge breaks the dikes of Zeeland and the Thames sea walls. 2,500 dead in a night.",
    "The February gale passes over the North Sea without a surge. The dikes hold. Nobody knows how close it came.",
    "The North Sea surge overtops every dike from Zeeland to the Humber. The count stops at five thousand."),
- W(1954,1,4,"North American Plains","drought","AMARILLO","Third year of drought in Texas and the southern Plains. Worse than the Thirties, the old men say.",
+ W(1954,1,4,"North American Plains","drought","AMARILLO","The fourth year of drought across Texas and the southern Plains — the worst on the state's record, and 1954 among its driest. Ranchers drive cattle north to Kansas; the drought follows them.",
    "The rains return to the southern Plains. The drought the almanacs feared breaks a year early.",
    "The southern Plains drought deepens. Dust over Amarillo again, thirty years on."),
  # --- Japan's typhoon decade (VERIFY vs JMA) ---
@@ -218,8 +218,6 @@ weather=[
  # --- China ---
  W(1954,4,2,"Yangtze Basin","flood","WUHAN","The Yangtze at 29.7 metres at Wuhan — the highest on record — from June to September. Hubei under water; 33,000 dead with the plague that follows.",
    "The Yangtze stays in its banks. A wet year, not a fatal one.","The Yangtze breaks the Wuhan dike. The city is an island; the plain a sea."),
- W(1949,7,1,"Yangtze Basin","flood","NANKING","The Yangtze and the Huai in flood while the armies move. Forty million on the roads, by some counts.",
-   "A low Yangtze the summer the armies cross it.","The Yangtze and the Huai flood together. The famine follows the war."),
  # --- Europe ---
  W(1947,1,1,"Northern European Plain","cold","BERLIN","The winter of 1947. Berlin burns its furniture; the Rhine freezes; the potato clamps are ice.",
    "A mild winter across the plain. The clamps hold.","The winter of 1947, and worse: the canals frozen to April, the seed potatoes lost."),

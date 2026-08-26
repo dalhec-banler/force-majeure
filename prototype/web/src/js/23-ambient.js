@@ -74,9 +74,11 @@ function drawAmbient(nowMs){
     const dia=(0.09+0.11*Math.min(1,st.w/150))*st.strength;
     drawCyclone(p, dia, nowMs+idx*900, {alpha:0.92, lat:st.lat, variant:idx});
     if(zoom>=1.2 || st.s.cat>=3){
+      const label=(st.s.name? st.s.name.toUpperCase() : STORM_WORD[st.s.basin].toUpperCase())+(st.s.cat? " · C"+st.s.cat : "");
       cx.font="9px "+getComputedStyle(document.body).getPropertyValue("--mono");
-      cx.fillStyle="rgba(230,240,255,.85)";
-      cx.fillText((st.s.name? st.s.name.toUpperCase() : STORM_WORD[st.s.basin].toUpperCase())+(st.s.cat? " · C"+st.s.cat : ""), p.x+Rp*dia*0.5+3, p.y+3);
+      const lx=p.x+Rp*dia*0.62+4, ly=p.y+Rp*dia*0.5+9, lw2=cx.measureText(label).width;
+      cx.fillStyle="rgba(4,7,10,.7)"; cx.fillRect(lx-3, ly-9, lw2+6, 12);
+      cx.fillStyle="rgba(230,240,255,.9)"; cx.fillText(label, lx, ly);
     }
   });
   // earthquakes of the season: rings from the epicentre
