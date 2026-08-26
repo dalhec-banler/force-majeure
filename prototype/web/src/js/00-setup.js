@@ -86,6 +86,7 @@ function fmtDead(n){
 function fmt(n,d=1){ return n.toLocaleString("en-US",
   {minimumFractionDigits:d,maximumFractionDigits:d}); }
 function lastRow(){ return eng.state.rows[t-1]; }
+function placeName(dl){ return dl.toLowerCase().replace(/(^|[\s\-'])(\S)/g,(m,a,b)=>a+b.toUpperCase()); }
 /* the purse: what is on hand, what is already committed, what is left */
 function funds(){ const r=lastRow(); return r? r.treasury : eng.assumptions.startingTreasury; }
 function capCost(name){ const c=CAPS.find(c2=>c2.name===name); if(!c) return 0;

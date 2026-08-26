@@ -58,6 +58,71 @@ if RAW:
             p0=round(doq(y0,m0,d0),3),p1=round(doq(y1,m1,d1),3) if season(y1,m1)==t else 1.0,
             m0=m0,d0=d0,peak=peak,cat=cat(peak),landfall=bool(land),dl=dl,track=track))
 
+# ---- IBTrACS (NOAA NCEI, public domain): the other basins ----
+# WP and EP carry JTWC winds and names from 1945; NI, SI, SP carry real tracks
+# but no wind measurements before the satellite era — those render as cyclones
+# of unrecorded strength (cat 0), never an invented category.
+BASIN_PORTS={
+ 'WP':[("TOKYO",35.7,139.7),("OSAKA",34.7,135.5),("KAGOSHIMA",31.6,130.6),("NAHA",26.2,127.7),("TAIPEI",25.0,121.5),("HONG KONG",22.3,114.2),
+       ("SHANGHAI",31.2,121.5),("MANILA",14.6,121.0),("CEBU",10.3,123.9),("HAIPHONG",20.9,106.7),("HAINAN",20.0,110.3),("GUAM",13.5,144.8),("FUZHOU",26.1,119.3),("SAPPORO",43.1,141.3)],
+ 'EP':[("ACAPULCO",16.9,-99.9),("MANZANILLO",19.1,-104.3),("MAZATLÁN",23.2,-106.4),("LA PAZ",24.1,-110.3),("PUERTO VALLARTA",20.6,-105.2),("SALINA CRUZ",16.2,-95.2)],
+ 'NI':[("CALCUTTA",22.6,88.4),("DACCA",23.7,90.4),("CHITTAGONG",22.3,91.8),("MADRAS",13.1,80.3),("BOMBAY",19.1,72.9),("KARACHI",24.9,67.0),("RANGOON",16.8,96.2),("VISAKHAPATNAM",17.7,83.3),("MASULIPATAM",16.2,81.1)],
+ 'SI':[("PORT HEDLAND",-20.3,118.6),("DARWIN",-12.5,130.8),("PERTH",-32.0,115.9),("BROOME",-18.0,122.2),("TAMATAVE",-18.2,49.4),("BEIRA",-19.8,34.9),("PORT LOUIS",-20.2,57.5),("SAINT-DENIS",-20.9,55.5)],
+ 'SP':[("BRISBANE",-27.5,153.0),("TOWNSVILLE",-19.3,146.8),("CAIRNS",-16.9,145.8),("NOUMÉA",-22.3,166.4),("SUVA",-18.1,178.4),("AUCKLAND",-36.9,174.8),("PORT VILA",-17.7,168.3)],
+}
+def ibtracs(basin):
+    import csv
+    f=HERE/f'../../data/raw/ibtracs.{basin}.list.v04r01.csv'
+    if not f.exists(): return []
+    rd=csv.reader(open(f)); hdr=next(rd); next(rd); ix={h:i for i,h in enumerate(hdr)}
+    S={}
+    for r in rd:
+        try: yr=int(r[ix['SEASON']])
+        except: continue
+        if yr>1956: break
+        if yr<1946 or yr>1955: continue
+        sid=r[ix['SID']]
+        w=-1
+        for k in ('USA_WIND','WMO_WIND'):
+            v=r[ix[k]].strip()
+            try: w=max(w,float(v))
+            except: pass
+        try: la=float(r[ix['LAT']]); lo=float(r[ix['LON']])
+        except: continue
+        s=S.setdefault(sid,dict(name=r[ix['NAME']],rows=[]))
+        s['rows'].append(dict(iso=r[ix['ISO_TIME']],lat=la,lon=lo,w=w,nat=r[ix['NATURE']],lf=r[ix['LANDFALL']].strip()))
+    out=[]
+    for sid,s in S.items():
+        rows=s['rows']
+        if len(rows)<8: continue
+        peak=max(r['w'] for r in rows)
+        winds=peak>0
+        if winds and peak<64: continue                      # measured, and never a hurricane
+        if not winds and (len(rows)<12 or not any(r['nat']=='TS' for r in rows)): continue
+        f0,l0=rows[0],rows[-1]
+        y0,m0,d0=int(f0['iso'][:4]),int(f0['iso'][5:7]),int(f0['iso'][8:10])
+        y1,m1=int(l0['iso'][:4]),int(l0['iso'][5:7])
+        t=season(y0,m0)
+        if t<1 or t>40: continue
+        keep=[j for j in range(len(rows)) if j%4==0 or rows[j]['w']==peak or j==len(rows)-1 or rows[j]['lf']=='0']
+        track=[[round(rows[j]['lat'],1),round(rows[j]['lon'],1),int(rows[j]['w']) if rows[j]['w']>0 else 0,rows[j]['nat'],1 if rows[j]['lf']=='0' else 0] for j in sorted(set(keep))]
+        land=[r for r in rows if r['lf']=='0']
+        pts=[(r['lat'],r['lon']) for r in (land or rows)]
+        best=None
+        for la,lo in pts:
+            for n,pa,po in BASIN_PORTS[basin]:
+                d=math.hypot(la-pa,(lo-po)*math.cos(math.radians(la)))
+                if best is None or d<best[0]: best=(d,n)
+        nm=s['name'].strip()
+        name=None if nm in ('NOT_NAMED','UNNAMED','') else nm.title()
+        out.append(dict(id=sid,basin=basin,name=name,year=y0,t=t,p0=round(doq(y0,m0,d0),3),
+            p1=round(doq(y1,m1,int(l0['iso'][8:10])),3) if season(y1,m1)==t else 1.0,
+            m0=m0,d0=d0,peak=int(peak) if winds else 0,cat=cat(peak) if winds else 0,landfall=bool(land),dl=best[1],track=track))
+    return out
+for b in ('WP','EP','NI','SI','SP'): storms.extend(ibtracs(b))
+for s in storms:
+    if 'basin' not in s: s['basin']='NA'
+
 # ---- authored geophysical canon (VERIFY dates/magnitudes vs GVP + USGS) ----
 # climate: stratospheric loading as a GLOBAL harvest-stress forcing (the aerosol
 # tool's natural analogue; 1946–55 had no Pinatubo — Hekla 1947 is the only one
@@ -169,7 +234,7 @@ weather=[
  C(1953,4,"North American Plains","tornado","WACO","Waco, Flint, Worcester: three tornadoes in four weeks each kill more than ninety. The deadliest spring on record."),
  W(1950,4,2,"Canadian Prairies","fire","GRANDE PRAIRIE","The Chinchaga fire, the largest in North America's record, burns from June to October. Blue suns over New York and Edinburgh; Toronto's streetlights come on at noon.",
    "A wet spring in the Peace country. The fire season never starts.","The Chinchaga fire and a dozen more. The northern plains under smoke till the snow."),
- W(1955,10,1,"California Central Valley","flood","SACRAMENTO","Christmas floods across the Central Valley. Yuba City under the levee break; the levees of the Feather gone.",
+ W(1955,10,1,"California Central Valley","flood","SACRAMENTO","Christmas floods across the Central Valley. The Feather levee breaks at Shanghai Bend on Christmas Eve; Yuba City under twenty feet; 74 dead.",
    "A dry December in the valley. The reservoirs wait for snow.","The Feather and the Yuba take the whole north valley at Christmas. Sacramento's levees hold by inches."),
  C(1952,7,"North American Plains","epidemic","NEW YORK","Polio's worst year: 57,000 cases across the United States. Swimming pools closed; the iron lungs are full."),
  # --- Africa and the Middle East ---
@@ -179,7 +244,7 @@ weather=[
  W(1951,7,1,"Sahel","locusts","NIAMEY","Swarms out of the Red Sea breeding grounds reach the Sahel. Millet stripped to the stalk.",
    "The swarms fail to reach the Sahel. A dry breeding season behind them.","The swarms reach the Sahel in waves. Nothing green from the Niger to Lake Chad."),
  # --- Asia ---
- W(1951,7,1,"South Asia","drought","DELHI","Failed monsoon across Bihar and Rajasthan. India asks Washington for two million tons of wheat.",
+ W(1950,10,2,"South Asia","drought","DELHI","Floods, then a failed monsoon, across Bihar and Rajasthan. India tells Washington it must import six million tons of grain and cannot pay for two.",
    "The monsoon arrives on time in Bihar. The wheat loan is not needed.","The monsoon fails from Rajasthan to Bengal. The ration is cut to the bone."),
  W(1955,10,1,"South Asia","flood","LAHORE","The Punjab rivers in flood together. Lahore's suburbs under water; the wheat sowing lost.",
    "The Punjab rivers stay low into October.","The five rivers of the Punjab flood at once. Lahore cut off for a week."),

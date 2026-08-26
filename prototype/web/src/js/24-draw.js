@@ -285,9 +285,10 @@ function hoverCheck(e){
     const hh=nearestHistory(mx,my);
     if(!hh){ h.style.display="none"; return; }
     if(hh.type==="storm"){ const s=hh.st.s, f=atlanticForcing();
-      h.innerHTML=`<b>${(s.name? "HURRICANE "+s.name : "UNNAMED HURRICANE").toUpperCase()}</b> · ${s.year}<br>
-        Category ${s.cat} · ${s.peak} kt at peak · ${s.landfall? "landfall near "+s.dl.charAt(0)+s.dl.slice(1).toLowerCase() : "at sea"}<br>
-        <span style="color:var(--ink-faint)">the record's storm, on its recorded track${f>1?" — <span style='color:var(--amber)'>stronger: you warmed the Atlantic</span>":""}</span>`; }
+      const word=STORM_WORD[s.basin]||"Hurricane";
+      h.innerHTML=`<b>${(s.name? word+" "+s.name : "UNNAMED "+word).toUpperCase()}</b> · ${s.year}<br>
+        ${s.cat? "Category "+s.cat+" · "+s.peak+" kt at peak" : "strength unrecorded — pre-satellite track"} · ${s.landfall? "landfall near "+placeName(s.dl) : "at sea"}<br>
+        <span style="color:var(--ink-faint)">the record's storm, on its recorded track${s.basin==="NA"&&f>1?" — <span style='color:var(--amber)'>stronger: you warmed the Atlantic</span>":""}</span>`; }
     else if(hh.type==="quake"){ const q=hh.q;
       h.innerHTML=`<b>EARTHQUAKE M${q.mag.toFixed(1)} — ${q.name.toUpperCase()}</b> · ${q.date}<br>${q.line}<br>
         <span style="color:var(--ink-faint)">canon. Nothing you do reaches the lithosphere${lithoUnlocked()?"":" — yet"}.</span>`; }

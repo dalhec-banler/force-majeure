@@ -326,9 +326,25 @@ function historyBeats(row){
     recordStopped=true;
     wire(`<span class="tag tagr">ARCHIVE</span> Every earthquake and eruption until today was documented and natural. From here the record is suspect — <b>including the ones you did not cause.</b>`,"att");
   }
+  // the other basins: as recorded (no forcing reaches them yet)
+  for(const basin of ["WP","EP","NI","SI","SP"]){
+    const bs=HISTORY.storms.filter(s=>s.t===t&&s.basin===basin).sort((a,b)=>b.peak-a.peak||b.track.length-a.track.length);
+    if(!bs.length) continue;
+    const word=STORM_WORD[basin];
+    const told=new Set(HISTORY.weather.filter(w=>w.t===t&&/typhoon|cyclone/i.test(w.kind)).map(w=>w.line.toLowerCase()));
+    const show=bs.filter(s=>(s.landfall||s.cat>=3) && !(s.name&&[...told].some(l=>l.includes(s.name.toLowerCase())))).slice(0, basin==="WP"?3:2);
+    for(const s of show){
+      const nm=s.name? `${word} ${s.name}` : `An unnamed ${word.toLowerCase()}`;
+      const where=s.landfall? `landfall near ${placeName(s.dl)}` : "at sea";
+      news(s.dl, `${nm} — ${s.cat? "Category "+s.cat+", " : "strength unrecorded, "}${where}.${s.peak? " "+s.peak+" knots at peak.":""}`, s.cat>=4&&s.landfall);
+      if(s.cat>=4 && s.landfall) alertStrip(`${nm.toUpperCase()} — CATEGORY ${s.cat} LANDFALL`);
+    }
+    if(bs.length>show.length) news(bs[0].dl, `${bs.length-show.length} more ${word.toLowerCase()}${bs.length-show.length>1?"s":""} in the basin this quarter, as recorded.`);
+    histAsRecorded+=bs.length;
+  }
   // the Atlantic season
   const f=atlanticForcing();
-  const ss=HISTORY.storms.filter(s=>s.t===t).sort((a,b)=>b.peak-a.peak);
+  const ss=HISTORY.storms.filter(s=>s.t===t&&s.basin==="NA").sort((a,b)=>b.peak-a.peak);
   if(ss.length){
     if(f<-1.0){
       news("MIAMI", `A quiet Atlantic. The ${ss.length===1?"storm":ss.length+" storms"} the almanacs expected did not form.`);
@@ -343,7 +359,7 @@ function historyBeats(row){
       }
       for(const s of ss.slice(0,3)){
         const nm=s.name? "Hurricane "+s.name : "An unnamed hurricane", c=Math.min(5, s.cat+(hot?1:0));
-        const where=s.landfall? `landfall near ${s.dl.charAt(0)+s.dl.slice(1).toLowerCase()}` : "at sea";
+        const where=s.landfall? `landfall near ${placeName(s.dl)}` : "at sea";
         news(s.dl, `${nm} — Category ${c}, ${where}. ${Math.round(s.peak*(hot?1.15:1))} knots at peak.`, c>=4);
         if(c>=4 && s.landfall) alertStrip(`${nm.toUpperCase()} — CATEGORY ${c} LANDFALL`);
       }

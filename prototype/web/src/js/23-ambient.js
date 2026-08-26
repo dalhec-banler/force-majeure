@@ -28,16 +28,18 @@ function atlanticForcing(){          // what was done to the Atlantic this seaso
   const ni=DRV.indexOf("NATL"); return ni<0? 0 : r.driverTotals[ni]-r.driverNat[ni];
 }
 function stormStrength(f){ return Math.max(0.25, Math.min(1.6, 1+0.6*f)); }
+const STORM_WORD={NA:"Hurricane",EP:"Hurricane",WP:"Typhoon",NI:"Cyclone",SI:"Cyclone",SP:"Cyclone"};
 function activeStorms(ts, prog){
-  const f=atlanticForcing(); if(f<-1.0) return [];
+  const f=atlanticForcing();
   const out=[];
   for(const s of HISTORY.storms){
     if(s.t!==ts) continue;
+    if(s.basin==="NA" && f<-1.0) continue;
     const p0=s.p0, p1=Math.max(s.p1, s.p0+0.15);            // at least a few seconds on screen
     if(prog<p0 || prog>p1) continue;
     const tr=s.track, k=((prog-p0)/(p1-p0))*(tr.length-1);
     const i=Math.min(tr.length-2, Math.floor(k)), fr=k-i, a=tr[i], b=tr[i+1];
-    out.push({s, lat:a[0]+(b[0]-a[0])*fr, lon:a[1]+(b[1]-a[1])*fr, w:a[2]+(b[2]-a[2])*fr, strength:stormStrength(f)});
+    out.push({s, lat:a[0]+(b[0]-a[0])*fr, lon:a[1]+(b[1]-a[1])*fr, w:(a[2]+(b[2]-a[2])*fr)||70, strength:s.basin==="NA"? stormStrength(f) : 1});
   }
   return out;
 }
@@ -74,7 +76,7 @@ function drawAmbient(nowMs){
     if(zoom>=1.2 || st.s.cat>=3){
       cx.font="9px "+getComputedStyle(document.body).getPropertyValue("--mono");
       cx.fillStyle="rgba(230,240,255,.85)";
-      cx.fillText((st.s.name? st.s.name.toUpperCase() : "HURRICANE")+" · C"+st.s.cat, p.x+Rp*dia*0.5+3, p.y+3);
+      cx.fillText((st.s.name? st.s.name.toUpperCase() : STORM_WORD[st.s.basin].toUpperCase())+(st.s.cat? " · C"+st.s.cat : ""), p.x+Rp*dia*0.5+3, p.y+3);
     }
   });
   // earthquakes of the season: rings from the epicentre
