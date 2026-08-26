@@ -2388,9 +2388,22 @@ function drawWires(nowMs,row){
       cx.fillText(`${e.coeff<0?"▼":"▲"} +${lag}`, b.x+7, b.y-7);
     }
     if(live||fresh){
-      const tt=((nowMs/1800)+e.ri*0.13)%1;
+      const tt=((nowMs/4200)+e.ri*0.13)%1;                 // the signal travels slowly enough to read
       const px=(1-tt)*(1-tt)*a.x+2*(1-tt)*tt*cxp+tt*tt*b.x, py=(1-tt)*(1-tt)*a.y+2*(1-tt)*tt*cyp+tt*tt*b.y;
       cx.fillStyle=`rgba(${rgb},.95)`; cx.beginPath(); cx.arc(px,py,1.8,0,7); cx.fill();
+      // what is travelling down this wire, in words, riding the signal
+      const eff=armed? (AD[e.driver]!==undefined? Math.sign(e.coeff) : 0) : dv*e.coeff;   // the anomaly this swing sends
+      const verb=eff<0? "drying" : "wetting";
+      const who=armed? "your forcing" : (DRVNAME[e.driver]||e.driver);
+      const lagS=`${armed? AD[e.driver]+e.lag : e.lag} season${(armed? AD[e.driver]+e.lag : e.lag)===1?"":"s"} out`;
+      const cap=`${who} ${verb} ${e.region} · ${lagS}`;
+      const vis=Math.min(1, Math.max(0, (tt-0.12)/0.12), Math.max(0, (0.88-tt)/0.12));   // fades in and out along the wire
+      if(vis>0){
+        cx.font="8px "+MONO_FONT; const w=cx.measureText(cap).width;
+        const lx=px+6, ly=py-6;
+        cx.fillStyle=`rgba(4,7,10,${0.75*vis})`; cx.fillRect(lx-3, ly-9, w+6, 12);
+        cx.fillStyle=`rgba(${rgb},${0.95*vis})`; cx.fillText(cap, lx, ly);
+      }
     }
   }
   cx.lineWidth=1;
