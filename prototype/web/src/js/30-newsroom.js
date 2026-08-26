@@ -3,7 +3,18 @@
    than thirty at once when a season resolves — a backlog drains faster so
    it never runs minutes behind. */
 const wireQ=[]; let wireLast=0;
-function wire(html, cls){
+/* An operation is ONE card on the wire: SEALED at commit, then the same
+   line grows — landed, filed, your share of the anomaly — instead of three
+   more messages. wireUpdate finds the card (rendered or still queued). */
+function wireUpdate(id, extra, cls){
+  if(typeof replaying!=="undefined" && replaying) return;
+  const q=wireQ.find(it=>it.id===id);
+  if(q){ q.html+=` <span class="upd">— ${extra}</span>`; return; }
+  const p=$("wire").querySelector(`p[data-op="${(typeof CSS!=="undefined"&&CSS.escape)? CSS.escape(id) : id.replace(/"/g,"")}"]`);
+  if(p){ p.insertAdjacentHTML("beforeend", ` <span class="upd">— ${extra}</span>`); p.classList.add("grown"); return; }
+  wire(extra, cls||"op");                       // no card (a resumed game): a line of its own
+}
+function wire(html, cls, id){
   if(typeof replaying!=="undefined" && replaying) return;
   const row=lastRow();
   const stamp = row? `${row.year}·${row.qtr[0]}` : "1946·W";
@@ -11,7 +22,7 @@ function wire(html, cls){
   // action, wings, the ladder, memos, and BREAKING world events. Everything
   // else is on the wire but folded until ALL is chosen.
   const lo = cls==="ad" || cls==="cast" || (cls==="news" && !/class="chip"/.test(html)) || (!cls && !/class="tag/.test(html));
-  wireQ.push({html:`<span class="stamp">${stamp}</span> ${cls?`<span class="${cls}">${html}</span>`:html}`, lo});
+  wireQ.push({html:`<span class="stamp">${stamp}</span> ${cls?`<span class="${cls}">${html}</span>`:html}`, lo, id});
   if(reduced) pumpWire(true);
 }
 let WIRE_PRIORITY=true;
@@ -19,7 +30,7 @@ function pumpWire(all){
   const now=performance.now();
   const gap = all? 0 : wireQ.length>24? 140 : wireQ.length>10? 300 : (typeof brisk!=="undefined"&&brisk)? 260 : 650;
   while(wireQ.length && (all || now-wireLast>=gap)){
-    const it=wireQ.shift(); const p=document.createElement("p"); p.innerHTML=it.html; if(it.lo) p.className="lo";
+    const it=wireQ.shift(); const p=document.createElement("p"); p.innerHTML=it.html; if(it.lo) p.className="lo"; if(it.id) p.dataset.op=it.id;
     $("wire").prepend(p); if(!it.lo || !WIRE_PRIORITY) wireLast=now;   // folded lines cost no time on the wire
     if(!all && (!it.lo || !WIRE_PRIORITY)) break;
   }

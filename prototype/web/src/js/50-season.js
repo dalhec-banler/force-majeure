@@ -102,6 +102,7 @@ async function runSeasonInner(auto, cmdOverride){
   const seasonName=(ti)=>{ const c=MODEL.climate[ti-1];
     return c? `${c.qtr.toLowerCase()} ${c.year}` : "beyond the decade"; };
   const homePos = REGPOS[REG.find(r=>r.homeland).name];
+  const landedCards=new Map();          // region -> the op card that landed there this season
   const PLANES=["Cloud Seeding","Stratospheric Aerosol Inj.","Fire Enablement"];
   const SHIPS=["Ocean Thermal Forcing","ENSO Forcing","Polar Destabilization"];   // icebreakers north
   for(const op of row.committed){
@@ -112,7 +113,7 @@ async function runSeasonInner(auto, cmdOverride){
     }
     wire(`SEALED — <b>${op.cap.toUpperCase()}</b> · ${DRVNAME[op.target]||op.target}`+
       (op.resil>0? " · takes effect at once"
-       : ` · lands ${seasonName(op.t+op.lag)}`),"op");
+       : ` · lands ${seasonName(op.t+op.lag)}`),"op", `${op.t}:${op.cap}:${op.target}`);
     if(!reduced){
       if(PLANES.includes(op.cap)){
         const dest = op.cap==="Stratospheric Aerosol Inj."
@@ -148,7 +149,7 @@ async function runSeasonInner(auto, cmdOverride){
       wire(`The energy you moved surfaces in the ${e.target} system. The ledger always settles.`,"op");
       if(DRVPOS[e.target]) effects.push({type:"oceanheat",pos:DRVPOS[e.target],bornT:t,life:1});
     } else if(e.kind==="driver"){
-      wire(`Your <b>${e.cap}</b> work takes hold in the ${e.target} system. The consequences are now in transit.`,"op");
+      wireUpdate(`${e.committedT}:${e.cap}:${e.target}`, `takes hold in the ${e.target} system; the consequences are in transit`);
       if(DRVPOS[e.target]) effects.push({type:"oceanheat",pos:DRVPOS[e.target],bornT:t,life:2});
       if(e.target==="GLOBAL")
         news("GENEVA","Sunsets have gone strange worldwide. Scientists point to stratospheric particulates.");
@@ -156,7 +157,9 @@ async function runSeasonInner(auto, cmdOverride){
       const ri=REG.findIndex(r=>r.name===e.target);
       const pos=REGPOS[e.target];
       const loud = ri>=0 && Math.abs(row.anomalies[ri])>row.sigmas[ri];
-      wire(`Your <b>${e.cap}</b> work reaches ${e.target}. ${loud? "It is drawing eyes." : "Nothing in the papers."}`,"op");
+      const yv=ri>=0? Math.round(row.yields[ri]) : null;
+      landedCards.set(e.target, `${e.committedT}:${e.cap}:${e.target}`);
+      wireUpdate(`${e.committedT}:${e.cap}:${e.target}`, `landed ${e.target}${yv!==null?`, harvest ${yv}%`:""}${loud? "; it is drawing eyes" : "; nothing in the papers"}`);
       if(e.cap==="Fire Enablement"&&pos){
         effects.push({type:"fire",pos,bornT:t,life:2},{type:"scar",pos,bornT:t,life:8});
         news(DATELINE[e.target],"Fires burning at a scale visible from orbit tonight.",true);
@@ -264,7 +267,9 @@ async function runSeasonInner(auto, cmdOverride){
     const pctYou=Math.abs(a)>1e-9? Math.max(0,Math.min(1,tr.mine/a)):0;
     const pctThem=Math.abs(a)>1e-9? Math.max(0,Math.min(1,tr.theirs/a)):0;
     if(tr.parts.length && pctYou>0.2){
-      wire(`TRACE — ~${Math.round(pctYou*100)}% your signal: ${tr.parts.join(", ")}.${tr.unknown?" <b>Part of it ran through a wire not on our board.</b>":""}`,"op");
+      const card=landedCards.get(r.name);
+      const traceTxt=`~${Math.round(pctYou*100)}% of the anomaly is yours (${tr.parts.join(", ")})${tr.unknown?"; part of it ran through a wire not on our board":""}`;
+      if(card) wireUpdate(card, traceTxt); else wire(`TRACE — ${traceTxt}.`,"op");
       if(a<0 && !r.kind && (t+ri)%2===0)
         wire(`ADVERTISEMENT — Halvorsen Yield Assurance: “Weather shouldn't decide a family's future.” Drought-tolerant cultivars, now available across ${r.name}.`,"ad");
     }
@@ -350,7 +355,9 @@ async function runSeasonInner(auto, cmdOverride){
   else if(prev && row.dossierFloor>0 && row.dossier<=row.dossierFloor+0.01 && prev.dossier>row.dossierFloor+0.01)
     wire(`MEMO — Legal office: the file has gone as quiet as it will ever go. Someone keeps a copy.`,"memo");
   else if(row.landed.some(e=>e.sig>0 && e.owner==="player")){
-    wire(pick("filed", t),"op");
+    const filedTxt=pick("filed", t).replace(/^FILED — /,"").replace(/\.$/,"");
+    const cards=[...new Set(row.landed.filter(e=>e.sig>0&&e.owner==="player").map(e=>`${e.committedT}:${e.cap}:${e.target}`))];
+    for(const c of cards) wireUpdate(c, `<b>FILED</b> — ${filedTxt}`);
     filedCount++;
     if(filedCount%3===0){
       const rants=[

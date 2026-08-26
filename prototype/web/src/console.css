@@ -142,6 +142,7 @@
   #wire .sev{color:var(--amber)} #wire .att{color:var(--red)}
   #wire .op{color:var(--green)} #wire .stamp{color:var(--ink-faint)}
   #wire .memo{color:var(--cyan)} #wire .news{color:var(--ink)}
+  #wire .upd{color:var(--ink-dim)} #wire p.grown{border-left:2px solid var(--line);padding-left:6px;margin-left:-8px}
   .chip{background:var(--red);color:#140808;font-weight:600;padding:0 5px;
         font-size:9px;letter-spacing:.12em;margin-right:5px}
 
