@@ -345,7 +345,7 @@
 .dircard #dctitle{font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.14em;color:var(--ink);margin-bottom:5px}
 .dircard #dctext{font-size:12.5px;color:var(--ink);line-height:1.45}
 .dircard #dcuse{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--green);margin-top:6px}
-.dircard .dc-f{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--ink-dim);margin-top:8px}
+.dircard .dc-f{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 14px;font-family:var(--mono);font-size:10px;color:var(--ink-dim);margin-top:8px}
 .dircard .dc-bar{height:4px;background:var(--panel2);margin-top:5px} .dircard .dc-bar span{display:block;height:100%;background:var(--amber);transition:width .4s}
 .dircard.done{border-color:var(--green)} .dircard.done .dc-h{color:var(--green)}
 .dircard.lapsed{border-color:var(--red)} .dircard.lapsed .dc-h{color:var(--red)}
