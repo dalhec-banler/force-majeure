@@ -1,0 +1,21 @@
+<!doctype html><meta charset="utf-8"><title>sizes</title>
+<style>html,body{margin:0;background:#222;height:100%;overflow:hidden}#f{border:2px solid #f0f;background:#000;transform-origin:0 0;display:block}#lbl{position:fixed;right:6px;top:4px;color:#f0f;font:12px monospace;z-index:9}</style>
+<div id="lbl"></div><iframe id="f"></iframe>
+<script>
+const q=new URLSearchParams(location.search); const w=+q.get('w')||1440, h=+q.get('h')||900;
+const f=document.getElementById('f'); f.width=w; f.height=h; f.style.width=w+'px'; f.style.height=h+'px';
+const s=Math.min(1,(innerWidth-8)/w,(innerHeight-8)/h); f.style.transform='scale('+s+')';
+document.getElementById('lbl').textContent=w+'×'+h+' @'+s.toFixed(2);
+f.onload=()=>{ const W=f.contentWindow, d=f.contentDocument;
+  d.getElementById('boot').click(); d.getElementById('begin').click();
+  setTimeout(()=>{ try{
+    const bc=d.getElementById('briefcard'); bc.style.display='block';
+    d.getElementById('bc-title').textContent='EVENT: HARVEST COLLAPSE';
+    d.getElementById('bc-text').textContent='South Asia · anomaly -0.90 vs ±0.73 · harvest 85%';
+    const bn=d.getElementById('banner'); bn.style.display='block';
+    bn.textContent='▲ NO OPERATIONS IN A YEAR — COMMITTEE ASKING WHAT YOU ARE FOR (2/4 reviews to dissolution)';
+    W.alertStrip('SUSPECTED HOSTILE OPERATION — HOMELAND');
+    d.getElementById('armed').innerHTML='<span class="pill">CLOUD SEEDING · Sahel <button>✕</button></span>';
+  }catch(e){ console.log('rig',e); } }, 700); };
+f.src='../console.html?v='+(q.get('v')||'0')+'&sz='+w;
+</script>

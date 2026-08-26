@@ -9,28 +9,32 @@
   <span class="stat"><span class="lbl">PROFIT</span><span class="val" id="hProfit">$0M</span></span>
   <span class="stat"><span class="lbl">DEATH TOLL</span><span class="val" id="hDead" style="color:var(--red)">0</span></span>
   <span class="stat"><span class="lbl">SEASON CLOSES</span><span class="val" id="szclock">—</span></span>
-  <span id="phase">PHASE <b id="phasename">FORECAST</b></span>
-  <span id="clock">1946 · WINTER</span>
+  <span id="hdrright"><span id="phase">PHASE <b id="phasename">FORECAST</b></span>
+  <span id="clock">1946 · WINTER</span></span>
 </header>
 
 <main>
   <div id="globe-wrap">
     <canvas id="earth"></canvas>
     <canvas id="globe"></canvas>
-    <div id="alerts"></div>
     <div id="hover"></div>
+    <div id="topstrip">
+    <div id="tl">
+    <div id="legend">
+      <span><i style="background:#53d97b"></i>thriving</span>
+      <span><i style="background:#e0a458"></i>strained</span>
+      <span><i style="background:#e05252"></i>failing</span>
+      <span class="legx" style="color:var(--ink-faint)">⚠ famine · ring = envelope · dashed = forecast</span>
+      <span class="legx" style="color:var(--ink-faint)"><i style="background:#e0a458;transform:none;width:10px;height:2px"></i>wire dries <i style="background:#5bc8e8;transform:none;width:10px;height:2px"></i>wets</span>
+    </div>
     <div id="banner"></div>
+    </div>
+    <div id="alerts"></div>
     <div id="briefcard">
       <div class="bc-cls">SECRET // BRIEFING PACKAGE</div>
       <img id="bc-img" alt="">
       <div class="bc-body"><b id="bc-title"></b><br><span id="bc-text"></span></div>
     </div>
-    <div id="legend">
-      <span><i style="background:#53d97b"></i>thriving</span>
-      <span><i style="background:#e0a458"></i>strained</span>
-      <span><i style="background:#e05252"></i>failing</span>
-      <span style="color:var(--ink-faint)">⚠ famine · ring = natural envelope · dashed ring = forecast</span>
-      <span style="color:var(--ink-faint)"><i style="background:#e0a458;transform:none;width:10px;height:2px"></i>wire dries <i style="background:#5bc8e8;transform:none;width:10px;height:2px"></i>wets</span>
     </div>
     <div id="traywrap">
       <div id="armed"></div>
