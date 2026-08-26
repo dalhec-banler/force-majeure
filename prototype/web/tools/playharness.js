@@ -71,9 +71,9 @@ const driver=`
     journalSince:(n)=>journal.slice(n),
     journalLen:()=>journal.length,
     arm:(cap,target)=>{ if(slots.length<2) slots.push({cap,target}); },
-    containment:(v)=>{ document.getElementById("containment").value=String(v); },
+    containment:(v)=>{ document.getElementById("containment").value=String(Math.max(0,Math.min(40,v))); },
     predict:(p)=>{ document.getElementById("predict").value=p; },
-    season:async()=>{ await runSeason(false); },
+    season:async()=>{ await runSeason(false); try{ drawGlobeInner(0); }catch(e){ console.error("DRAW ERROR", e.stack); } },
     telemetryDossier:()=>lastRow()? +lastRow().dossier.toFixed(1):0,
   };
   const result=await (${strategy.play.toString()})(api);

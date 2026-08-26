@@ -24,7 +24,7 @@ function renderInflight(){
   for(const o of eng.state.ops){
     if(o.owner!=="player") continue;
     const start=o.t+o.lag, dur=o.dur||1;
-    if(start>t && o.mag!==0)
+    if(start>t && (o.mag!==0 || o.research))
       items.push({label:o.cap, tgt:o.target, rem:start-t, mode:"pending"});
     else if(o.mag!==0 && t>=start && t<start+dur && dur>1)
       items.push({label:o.cap, tgt:o.target, rem:start+dur-1-t, mode:"active"});
@@ -34,7 +34,7 @@ function renderInflight(){
   items.sort((a,b)=>a.rem-b.rem);
   $("inflight").innerHTML = items.length? items.map(i=>
     i.mode==="active"
-    ? `<div class="fl"><span><b>${i.label.toUpperCase()}</b> · ${i.tgt}</span>
+    ? `<div class="fl"><span><b>${i.label.toUpperCase()}</b> · ${DRVNAME[i.tgt]||i.tgt}</span>
        <span class="tmin" style="color:var(--green)">● ACTIVE${i.rem>0?" +"+i.rem:""}</span></div>`
     : `<div class="fl${i.rem===1&&i.mode==="pending"?" t1":""}${i.mode==="debt"?" debt":""}">
        <span><b>${i.label.toUpperCase()}</b> · ${i.tgt}</span>
@@ -98,7 +98,7 @@ function traceFor(ri, row){
         const c=hit*MODEL.coeff[di][ri];
         if(o.owner==="player"){ mine+=c; parts.push(o.cap);
           if(!eng.knowledge.isKnown(di,ri)) unknown=true; }
-        else if(o.owner==="rival") theirs+=c;
+        else if(o.owner==="rival" && eng.knowledge.isKnown(di,ri)) theirs+=c;   // an unknown wire hides them too
       }
     }
   }

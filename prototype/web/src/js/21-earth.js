@@ -196,7 +196,7 @@ function nearestRegion(e){
   return best;
 }
 function globeClick(e){
-  if(!pendingTool) return;
+  if(!pendingTool || resolving) return;
   const c=CAPS.find(x=>x.name===pendingTool);
   if(budgetRefuse(c)) return;
   const ri=nearestRegion(e);

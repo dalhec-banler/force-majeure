@@ -77,7 +77,8 @@ function clientInNeed(row){
 }
 let dirIdx=0, dirIssued=0, pendingGrant=0, pendingClaw=0;
 let standing=null, standingCount=0, nextStandingT=99, lapses=0, lastStandingKey=null;
-function curDir(){ return DIRECTIVES[dirIdx]||standing; }
+function curDir(){ const d=DIRECTIVES[dirIdx]; return (d && !(d.from && t<d.from))? d : (standing||d||null); }
+function onboardingGated(){ const d=DIRECTIVES[dirIdx]; return !!(d && d.from && t<d.from); }
 function dirActive(d){ return d && !(d.from && t<d.from); }
 function issueStanding(row){
   const rot=["price","flag","map","hold"];
@@ -90,7 +91,7 @@ function issueStanding(row){
   lastStandingKey=src.key;
   standing=Object.assign({},src,{issued:t, standing:true});
   if(standing.make) standing.make(row,standing);
-  standingCount++;
+  if(rot.includes(src.key)) standingCount++;
   wire(`<span class="tag tagd">DIRECTIVE</span><b>${standing.title.toUpperCase()}</b> — ${standing.text}`,"op");
   sfxChime();
 }
@@ -114,13 +115,15 @@ function directiveStep(row){
         pendingClaw+=claw; sfxAlert(); advanceDir();
       }
     }
-  } else if(t>=nextStandingT) issueStanding(row);
+  } else if(t>=nextStandingT && t<40) issueStanding(row);
+  if(onboardingGated() && !standing && t>=nextStandingT && t<40) issueStanding(row);   // the committee does not wait for S24
   renderDirective();
 }
 function advanceDir(){
-  if(DIRECTIVES[dirIdx]){ dirIdx++; dirIssued=t; }
+  const d=DIRECTIVES[dirIdx];
+  if(d && !d.standing && curDir()===d){ dirIdx++; dirIssued=t; }
   else standing=null;
-  if(!DIRECTIVES[dirIdx]) nextStandingT=t+2;     // the committee drafts language
+  if(!DIRECTIVES[dirIdx] || onboardingGated()) nextStandingT=t+2;     // the committee drafts language
 }
 function earmarkLine(){
   if(!flagship) return "";
@@ -147,12 +150,12 @@ const FLAGSHIP_CAPS=["ENSO Forcing","Ionospheric Coupling [T3]","Polar Destabili
 const FLAGSHIP_AT=[12,28], FLAGSHIP_AMOUNT=60, FLAGSHIP_FUSE=3;
 let flagship=null;
 function flagshipStep(row){
-  if(flagship && t>flagship.deadline){
+  if(flagship && t>=flagship.deadline){
     wire(`<span class="tag" style="color:var(--amber);border-color:var(--amber)">EARMARK WITHDRAWN</span> $${flagship.amount}M returns to the classified line. The Navy sends its regards.`,"att");
     flagship=null; renderTray(); renderDirective();
   }
   if(!flagship && FLAGSHIP_AT.includes(t) && row.status==="running"){
-    flagship={amount:FLAGSHIP_AMOUNT, issued:t, deadline:t+FLAGSHIP_FUSE};
+    flagship={amount:FLAGSHIP_AMOUNT, issued:t, deadline:t+FLAGSHIP_FUSE};   // drawable at the next FLAGSHIP_FUSE commits
     alertStrip("FLAGSHIP APPROPRIATION — $"+FLAGSHIP_AMOUNT+"M EARMARKED");
     wire(`<span class="tag tagd">EARMARK</span><b>FLAGSHIP APPROPRIATION</b> — the committee has found $${FLAGSHIP_AMOUNT}M in a classified line. It wants a demonstration: ENSO, Ionospheric, or Polar. ${FLAGSHIP_FUSE} seasons, then the money goes to the Navy.`,"op");
     sfxChime(); renderTray(); renderDirective();

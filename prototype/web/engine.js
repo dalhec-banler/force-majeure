@@ -74,6 +74,9 @@ function createEngine(MODEL, opts) {
     MODEL.capabilities.map((c) => [c.name, c]));
 
   const state = { ops: [], rows: [], jetUntil: 0 };  // rows[t-1] = season t
+  for (let di = 0; di < ND; di++) for (let ri = 0; ri < NR; ri++)
+    if (MODEL.coeff[di][ri] !== 0 && MODEL.lags[di][ri] < 1)
+      throw new Error("lag 0 edge: forbidden (" + DRIVERS[di] + " → " + REGIONS[ri].name + ")");
 
   const EDGES = [];
   DRIVERS.forEach((d, di) => { if (d === "GLOBAL") return;
@@ -208,7 +211,11 @@ function createEngine(MODEL, opts) {
     const committed = [], refused = [];
     // the purse reserves this season's overhead: you cannot spend the rent
     let purse = (prev ? prev.treasury : P.startingTreasury) + Math.max(0, cmd.grant || 0)
-              - (budgetGate ? P.overhead : 0);
+              - Math.max(0, cmd.clawback || 0) - (budgetGate ? P.overhead : 0);
+    // a flagship earmark {amount, caps} is drawn only by the op it funds
+    const earmark = cmd.earmark && cmd.earmark.amount > 0 ? cmd.earmark : null;
+    let earmarkUsed = 0;
+    if (earmark) purse += earmark.amount;                 // available to the flagship op
     // any number of operations a season (author rule 2026-08-25); the sheet's
     // two-slot cmd shape (opA/opB) is still accepted for conformance
     const wanted = Array.isArray(cmd.ops)
@@ -217,8 +224,10 @@ function createEngine(MODEL, opts) {
     for (const [capName, target] of wanted) {
       const op = makeOp(t, capName, target, prevAnom, "player");
       if (!op) continue;
-      if (budgetGate && op.cost > purse) { refused.push(op); continue; }
+      const funded = earmark && !earmarkUsed && earmark.caps.includes(op.cap);
+      if (budgetGate && op.cost > (funded ? purse : purse - (earmark && !earmarkUsed ? earmark.amount : 0))) { refused.push(op); continue; }
       purse -= op.cost;
+      if (funded) earmarkUsed = earmark.amount;
       committed.push(op); state.ops.push(op);
     }
     for (const r of rivalPlan(t)) {
@@ -337,7 +346,7 @@ function createEngine(MODEL, opts) {
       const a = anomalies[ri];
       const damage = (Math.max(0, -a) * r.sens * P.droughtPenalty
         + Math.max(0, a - P.floodThreshold) * r.sens * P.floodPenalty)
-        * (1 - resil[ri] / 100);
+        * (1 - Math.min(90, resil[ri]) / 100);
       return Math.max(0, Math.min(135, 100 - damage));
     });
 
@@ -362,9 +371,14 @@ function createEngine(MODEL, opts) {
             || (o.mag !== 0 && t < o.t + o.lag + (o.dur || 1))));  // or still burning
 
     const trimmed = t > 4 && !recentOp && idleTrim < 1;
+    // the committee winds up a programme that has run no real operation
+    // (signature or magnitude) in eight seasons — research and adaptation
+    // keep the appropriation, not the mandate to exist (budget gate only)
+    const recentRealOp = state.ops.some(
+      (o) => o.owner === "player" && (o.sig > 0 || o.mag !== 0) && o.t > t - 8);
     const budgetIn = revenue * P.budgetFromRevenue
                    + mandate * P.budgetFromMandate * (trimmed ? idleTrim : 1)
-                   + Math.max(0, cmd.grant || 0)    // directive appropriations
+                   + Math.max(0, cmd.grant || 0) + earmarkUsed   // directive appropriations, the earmark if drawn
                    - Math.max(0, cmd.clawback || 0); // lapsed-directive clawback
     const prevTreasury = prev ? prev.treasury : P.startingTreasury;
     let treasury = prevTreasury + budgetIn - opsSpend - containment
@@ -430,7 +444,9 @@ function createEngine(MODEL, opts) {
     let status = "running";
     // (recentOp computed above counts PLAYER ops only — rival activity must
     // never shield the player from the committee)
-    const obsolescent = (t > 8 && mandate <= P.mandateBase + 1 && !recentOp) || (broke && !recentOp);
+    const obsolescent = budgetGate
+      ? (t > 8 && (!recentRealOp || broke))                 // idleness itself, not the weather
+      : (t > 8 && mandate <= P.mandateBase + 1 && !recentOp);
     const obsStreak = obsolescent ? ((prev ? prev.obsStreak : 0) + 1) : 0;
     if (dossier >= 200) status = "exposed";
     else if (treasury < 0) status = "insolvent";
@@ -442,7 +458,7 @@ function createEngine(MODEL, opts) {
                   price, revenue, severity, mandate, opsSpend, containment,
                   budgetIn, trimmed, jetTriggered, jetActive,
                   treasury, attribution, dossier, ladderText,
-                  status, obsStreak, landed, committed, refused, revealed,
+                  status, obsStreak, landed, committed, refused, revealed, earmarkUsed,
                   prediction: cmd.prediction || "" };
     state.rows.push(row);
     return row;

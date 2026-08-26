@@ -4,14 +4,20 @@ async function runSeason(auto){
   if(!running || resolving) return;
   resolving=true; seasonDeadline=null;
   $("resolve").disabled=true;
+  alertQ.length=0;                                   // a new season's chyrons, not last season's backlog
+  try{ await runSeasonInner(auto); }
+  catch(e){ console.error("season error", e); wire(`<span class="tag tagr">FAULT</span> The season resolved with an error in the instrument: ${escapeHTML(e.message)}. The record stands.`,"att"); }
+  finally{ resolving=false; $("resolve").disabled=!running; if(running && seasonDeadline===null) seasonDeadline=performance.now()+SEASON_MS; }
+}
+async function runSeasonInner(auto){
   const prev=lastRow();
   const cmd={ ops:slots.map(s=>({cap:s.cap,target:s.target})),
               containment:+$("containment").value,
               grant:pendingGrant, clawback:pendingClaw,
               prediction:$("predict").value.trim() };
-  // the flagship earmark is drawn the season a flagship op is sealed
-  const drawn = flagship && slots.some(s=>FLAGSHIP_CAPS.includes(s.cap));
-  if(drawn){ cmd.grant+=flagship.amount; }
+  // the flagship earmark travels with the commitment; the engine draws it
+  // only if the flagship op actually commits
+  if(flagship) cmd.earmark={amount:flagship.amount, caps:FLAGSHIP_CAPS};
   pendingGrant=0; pendingClaw=0;
   t++;
   const row = eng.resolve(t, cmd);
@@ -30,6 +36,7 @@ async function runSeason(auto){
     const kc=eng.knowledge.count();
     if(kc.known>=kc.total) wire(`ANALYSIS — <b>The board is complete.</b> Every wire in the world is on it. Nothing that happens now is unexplained.`,"op");
   }
+  const drawn=!!row.earmarkUsed;
   if(drawn){
     wire(`<span class="tag tagd">EARMARK DRAWN</span> $${flagship.amount}M. The demonstration is funded. The committee will want to watch.`,"op");
     flagship=null;
@@ -64,7 +71,7 @@ async function runSeason(auto){
       const [cls,tag,txt]=PRECEDENT[op.cap];
       wire(`<span class="tag ${cls}">${tag}</span>${txt}`);
     }
-    wire(`SEALED — <b>${op.cap.toUpperCase()}</b> · ${op.target}`+
+    wire(`SEALED — <b>${op.cap.toUpperCase()}</b> · ${DRVNAME[op.target]||op.target}`+
       (op.resil>0? " · takes effect at once"
        : ` · lands ${seasonName(op.t+op.lag)}`),"op");
     if(!reduced){
@@ -78,7 +85,7 @@ async function runSeason(auto){
                        start:performance.now(),dur:3800});
     }
   }
-  if(cmd.prediction) wire(`PREDICTION LOGGED — “${cmd.prediction}”`);
+  if(cmd.prediction) wire(`PREDICTION LOGGED — “${escapeHTML(cmd.prediction)}”`);
   await phaseShow(2);
   const nowMs=performance.now();
   for(const e of row.landed){
@@ -292,7 +299,6 @@ async function runSeason(auto){
   if(auto && row.committed.length===0)
     wire(`The season closed while the directorate deliberated.`);
   $("resolve").disabled=!running;
-  resolving=false;
   if(running) seasonDeadline=performance.now()+SEASON_MS;
 }
 $("resolve").addEventListener("click",()=>{ sfxClick(); runSeason(false); });
@@ -344,7 +350,7 @@ function historyBeats(row){
     const bs=all.filter(s=>stormShown(s,bf)).sort((a,b)=>b.peak-a.peak||b.track.length-a.track.length);
     if(!bs.length) continue;
     const told=new Set(HISTORY.weather.filter(w=>w.t===t&&/typhoon|cyclone/i.test(w.kind)).map(w=>w.line.toLowerCase()));
-    const show=bs.filter(s=>(s.landfall||s.cat>=3) && !(s.name&&[...told].some(l=>l.includes(s.name.toLowerCase())))).slice(0, basin==="WP"?3:2);
+    const show=bs.filter(s=>(s.landfall||s.cat>=3) && !(s.name&&[...told].some(l=>new RegExp("\\b"+word.toLowerCase()+" "+s.name.toLowerCase()+"\\b").test(l)))).slice(0, basin==="WP"?3:2);
     for(const s of show){
       const nm=s.name? `${word} ${s.name}` : `An unnamed ${word.toLowerCase()}`;
       const where=s.landfall? `landfall near ${placeName(s.dl)}` : "at sea";
@@ -352,7 +358,7 @@ function historyBeats(row){
       if(s.cat>=4 && s.landfall) alertStrip(`${nm.toUpperCase()} — CATEGORY ${s.cat} LANDFALL`);
     }
     if(bs.length>show.length) news(bs[0].dl, `${bs.length-show.length} more ${word.toLowerCase()}${bs.length-show.length>1?"s":""} in the basin this quarter, as recorded.`);
-    histAsRecorded+=bs.length;
+    if(bf>=0.7 && bf<=1.3) histAsRecorded+=bs.length;
   }
   // the Atlantic season
   const f=atlanticForcing();
@@ -376,14 +382,15 @@ function historyBeats(row){
         if(c>=4 && s.landfall) alertStrip(`${nm.toUpperCase()} — CATEGORY ${c} LANDFALL`);
       }
       if(ss.length>3) news("MIAMI", `${ss.length-3} more hurricane${ss.length>4?"s":""} this quarter. The season the record remembers.`);
-      histAsRecorded+=ss.length;
+      if(!hot) histAsRecorded+=ss.length;
     }
   }
   // disasters on the record
   for(const w of HISTORY.weather){
     if(w.t!==t) continue;
     const ri=REG.findIndex(r=>r.name===w.region); if(ri<0) continue;
-    const tr=traceFor(ri,row), sign=(w.kind==="flood")? 1 : -1;
+    const WET=new Set(["flood","typhoon","cyclone","tornado","blizzard","avalanche","locusts"]);
+    const tr=traceFor(ri,row), sign=WET.has(w.kind)? 1 : -1;
     const push=tr.mine*sign;                       // >0 with the record, <0 against it
     if(w.canon){ news(w.dl, w.line, true); alertStrip(`${w.kind.toUpperCase()} — ${w.region.toUpperCase()}`); histAsRecorded++; cumDead+=w.toll||0; continue; }
     if(push<-0.3){

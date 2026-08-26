@@ -55,6 +55,7 @@ const TOOLICON = { "Climate Research":"🔬", "Cloud Seeding":"☁","Watershed I
   "Polar Destabilization":"🧊" };
 const $ = (id) => document.getElementById(id);
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const MONO_FONT='"IBM Plex Mono", Menlo, monospace';    // cached once: canvas font strings are parsed per call
 
 let FLAT=false;                  // flat-map view toggle
 let t = 0;                       // last resolved season
@@ -90,11 +91,13 @@ function placeName(dl){ return dl.toLowerCase().replace(/(^|[\s\-'])(\S)/g,(m,a,
 /* the purse: what is on hand, what is already committed, what is left */
 function funds(){ const r=lastRow(); return r? r.treasury : eng.assumptions.startingTreasury; }
 function capCost(name){ const c=CAPS.find(c2=>c2.name===name); if(!c) return 0;
-  return (typeof flagship!=="undefined" && flagship && FLAGSHIP_CAPS.includes(name))? 0 : c.cost; }
+  const funded = flagship && FLAGSHIP_CAPS.includes(name) && !slots.some(s=>FLAGSHIP_CAPS.includes(s.cap) && s.cap!==name);
+  return funded? 0 : c.cost; }
+function escapeHTML(x){ return String(x).replace(/[&<>"]/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch])); }
 function armedCost(){ return slots.reduce((s,x)=>s+capCost(x.cap),0); }
 function spendable(){ return Math.max(0, funds()-eng.assumptions.overhead); }   // after the overhead reserve
 function available(){ return Math.max(0, spendable()-armedCost()); }
-function canAfford(c){ return capCost(c.name) <= available(); }
+function canAfford(c){ if(capCost(c.name)===0 && c.cost>0) return funds()>=eng.assumptions.overhead; return capCost(c.name) <= available(); }
 function renderTab(){
   const a=armedCost(), el=$("hTab"); if(!el) return;
   el.style.display = slots.length? "" : "none";

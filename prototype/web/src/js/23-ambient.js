@@ -19,20 +19,22 @@ function activeEruptions(ts){
   if(!lithoUnlocked()) return HISTORY.eruptions.filter(e=>ts>=e.t && ts<e.t+e.dur);
   return FICTIONAL_VOLCANOES.filter((v,i)=>((ts+i*3)%9)<2);
 }
+let lastProg=0;
 function seasonProgress(nowMs){
-  if(!running || seasonDeadline===null) return 0.5;
-  return Math.max(0,Math.min(1, 1-(seasonDeadline-nowMs)/SEASON_MS));
+  if(!running || seasonDeadline===null) return lastProg;          // hold, don't teleport, while resolving
+  return lastProg=Math.max(0,Math.min(1, 1-(seasonDeadline-nowMs)/SEASON_MS));
 }
-function atlanticForcing(){          // what was done to the Atlantic this season, beyond nature
+function driverForcingBy(name){      // what YOU did to an ocean this season (the player's landed driver ops)
   const r=lastRow(); if(!r) return 0;
-  const ni=DRV.indexOf("NATL"); return ni<0? 0 : r.driverTotals[ni]-r.driverNat[ni];
+  return r.landed.filter(e=>e.kind==="driver"&&e.target===name&&e.owner==="player").reduce((s,e)=>s+e.mag,0);
 }
+function atlanticForcing(){ return driverForcingBy("NATL"); }
 function stormStrength(f){ return Math.max(0.25, Math.min(1.6, 1+0.6*f)); }
 /* what was done to the Pacific this season, beyond nature — and what it does
    to each basin's storm season (El Niño: typhoons recurve away from China
    and the Philippines, Australia's cyclones stay offshore, the eastern
    Pacific wakes; La Niña the reverse) */
-function pacificForcing(){ const r=lastRow(); if(!r) return 0; const i=DRV.indexOf("ENSO"); return i<0?0:r.driverTotals[i]-r.driverNat[i]; }
+function pacificForcing(){ return driverForcingBy("ENSO"); }
 function basinFactor(basin){
   if(basin==="NA") return stormStrength(atlanticForcing());
   const dE=pacificForcing();

@@ -73,7 +73,7 @@ function budgetRefuse(c){                 // true if the purse says no (and says
   sfxAlert(); renderTray(); return true;
 }
 function toolClick(c){
-  if(!running) return;
+  if(!running || resolving) return;
   if(pendingTool===c.name){ pendingTool=null; renderTray();
     $("toolinfo").textContent="Pick a tool. Aim it at the world. Scroll to zoom."; return; }
   if(budgetRefuse(c)) return;

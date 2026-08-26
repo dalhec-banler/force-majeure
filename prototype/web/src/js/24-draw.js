@@ -1,4 +1,8 @@
 function drawGlobe(now){
+  try{ drawGlobeInner(now); }catch(e){ console.error("frame error", e); }
+  finally{ requestAnimationFrame(drawGlobe); }
+}
+function drawGlobeInner(now){
   if(!dragging && !reduced && !FLAT) rot += 0.022;
   const nowMs=now||0;
   cx.clearRect(0,0,W,H);
@@ -60,7 +64,7 @@ function drawGlobe(now){
         const lag=AD.GLOBAL+MODEL.lags[3][ri];
         cx.strokeStyle=`rgba(224,164,88,${0.55*(1-ph)})`; cx.lineWidth=1;
         cx.beginPath(); cx.arc(p.x,p.y,8+ph*18,0,7); cx.stroke();
-        cx.fillStyle="rgba(224,164,88,.9)"; cx.font="8px "+getComputedStyle(document.body).getPropertyValue("--mono");
+        cx.fillStyle="rgba(224,164,88,.9)"; cx.font="8px "+MONO_FONT;
         cx.fillText(`▼ +${lag}`, p.x+7, p.y-7); }
     } }
 
@@ -68,7 +72,7 @@ function drawGlobe(now){
     const p=project(la,lo); if(!p.vis) continue;
     const v = row ? row.driverTotals[DRV.indexOf(d)] : MODEL.climate[0].drivers[DRV.indexOf(d)];
     cx.fillStyle="rgba(127,163,137,.9)";
-    cx.font="9px "+getComputedStyle(document.body).getPropertyValue("--mono");
+    cx.font="9px "+MONO_FONT;
     cx.fillText(d, p.x-10, p.y-8);
     const col = v>=0? "rgba(224,164,88,.8)":"rgba(91,200,232,.8)";
     cx.strokeStyle=col; cx.strokeRect(p.x-9,p.y-3,18,4);
@@ -111,7 +115,7 @@ function drawGlobe(now){
       cx.beginPath(); cx.arc(p.x,p.y,10,0,7); cx.stroke(); cx.lineWidth=1; }
     if(zoom>=1.5){                          // zoomed in: name the target
       const label=r.name.length>18? r.name.slice(0,17)+"…" : r.name;
-      cx.font="9px "+getComputedStyle(document.body).getPropertyValue("--mono");
+      cx.font="9px "+MONO_FONT;
       const tw=cx.measureText(label.toUpperCase()).width;
       cx.fillStyle="rgba(3,7,5,.65)";
       cx.fillRect(p.x-tw/2-3,p.y+11,tw+6,12);
@@ -120,7 +124,7 @@ function drawGlobe(now){
     }
     if(row && row.yields[ri]<60){       // famine indicator, pulsing
       const grave = row.yields[ri]<40;
-      cx.font="11px "+getComputedStyle(document.body).getPropertyValue("--mono");
+      cx.font="11px "+MONO_FONT;
       cx.fillStyle=(grave? "rgba(224,82,82,":"rgba(224,164,88,")
         +(0.55+0.4*Math.sin(nowMs/280))+")";
       cx.fillText("⚠", p.x-4, p.y-k*sig-6-(zoom>=1.5?8:0));
@@ -192,7 +196,7 @@ function drawGlobe(now){
     }
     cx.lineWidth=1;
   }
-  requestAnimationFrame(drawGlobe);
+  /* re-armed by the wrapper */
 }
 function pts(n,f){ const out=[]; for(let i=0;i<=n;i++) out.push(f(i)); return out; }
 function strokePath(arr){
@@ -230,7 +234,7 @@ function drawWires(nowMs,row){
       const L=armed? 0.35 : 0.16, x1=a.x+(b.x-a.x)*L, y1=a.y+(b.y-a.y)*L;
       cx.setLineDash([2,4]); cx.strokeStyle=armed? "rgba(200,230,207,.75)" : "rgba(200,230,207,.28)"; cx.lineWidth=armed?1.2:0.8;
       cx.beginPath(); cx.moveTo(a.x,a.y); cx.lineTo(x1,y1); cx.stroke(); cx.setLineDash([]);
-      if(armed){ cx.fillStyle="rgba(200,230,207,.85)"; cx.font="8px "+getComputedStyle(document.body).getPropertyValue("--mono"); cx.fillText("?", x1+2, y1-2); }
+      if(armed){ cx.fillStyle="rgba(200,230,207,.85)"; cx.font="8px "+MONO_FONT; cx.fillText("?", x1+2, y1-2); }
     }
     for(const nm of targets){ const p=project(...REGPOS[nm]); if(!p.vis) continue;
       const ph=(nowMs/1500)%1; cx.strokeStyle=`rgba(200,230,207,${0.6*(1-ph)})`; cx.lineWidth=1;
@@ -258,7 +262,7 @@ function drawWires(nowMs,row){
     cx.setLineDash([]);
     if(armed){                                     // when it lands, and which way
       const lag=AD[e.driver]+e.lag;
-      cx.fillStyle=`rgba(${rgb},.95)`; cx.font="8px "+getComputedStyle(document.body).getPropertyValue("--mono");
+      cx.fillStyle=`rgba(${rgb},.95)`; cx.font="8px "+MONO_FONT;
       cx.fillText(`${e.coeff<0?"▼":"▲"} +${lag}`, b.x+7, b.y-7);
     }
     if(live||fresh){
@@ -308,12 +312,12 @@ function hoverCheck(e){
     · ${r.weight.toFixed(1)}% of world supply${res?` · hardened`:""}<br>
     <span style="color:var(--ink-faint)">anomaly ${a.toFixed(2)} vs natural range ±${s.toFixed(2)}${Math.abs(a)>s?" — outside":""}</span>${(()=>{
       if(!eng.knowledge.on) return "";
-      const fc=eng.knowledge.forecast(); if(!fc) return "";
+      const fc=eng.knowledge.forecast(slots); if(!fc) return "";
       const f=fc[best], unk=f.total-f.known;
       return `<br><span style="color:var(--ink-faint)">wires: ${f.known} of ${f.total} on the board${unk?` · <span style="color:var(--amber)">${unk} unknown</span>`:""}
         · next season ${f.anomaly>0.2?"wet ":f.anomaly<-0.2?"dry ":""}${(f.anomaly>=0?"+":"")+f.anomaly.toFixed(2)} by known wiring</span>`; })()}`;
   h.style.display="block";
   h.style.left=Math.min(mx+14,W-250)+"px"; h.style.top=(my+10)+"px";
 }
-requestAnimationFrame(drawGlobe);
+/* kick-off happens in 70-boot.js once every part has run */
 

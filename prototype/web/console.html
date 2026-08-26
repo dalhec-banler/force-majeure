@@ -516,6 +516,9 @@ function createEngine(MODEL, opts) {
     MODEL.capabilities.map((c) => [c.name, c]));
 
   const state = { ops: [], rows: [], jetUntil: 0 };  // rows[t-1] = season t
+  for (let di = 0; di < ND; di++) for (let ri = 0; ri < NR; ri++)
+    if (MODEL.coeff[di][ri] !== 0 && MODEL.lags[di][ri] < 1)
+      throw new Error("lag 0 edge: forbidden (" + DRIVERS[di] + " → " + REGIONS[ri].name + ")");
 
   const EDGES = [];
   DRIVERS.forEach((d, di) => { if (d === "GLOBAL") return;
@@ -650,7 +653,11 @@ function createEngine(MODEL, opts) {
     const committed = [], refused = [];
     // the purse reserves this season's overhead: you cannot spend the rent
     let purse = (prev ? prev.treasury : P.startingTreasury) + Math.max(0, cmd.grant || 0)
-              - (budgetGate ? P.overhead : 0);
+              - Math.max(0, cmd.clawback || 0) - (budgetGate ? P.overhead : 0);
+    // a flagship earmark {amount, caps} is drawn only by the op it funds
+    const earmark = cmd.earmark && cmd.earmark.amount > 0 ? cmd.earmark : null;
+    let earmarkUsed = 0;
+    if (earmark) purse += earmark.amount;                 // available to the flagship op
     // any number of operations a season (author rule 2026-08-25); the sheet's
     // two-slot cmd shape (opA/opB) is still accepted for conformance
     const wanted = Array.isArray(cmd.ops)
@@ -659,8 +666,10 @@ function createEngine(MODEL, opts) {
     for (const [capName, target] of wanted) {
       const op = makeOp(t, capName, target, prevAnom, "player");
       if (!op) continue;
-      if (budgetGate && op.cost > purse) { refused.push(op); continue; }
+      const funded = earmark && !earmarkUsed && earmark.caps.includes(op.cap);
+      if (budgetGate && op.cost > (funded ? purse : purse - (earmark && !earmarkUsed ? earmark.amount : 0))) { refused.push(op); continue; }
       purse -= op.cost;
+      if (funded) earmarkUsed = earmark.amount;
       committed.push(op); state.ops.push(op);
     }
     for (const r of rivalPlan(t)) {
@@ -779,7 +788,7 @@ function createEngine(MODEL, opts) {
       const a = anomalies[ri];
       const damage = (Math.max(0, -a) * r.sens * P.droughtPenalty
         + Math.max(0, a - P.floodThreshold) * r.sens * P.floodPenalty)
-        * (1 - resil[ri] / 100);
+        * (1 - Math.min(90, resil[ri]) / 100);
       return Math.max(0, Math.min(135, 100 - damage));
     });
 
@@ -804,9 +813,14 @@ function createEngine(MODEL, opts) {
             || (o.mag !== 0 && t < o.t + o.lag + (o.dur || 1))));  // or still burning
 
     const trimmed = t > 4 && !recentOp && idleTrim < 1;
+    // the committee winds up a programme that has run no real operation
+    // (signature or magnitude) in eight seasons — research and adaptation
+    // keep the appropriation, not the mandate to exist (budget gate only)
+    const recentRealOp = state.ops.some(
+      (o) => o.owner === "player" && (o.sig > 0 || o.mag !== 0) && o.t > t - 8);
     const budgetIn = revenue * P.budgetFromRevenue
                    + mandate * P.budgetFromMandate * (trimmed ? idleTrim : 1)
-                   + Math.max(0, cmd.grant || 0)    // directive appropriations
+                   + Math.max(0, cmd.grant || 0) + earmarkUsed   // directive appropriations, the earmark if drawn
                    - Math.max(0, cmd.clawback || 0); // lapsed-directive clawback
     const prevTreasury = prev ? prev.treasury : P.startingTreasury;
     let treasury = prevTreasury + budgetIn - opsSpend - containment
@@ -872,7 +886,9 @@ function createEngine(MODEL, opts) {
     let status = "running";
     // (recentOp computed above counts PLAYER ops only — rival activity must
     // never shield the player from the committee)
-    const obsolescent = (t > 8 && mandate <= P.mandateBase + 1 && !recentOp) || (broke && !recentOp);
+    const obsolescent = budgetGate
+      ? (t > 8 && (!recentRealOp || broke))                 // idleness itself, not the weather
+      : (t > 8 && mandate <= P.mandateBase + 1 && !recentOp);
     const obsStreak = obsolescent ? ((prev ? prev.obsStreak : 0) + 1) : 0;
     if (dossier >= 200) status = "exposed";
     else if (treasury < 0) status = "insolvent";
@@ -884,7 +900,7 @@ function createEngine(MODEL, opts) {
                   price, revenue, severity, mandate, opsSpend, containment,
                   budgetIn, trimmed, jetTriggered, jetActive,
                   treasury, attribution, dossier, ladderText,
-                  status, obsStreak, landed, committed, refused, revealed,
+                  status, obsStreak, landed, committed, refused, revealed, earmarkUsed,
                   prediction: cmd.prediction || "" };
     state.rows.push(row);
     return row;
@@ -953,6 +969,7 @@ const TOOLICON = { "Climate Research":"🔬", "Cloud Seeding":"☁","Watershed I
   "Polar Destabilization":"🧊" };
 const $ = (id) => document.getElementById(id);
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const MONO_FONT='"IBM Plex Mono", Menlo, monospace';    // cached once: canvas font strings are parsed per call
 
 let FLAT=false;                  // flat-map view toggle
 let t = 0;                       // last resolved season
@@ -988,11 +1005,13 @@ function placeName(dl){ return dl.toLowerCase().replace(/(^|[\s\-'])(\S)/g,(m,a,
 /* the purse: what is on hand, what is already committed, what is left */
 function funds(){ const r=lastRow(); return r? r.treasury : eng.assumptions.startingTreasury; }
 function capCost(name){ const c=CAPS.find(c2=>c2.name===name); if(!c) return 0;
-  return (typeof flagship!=="undefined" && flagship && FLAGSHIP_CAPS.includes(name))? 0 : c.cost; }
+  const funded = flagship && FLAGSHIP_CAPS.includes(name) && !slots.some(s=>FLAGSHIP_CAPS.includes(s.cap) && s.cap!==name);
+  return funded? 0 : c.cost; }
+function escapeHTML(x){ return String(x).replace(/[&<>"]/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch])); }
 function armedCost(){ return slots.reduce((s,x)=>s+capCost(x.cap),0); }
 function spendable(){ return Math.max(0, funds()-eng.assumptions.overhead); }   // after the overhead reserve
 function available(){ return Math.max(0, spendable()-armedCost()); }
-function canAfford(c){ return capCost(c.name) <= available(); }
+function canAfford(c){ if(capCost(c.name)===0 && c.cost>0) return funds()>=eng.assumptions.overhead; return capCost(c.name) <= available(); }
 function renderTab(){
   const a=armedCost(), el=$("hTab"); if(!el) return;
   el.style.display = slots.length? "" : "none";
@@ -1081,7 +1100,7 @@ function budgetRefuse(c){                 // true if the purse says no (and says
   sfxAlert(); renderTray(); return true;
 }
 function toolClick(c){
-  if(!running) return;
+  if(!running || resolving) return;
   if(pendingTool===c.name){ pendingTool=null; renderTray();
     $("toolinfo").textContent="Pick a tool. Aim it at the world. Scroll to zoom."; return; }
   if(budgetRefuse(c)) return;
@@ -1355,7 +1374,7 @@ function nearestRegion(e){
   return best;
 }
 function globeClick(e){
-  if(!pendingTool) return;
+  if(!pendingTool || resolving) return;
   const c=CAPS.find(x=>x.name===pendingTool);
   if(budgetRefuse(c)) return;
   const ri=nearestRegion(e);
@@ -1510,20 +1529,22 @@ function activeEruptions(ts){
   if(!lithoUnlocked()) return HISTORY.eruptions.filter(e=>ts>=e.t && ts<e.t+e.dur);
   return FICTIONAL_VOLCANOES.filter((v,i)=>((ts+i*3)%9)<2);
 }
+let lastProg=0;
 function seasonProgress(nowMs){
-  if(!running || seasonDeadline===null) return 0.5;
-  return Math.max(0,Math.min(1, 1-(seasonDeadline-nowMs)/SEASON_MS));
+  if(!running || seasonDeadline===null) return lastProg;          // hold, don't teleport, while resolving
+  return lastProg=Math.max(0,Math.min(1, 1-(seasonDeadline-nowMs)/SEASON_MS));
 }
-function atlanticForcing(){          // what was done to the Atlantic this season, beyond nature
+function driverForcingBy(name){      // what YOU did to an ocean this season (the player's landed driver ops)
   const r=lastRow(); if(!r) return 0;
-  const ni=DRV.indexOf("NATL"); return ni<0? 0 : r.driverTotals[ni]-r.driverNat[ni];
+  return r.landed.filter(e=>e.kind==="driver"&&e.target===name&&e.owner==="player").reduce((s,e)=>s+e.mag,0);
 }
+function atlanticForcing(){ return driverForcingBy("NATL"); }
 function stormStrength(f){ return Math.max(0.25, Math.min(1.6, 1+0.6*f)); }
 /* what was done to the Pacific this season, beyond nature — and what it does
    to each basin's storm season (El Niño: typhoons recurve away from China
    and the Philippines, Australia's cyclones stay offshore, the eastern
    Pacific wakes; La Niña the reverse) */
-function pacificForcing(){ const r=lastRow(); if(!r) return 0; const i=DRV.indexOf("ENSO"); return i<0?0:r.driverTotals[i]-r.driverNat[i]; }
+function pacificForcing(){ return driverForcingBy("ENSO"); }
 function basinFactor(basin){
   if(basin==="NA") return stormStrength(atlanticForcing());
   const dE=pacificForcing();
@@ -1733,6 +1754,10 @@ function drawStars(nowMs){
   }
 }
 function drawGlobe(now){
+  try{ drawGlobeInner(now); }catch(e){ console.error("frame error", e); }
+  finally{ requestAnimationFrame(drawGlobe); }
+}
+function drawGlobeInner(now){
   if(!dragging && !reduced && !FLAT) rot += 0.022;
   const nowMs=now||0;
   cx.clearRect(0,0,W,H);
@@ -1794,7 +1819,7 @@ function drawGlobe(now){
         const lag=AD.GLOBAL+MODEL.lags[3][ri];
         cx.strokeStyle=`rgba(224,164,88,${0.55*(1-ph)})`; cx.lineWidth=1;
         cx.beginPath(); cx.arc(p.x,p.y,8+ph*18,0,7); cx.stroke();
-        cx.fillStyle="rgba(224,164,88,.9)"; cx.font="8px "+getComputedStyle(document.body).getPropertyValue("--mono");
+        cx.fillStyle="rgba(224,164,88,.9)"; cx.font="8px "+MONO_FONT;
         cx.fillText(`▼ +${lag}`, p.x+7, p.y-7); }
     } }
 
@@ -1802,7 +1827,7 @@ function drawGlobe(now){
     const p=project(la,lo); if(!p.vis) continue;
     const v = row ? row.driverTotals[DRV.indexOf(d)] : MODEL.climate[0].drivers[DRV.indexOf(d)];
     cx.fillStyle="rgba(127,163,137,.9)";
-    cx.font="9px "+getComputedStyle(document.body).getPropertyValue("--mono");
+    cx.font="9px "+MONO_FONT;
     cx.fillText(d, p.x-10, p.y-8);
     const col = v>=0? "rgba(224,164,88,.8)":"rgba(91,200,232,.8)";
     cx.strokeStyle=col; cx.strokeRect(p.x-9,p.y-3,18,4);
@@ -1845,7 +1870,7 @@ function drawGlobe(now){
       cx.beginPath(); cx.arc(p.x,p.y,10,0,7); cx.stroke(); cx.lineWidth=1; }
     if(zoom>=1.5){                          // zoomed in: name the target
       const label=r.name.length>18? r.name.slice(0,17)+"…" : r.name;
-      cx.font="9px "+getComputedStyle(document.body).getPropertyValue("--mono");
+      cx.font="9px "+MONO_FONT;
       const tw=cx.measureText(label.toUpperCase()).width;
       cx.fillStyle="rgba(3,7,5,.65)";
       cx.fillRect(p.x-tw/2-3,p.y+11,tw+6,12);
@@ -1854,7 +1879,7 @@ function drawGlobe(now){
     }
     if(row && row.yields[ri]<60){       // famine indicator, pulsing
       const grave = row.yields[ri]<40;
-      cx.font="11px "+getComputedStyle(document.body).getPropertyValue("--mono");
+      cx.font="11px "+MONO_FONT;
       cx.fillStyle=(grave? "rgba(224,82,82,":"rgba(224,164,88,")
         +(0.55+0.4*Math.sin(nowMs/280))+")";
       cx.fillText("⚠", p.x-4, p.y-k*sig-6-(zoom>=1.5?8:0));
@@ -1926,7 +1951,7 @@ function drawGlobe(now){
     }
     cx.lineWidth=1;
   }
-  requestAnimationFrame(drawGlobe);
+  /* re-armed by the wrapper */
 }
 function pts(n,f){ const out=[]; for(let i=0;i<=n;i++) out.push(f(i)); return out; }
 function strokePath(arr){
@@ -1964,7 +1989,7 @@ function drawWires(nowMs,row){
       const L=armed? 0.35 : 0.16, x1=a.x+(b.x-a.x)*L, y1=a.y+(b.y-a.y)*L;
       cx.setLineDash([2,4]); cx.strokeStyle=armed? "rgba(200,230,207,.75)" : "rgba(200,230,207,.28)"; cx.lineWidth=armed?1.2:0.8;
       cx.beginPath(); cx.moveTo(a.x,a.y); cx.lineTo(x1,y1); cx.stroke(); cx.setLineDash([]);
-      if(armed){ cx.fillStyle="rgba(200,230,207,.85)"; cx.font="8px "+getComputedStyle(document.body).getPropertyValue("--mono"); cx.fillText("?", x1+2, y1-2); }
+      if(armed){ cx.fillStyle="rgba(200,230,207,.85)"; cx.font="8px "+MONO_FONT; cx.fillText("?", x1+2, y1-2); }
     }
     for(const nm of targets){ const p=project(...REGPOS[nm]); if(!p.vis) continue;
       const ph=(nowMs/1500)%1; cx.strokeStyle=`rgba(200,230,207,${0.6*(1-ph)})`; cx.lineWidth=1;
@@ -1992,7 +2017,7 @@ function drawWires(nowMs,row){
     cx.setLineDash([]);
     if(armed){                                     // when it lands, and which way
       const lag=AD[e.driver]+e.lag;
-      cx.fillStyle=`rgba(${rgb},.95)`; cx.font="8px "+getComputedStyle(document.body).getPropertyValue("--mono");
+      cx.fillStyle=`rgba(${rgb},.95)`; cx.font="8px "+MONO_FONT;
       cx.fillText(`${e.coeff<0?"▼":"▲"} +${lag}`, b.x+7, b.y-7);
     }
     if(live||fresh){
@@ -2042,14 +2067,14 @@ function hoverCheck(e){
     · ${r.weight.toFixed(1)}% of world supply${res?` · hardened`:""}<br>
     <span style="color:var(--ink-faint)">anomaly ${a.toFixed(2)} vs natural range ±${s.toFixed(2)}${Math.abs(a)>s?" — outside":""}</span>${(()=>{
       if(!eng.knowledge.on) return "";
-      const fc=eng.knowledge.forecast(); if(!fc) return "";
+      const fc=eng.knowledge.forecast(slots); if(!fc) return "";
       const f=fc[best], unk=f.total-f.known;
       return `<br><span style="color:var(--ink-faint)">wires: ${f.known} of ${f.total} on the board${unk?` · <span style="color:var(--amber)">${unk} unknown</span>`:""}
         · next season ${f.anomaly>0.2?"wet ":f.anomaly<-0.2?"dry ":""}${(f.anomaly>=0?"+":"")+f.anomaly.toFixed(2)} by known wiring</span>`; })()}`;
   h.style.display="block";
   h.style.left=Math.min(mx+14,W-250)+"px"; h.style.top=(my+10)+"px";
 }
-requestAnimationFrame(drawGlobe);
+/* kick-off happens in 70-boot.js once every part has run */
 
 /* --------------------------------------------------------- feed & drama */
 function wire(html, cls){
@@ -2192,7 +2217,7 @@ function renderInflight(){
   for(const o of eng.state.ops){
     if(o.owner!=="player") continue;
     const start=o.t+o.lag, dur=o.dur||1;
-    if(start>t && o.mag!==0)
+    if(start>t && (o.mag!==0 || o.research))
       items.push({label:o.cap, tgt:o.target, rem:start-t, mode:"pending"});
     else if(o.mag!==0 && t>=start && t<start+dur && dur>1)
       items.push({label:o.cap, tgt:o.target, rem:start+dur-1-t, mode:"active"});
@@ -2202,7 +2227,7 @@ function renderInflight(){
   items.sort((a,b)=>a.rem-b.rem);
   $("inflight").innerHTML = items.length? items.map(i=>
     i.mode==="active"
-    ? `<div class="fl"><span><b>${i.label.toUpperCase()}</b> · ${i.tgt}</span>
+    ? `<div class="fl"><span><b>${i.label.toUpperCase()}</b> · ${DRVNAME[i.tgt]||i.tgt}</span>
        <span class="tmin" style="color:var(--green)">● ACTIVE${i.rem>0?" +"+i.rem:""}</span></div>`
     : `<div class="fl${i.rem===1&&i.mode==="pending"?" t1":""}${i.mode==="debt"?" debt":""}">
        <span><b>${i.label.toUpperCase()}</b> · ${i.tgt}</span>
@@ -2266,7 +2291,7 @@ function traceFor(ri, row){
         const c=hit*MODEL.coeff[di][ri];
         if(o.owner==="player"){ mine+=c; parts.push(o.cap);
           if(!eng.knowledge.isKnown(di,ri)) unknown=true; }
-        else if(o.owner==="rival") theirs+=c;
+        else if(o.owner==="rival" && eng.knowledge.isKnown(di,ri)) theirs+=c;   // an unknown wire hides them too
       }
     }
   }
@@ -2395,7 +2420,8 @@ function clientInNeed(row){
 }
 let dirIdx=0, dirIssued=0, pendingGrant=0, pendingClaw=0;
 let standing=null, standingCount=0, nextStandingT=99, lapses=0, lastStandingKey=null;
-function curDir(){ return DIRECTIVES[dirIdx]||standing; }
+function curDir(){ const d=DIRECTIVES[dirIdx]; return (d && !(d.from && t<d.from))? d : (standing||d||null); }
+function onboardingGated(){ const d=DIRECTIVES[dirIdx]; return !!(d && d.from && t<d.from); }
 function dirActive(d){ return d && !(d.from && t<d.from); }
 function issueStanding(row){
   const rot=["price","flag","map","hold"];
@@ -2408,7 +2434,7 @@ function issueStanding(row){
   lastStandingKey=src.key;
   standing=Object.assign({},src,{issued:t, standing:true});
   if(standing.make) standing.make(row,standing);
-  standingCount++;
+  if(rot.includes(src.key)) standingCount++;
   wire(`<span class="tag tagd">DIRECTIVE</span><b>${standing.title.toUpperCase()}</b> — ${standing.text}`,"op");
   sfxChime();
 }
@@ -2432,13 +2458,15 @@ function directiveStep(row){
         pendingClaw+=claw; sfxAlert(); advanceDir();
       }
     }
-  } else if(t>=nextStandingT) issueStanding(row);
+  } else if(t>=nextStandingT && t<40) issueStanding(row);
+  if(onboardingGated() && !standing && t>=nextStandingT && t<40) issueStanding(row);   // the committee does not wait for S24
   renderDirective();
 }
 function advanceDir(){
-  if(DIRECTIVES[dirIdx]){ dirIdx++; dirIssued=t; }
+  const d=DIRECTIVES[dirIdx];
+  if(d && !d.standing && curDir()===d){ dirIdx++; dirIssued=t; }
   else standing=null;
-  if(!DIRECTIVES[dirIdx]) nextStandingT=t+2;     // the committee drafts language
+  if(!DIRECTIVES[dirIdx] || onboardingGated()) nextStandingT=t+2;     // the committee drafts language
 }
 function earmarkLine(){
   if(!flagship) return "";
@@ -2465,12 +2493,12 @@ const FLAGSHIP_CAPS=["ENSO Forcing","Ionospheric Coupling [T3]","Polar Destabili
 const FLAGSHIP_AT=[12,28], FLAGSHIP_AMOUNT=60, FLAGSHIP_FUSE=3;
 let flagship=null;
 function flagshipStep(row){
-  if(flagship && t>flagship.deadline){
+  if(flagship && t>=flagship.deadline){
     wire(`<span class="tag" style="color:var(--amber);border-color:var(--amber)">EARMARK WITHDRAWN</span> $${flagship.amount}M returns to the classified line. The Navy sends its regards.`,"att");
     flagship=null; renderTray(); renderDirective();
   }
   if(!flagship && FLAGSHIP_AT.includes(t) && row.status==="running"){
-    flagship={amount:FLAGSHIP_AMOUNT, issued:t, deadline:t+FLAGSHIP_FUSE};
+    flagship={amount:FLAGSHIP_AMOUNT, issued:t, deadline:t+FLAGSHIP_FUSE};   // drawable at the next FLAGSHIP_FUSE commits
     alertStrip("FLAGSHIP APPROPRIATION — $"+FLAGSHIP_AMOUNT+"M EARMARKED");
     wire(`<span class="tag tagd">EARMARK</span><b>FLAGSHIP APPROPRIATION</b> — the committee has found $${FLAGSHIP_AMOUNT}M in a classified line. It wants a demonstration: ENSO, Ionospheric, or Polar. ${FLAGSHIP_FUSE} seasons, then the money goes to the Navy.`,"op");
     sfxChime(); renderTray(); renderDirective();
@@ -2505,14 +2533,20 @@ async function runSeason(auto){
   if(!running || resolving) return;
   resolving=true; seasonDeadline=null;
   $("resolve").disabled=true;
+  alertQ.length=0;                                   // a new season's chyrons, not last season's backlog
+  try{ await runSeasonInner(auto); }
+  catch(e){ console.error("season error", e); wire(`<span class="tag tagr">FAULT</span> The season resolved with an error in the instrument: ${escapeHTML(e.message)}. The record stands.`,"att"); }
+  finally{ resolving=false; $("resolve").disabled=!running; if(running && seasonDeadline===null) seasonDeadline=performance.now()+SEASON_MS; }
+}
+async function runSeasonInner(auto){
   const prev=lastRow();
   const cmd={ ops:slots.map(s=>({cap:s.cap,target:s.target})),
               containment:+$("containment").value,
               grant:pendingGrant, clawback:pendingClaw,
               prediction:$("predict").value.trim() };
-  // the flagship earmark is drawn the season a flagship op is sealed
-  const drawn = flagship && slots.some(s=>FLAGSHIP_CAPS.includes(s.cap));
-  if(drawn){ cmd.grant+=flagship.amount; }
+  // the flagship earmark travels with the commitment; the engine draws it
+  // only if the flagship op actually commits
+  if(flagship) cmd.earmark={amount:flagship.amount, caps:FLAGSHIP_CAPS};
   pendingGrant=0; pendingClaw=0;
   t++;
   const row = eng.resolve(t, cmd);
@@ -2531,6 +2565,7 @@ async function runSeason(auto){
     const kc=eng.knowledge.count();
     if(kc.known>=kc.total) wire(`ANALYSIS — <b>The board is complete.</b> Every wire in the world is on it. Nothing that happens now is unexplained.`,"op");
   }
+  const drawn=!!row.earmarkUsed;
   if(drawn){
     wire(`<span class="tag tagd">EARMARK DRAWN</span> $${flagship.amount}M. The demonstration is funded. The committee will want to watch.`,"op");
     flagship=null;
@@ -2565,7 +2600,7 @@ async function runSeason(auto){
       const [cls,tag,txt]=PRECEDENT[op.cap];
       wire(`<span class="tag ${cls}">${tag}</span>${txt}`);
     }
-    wire(`SEALED — <b>${op.cap.toUpperCase()}</b> · ${op.target}`+
+    wire(`SEALED — <b>${op.cap.toUpperCase()}</b> · ${DRVNAME[op.target]||op.target}`+
       (op.resil>0? " · takes effect at once"
        : ` · lands ${seasonName(op.t+op.lag)}`),"op");
     if(!reduced){
@@ -2579,7 +2614,7 @@ async function runSeason(auto){
                        start:performance.now(),dur:3800});
     }
   }
-  if(cmd.prediction) wire(`PREDICTION LOGGED — “${cmd.prediction}”`);
+  if(cmd.prediction) wire(`PREDICTION LOGGED — “${escapeHTML(cmd.prediction)}”`);
   await phaseShow(2);
   const nowMs=performance.now();
   for(const e of row.landed){
@@ -2793,7 +2828,6 @@ async function runSeason(auto){
   if(auto && row.committed.length===0)
     wire(`The season closed while the directorate deliberated.`);
   $("resolve").disabled=!running;
-  resolving=false;
   if(running) seasonDeadline=performance.now()+SEASON_MS;
 }
 $("resolve").addEventListener("click",()=>{ sfxClick(); runSeason(false); });
@@ -2845,7 +2879,7 @@ function historyBeats(row){
     const bs=all.filter(s=>stormShown(s,bf)).sort((a,b)=>b.peak-a.peak||b.track.length-a.track.length);
     if(!bs.length) continue;
     const told=new Set(HISTORY.weather.filter(w=>w.t===t&&/typhoon|cyclone/i.test(w.kind)).map(w=>w.line.toLowerCase()));
-    const show=bs.filter(s=>(s.landfall||s.cat>=3) && !(s.name&&[...told].some(l=>l.includes(s.name.toLowerCase())))).slice(0, basin==="WP"?3:2);
+    const show=bs.filter(s=>(s.landfall||s.cat>=3) && !(s.name&&[...told].some(l=>new RegExp("\\b"+word.toLowerCase()+" "+s.name.toLowerCase()+"\\b").test(l)))).slice(0, basin==="WP"?3:2);
     for(const s of show){
       const nm=s.name? `${word} ${s.name}` : `An unnamed ${word.toLowerCase()}`;
       const where=s.landfall? `landfall near ${placeName(s.dl)}` : "at sea";
@@ -2853,7 +2887,7 @@ function historyBeats(row){
       if(s.cat>=4 && s.landfall) alertStrip(`${nm.toUpperCase()} — CATEGORY ${s.cat} LANDFALL`);
     }
     if(bs.length>show.length) news(bs[0].dl, `${bs.length-show.length} more ${word.toLowerCase()}${bs.length-show.length>1?"s":""} in the basin this quarter, as recorded.`);
-    histAsRecorded+=bs.length;
+    if(bf>=0.7 && bf<=1.3) histAsRecorded+=bs.length;
   }
   // the Atlantic season
   const f=atlanticForcing();
@@ -2877,14 +2911,15 @@ function historyBeats(row){
         if(c>=4 && s.landfall) alertStrip(`${nm.toUpperCase()} — CATEGORY ${c} LANDFALL`);
       }
       if(ss.length>3) news("MIAMI", `${ss.length-3} more hurricane${ss.length>4?"s":""} this quarter. The season the record remembers.`);
-      histAsRecorded+=ss.length;
+      if(!hot) histAsRecorded+=ss.length;
     }
   }
   // disasters on the record
   for(const w of HISTORY.weather){
     if(w.t!==t) continue;
     const ri=REG.findIndex(r=>r.name===w.region); if(ri<0) continue;
-    const tr=traceFor(ri,row), sign=(w.kind==="flood")? 1 : -1;
+    const WET=new Set(["flood","typhoon","cyclone","tornado","blizzard","avalanche","locusts"]);
+    const tr=traceFor(ri,row), sign=WET.has(w.kind)? 1 : -1;
     const push=tr.mine*sign;                       // >0 with the record, <0 against it
     if(w.canon){ news(w.dl, w.line, true); alertStrip(`${w.kind.toUpperCase()} — ${w.region.toUpperCase()}`); histAsRecorded++; cumDead+=w.toll||0; continue; }
     if(push<-0.3){
@@ -2973,6 +3008,7 @@ function showArchive(finalRow){
 
 /* --------------------------------------------------------------- misc */
 buildTray(); clampContainment(); renderTray(); renderDirective();
+requestAnimationFrame(drawGlobe);            // every part has run; the loop may start
 $("begin").addEventListener("click",()=>{ $("intro").style.display="none";
   audioInit(); sfxClick();
   seasonDeadline=performance.now()+SEASON_MS; });

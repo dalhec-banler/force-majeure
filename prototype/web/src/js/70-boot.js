@@ -1,5 +1,6 @@
 /* --------------------------------------------------------------- misc */
 buildTray(); clampContainment(); renderTray(); renderDirective();
+requestAnimationFrame(drawGlobe);            // every part has run; the loop may start
 $("begin").addEventListener("click",()=>{ $("intro").style.display="none";
   audioInit(); sfxClick();
   seasonDeadline=performance.now()+SEASON_MS; });
