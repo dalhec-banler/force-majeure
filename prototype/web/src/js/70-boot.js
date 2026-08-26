@@ -42,6 +42,8 @@ $("sndtoggle").addEventListener("click",()=>{
   if(!sndMuted){ audioInit(); sfxClick(); }
 });
 $("wire").classList.add("priority");
+$("dcclose").addEventListener("click",()=>{ hideDirCard(); renderDirective(); sfxClick(); });
+$("diropen").addEventListener("click",()=>{ const d=curDir(); if(d&&!gated(d)) showDirCard(d); renderDirective(); sfxClick(); });
 $("wiremode").addEventListener("click",()=>{
   WIRE_PRIORITY=!WIRE_PRIORITY;
   $("wire").classList.toggle("priority", WIRE_PRIORITY);

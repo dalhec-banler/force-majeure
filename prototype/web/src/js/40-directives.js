@@ -120,14 +120,15 @@ function issueStanding(row){
   if(standing.make) standing.make(row,standing);
   if(rot.includes(src.key)) standingCount++;
   wire(`<span class="tag tagd">DIRECTIVE</span><b>${standing.title.toUpperCase()}</b> — ${standing.text}`,"op");
-  sfxChime();
+  sfxChime(); if(!replaying) showDirCard(standing);
 }
 function directiveStep(row){
   const d=curDir();
   if(d){
     if(gated(d)){ /* drafting language */ }
     else{
-      if(!d.standing && d.fromYear && d.issuedT===undefined){ d.issuedT=t; dirIssued=t; dirIssuedRv=rv; }   // the year arrived: the fuse starts now
+      if(!d.standing && d.fromYear && d.issuedT===undefined){ d.issuedT=t; dirIssued=t; dirIssuedRv=rv; if(!replaying) showDirCard(d); }   // the year arrived: the fuse starts now
+      if(!d.standing && !d.fromYear && !d.shown){ d.shown=true; if(!replaying && t>0) showDirCard(d); }
       if(!d.standing && d.issuedT===undefined) d.issuedT=dirIssued;
       const issuedRv=d.standing? d.issuedRv : dirIssuedRv;
       const left=d.window-(rv-issuedRv);
@@ -136,11 +137,11 @@ function directiveStep(row){
       const due=left<=0;
       if(done || (due && d.goal && d.check(row,d))){
         wire(`<span class="tag tagd">DIRECTIVE COMPLETE</span><b>${d.title.toUpperCase()}</b> — +$${d.reward}M appropriated next quarter. The committee is pleased. For now.`,"op");
-        pendingGrant+=d.reward; dirLog.push({t, title:d.title, done:true, reward:d.reward}); sfxChime(); advanceDir();
+        pendingGrant+=d.reward; dirLog.push({t, title:d.title, done:true, reward:d.reward}); sfxChime(); if(!replaying) dirCardResult(d,true,d.reward); advanceDir();
       } else if(broke || due){
         const claw=Math.round(d.reward/2); lapses++;
         wire(`<span class="tag" style="color:var(--red);border-color:var(--red)">DIRECTIVE LAPSED</span><b>${d.title.toUpperCase()}</b> — ${broke?"the line broke.":"the fuse ran out."} The committee withdraws $${claw}M from next quarter's appropriation. Minutes record “a directorate that does not deliver.”`,"att");
-        pendingClaw+=claw; dirLog.push({t, title:d.title, done:false, claw}); sfxAlert(); advanceDir();
+        pendingClaw+=claw; dirLog.push({t, title:d.title, done:false, claw}); sfxAlert(); if(!replaying) dirCardResult(d,false,claw); advanceDir();
       }
     }
   } else if(rv>=nextStandingRv && t<eng.seasons-4 && isReviewStart(t)) issueStanding(row);
@@ -158,17 +159,46 @@ function earmarkLine(){
   const n=flagship.issuedRv+FLAGSHIP_FUSE-rv;
   return `<div style="margin-top:5px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:${n<=1?"var(--red)":"var(--amber)"}">EARMARK: $${flagship.amount}M for ${flagship.ask} · ${n} review${n===1?"":"s"} left</div>`;
 }
+/* The directive is a CABLE: it pops out over the globe when the committee
+   sends it, with its fuse; NOTED puts it away (the panel keeps a one-line
+   summary and OPEN THE CABLE brings it back); resolving or lapsing it
+   closes it with the result. */
+let cardDir=null, cardTimer=null;
+function dirLeft(d){ const issuedRv=d.standing? d.issuedRv : dirIssuedRv; return Math.max(0,d.window-(rv-issuedRv)); }
+function showDirCard(d){
+  if(!d || gated(d)) return;
+  cardDir=d; if(cardTimer){ clearTimeout(cardTimer); cardTimer=null; }
+  const left=dirLeft(d), card=$("dircard");
+  card.className="dircard"; $("dctag").textContent="CABLE — FROM THE COMMITTEE";
+  $("dctitle").textContent=d.title.toUpperCase();
+  $("dctext").innerHTML=d.text;
+  $("dcuse").innerHTML=d.tool? `USE: ${useLine(d)}` : "";
+  $("dcreward").innerHTML=`+$${d.reward}M on completion${d.reward?` · −$${Math.round(d.reward/2)}M if it lapses`:""}`;
+  $("dcfuse").innerHTML=`<b style="color:${left<=1?"var(--red)":"var(--amber)"}">${left} review${left===1?"":"s"}</b> on the fuse`;
+  $("dcbar").style.width=Math.round(100*left/Math.max(1,d.window))+"%";
+  $("dcbar").style.background=left<=1?"var(--red)":"var(--amber)";
+  card.style.display="block";
+}
+function hideDirCard(){ $("dircard").style.display="none"; cardDir=null; }
+function dirCardResult(d, ok, amount){
+  const card=$("dircard"); cardDir=null; if(cardTimer) clearTimeout(cardTimer);
+  card.className="dircard "+(ok?"done":"lapsed"); card.style.display="block";
+  $("dctag").textContent=ok? "CABLE — DIRECTIVE COMPLETE" : "CABLE — DIRECTIVE LAPSED";
+  $("dctitle").textContent=d.title.toUpperCase();
+  $("dctext").innerHTML=ok? `+$${amount}M appropriated next season. The committee is pleased. For now.` : `The committee withdraws $${amount}M from next season's appropriation.`;
+  $("dcuse").innerHTML=""; $("dcreward").innerHTML=""; $("dcfuse").innerHTML=""; $("dcbar").style.width="0";
+  cardTimer=setTimeout(()=>{ if(!cardDir) $("dircard").style.display="none"; }, reduced?0:5000);
+}
 function renderDirective(){
   const d=curDir();
   if(!d || gated(d)){
     $("dirtext").innerHTML="The committee is drafting language. Nothing is asked of you this review — <b>if the world is stable, run the year.</b> A seed a year keeps the appropriation whole."+earmarkLine();
-    $("dirreward").textContent=""; return; }
-  const issuedRv=d.standing? d.issuedRv : dirIssuedRv;
-  const left=Math.max(0,d.window-(rv-issuedRv));
-  $("dirtext").innerHTML=d.text+(d.tool?
-    `<div style="margin-top:5px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--green)">USE: ${useLine(d)}</div>`:"")
-    +earmarkLine();
+    $("dirreward").textContent=""; $("diropen").style.display="none"; if(cardDir) hideDirCard(); return; }
+  const left=dirLeft(d);
+  $("dirtext").innerHTML=`<b>${d.title.toUpperCase()}</b>${d.tool?` <span style="font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--green)">· ${useLine(d)}</span>`:""}`+earmarkLine();
   $("dirreward").innerHTML=`+$${d.reward}M <span style="color:${left<=1?"var(--red)":"var(--ink-dim)"}">· ${left} review${left===1?"":"s"}</span>`;
+  $("diropen").style.display=(cardDir===d)? "none" : "";
+  if(cardDir===d) showDirCard(d);                           // refresh the fuse on the open card
 }
 
 /* Flagship earmark — twice a campaign the committee finds money in a

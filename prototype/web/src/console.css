@@ -336,3 +336,18 @@
 .tool.fresh{opacity:1;filter:none;animation:freshwing 1.6s ease-in-out infinite}
 .tool.fresh .pr{color:var(--green)}
 @keyframes freshwing{0%,100%{box-shadow:inset 0 0 0 1px var(--green),0 0 0 0 rgba(83,217,123,0)}50%{box-shadow:inset 0 0 0 1px var(--green),0 0 10px 2px rgba(83,217,123,.45)}}
+
+/* the directive as a cable over the globe */
+.dircard{position:absolute;right:14px;top:44px;width:min(380px,calc(100% - 28px));z-index:7;background:rgba(10,15,12,.96);border:1px solid var(--amber);box-shadow:0 0 0 1px rgba(224,164,88,.2),0 12px 30px rgba(0,0,0,.5);padding:10px 12px 12px;font-family:var(--sans)}
+.dircard .dc-h{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:9px;letter-spacing:.24em;color:var(--amber);margin-bottom:6px}
+.dircard .dc-h button{background:none;border:1px solid var(--line);color:var(--ink-dim);font:inherit;font-size:9px;letter-spacing:.18em;padding:2px 7px;cursor:pointer}
+.dircard .dc-h button:hover{color:var(--ink);border-color:var(--ink-dim)}
+.dircard #dctitle{font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.14em;color:var(--ink);margin-bottom:5px}
+.dircard #dctext{font-size:12.5px;color:var(--ink);line-height:1.45}
+.dircard #dcuse{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--green);margin-top:6px}
+.dircard .dc-f{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--ink-dim);margin-top:8px}
+.dircard .dc-bar{height:4px;background:var(--panel2);margin-top:5px} .dircard .dc-bar span{display:block;height:100%;background:var(--amber);transition:width .4s}
+.dircard.done{border-color:var(--green)} .dircard.done .dc-h{color:var(--green)}
+.dircard.lapsed{border-color:var(--red)} .dircard.lapsed .dc-h{color:var(--red)}
+#dirpanel{padding-bottom:8px}
+#wirepanel{flex:1 1 320px;min-height:260px}
