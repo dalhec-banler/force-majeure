@@ -142,6 +142,11 @@
   #wire{flex:1 1 0;min-height:0;overflow-y:auto;padding:8px 14px;font-size:11.5px}
   #wire p{margin-bottom:6px;color:var(--ink-dim)}
   #wire.priority p.lo{display:none}
+  #wire details.yr{margin:4px 0 8px;border-top:1px solid var(--line);padding-top:4px}
+  #wire details.yr summary{cursor:pointer;color:var(--ink-dim);font-size:11px;letter-spacing:.08em;list-style:none}
+  #wire details.yr summary::before{content:"▸ ";color:var(--ink-faint)} #wire details.yr[open] summary::before{content:"▾ "}
+  #wire details.yr summary b{color:var(--ink)}
+  #wire details.yr p{margin-left:10px}
   .wmode{background:none;border:1px solid var(--line);color:var(--ink-dim);font:inherit;font-size:9px;letter-spacing:.18em;padding:1px 6px;margin-right:8px;cursor:pointer}
   .wmode:hover{color:var(--ink);border-color:var(--ink-dim)}
   #wire p b{color:var(--ink);font-weight:500}
@@ -2504,6 +2509,22 @@ function wire(html, cls, id){
   if(reduced) pumpWire(true);
 }
 let WIRE_PRIORITY=true;
+/* When a review begins, the wire folds: everything on it collapses into one
+   line for the period just closed — open it to read back. You look at one
+   review's worth of feed at a time. */
+function foldWire(label){
+  pumpWire(true);
+  const w=$("wire"); const loose=[...w.children].filter(el=>el.tagName==="P");
+  if(!loose.length) return;
+  const pri=loose.filter(p=>!p.classList.contains("lo"));
+  const dirs=pri.filter(p=>/DIRECTIVE/.test(p.textContent)).length, ops=pri.filter(p=>/SEALED/.test(p.textContent)).length;
+  const hot=pri.filter(p=>/INTERCEPT|HOSTILE|EXPOSED|MOTHBALLED|STANDS UP|WING|EARMARK|investigation/i.test(p.textContent)).length;
+  const bits=[`${pri.length} line${pri.length===1?"":"s"}`]; if(ops) bits.push(`${ops} op${ops===1?"":"s"}`); if(dirs) bits.push(`${dirs} directive${dirs===1?"":"s"}`); if(hot) bits.push(`${hot} alert${hot===1?"":"s"}`);
+  const d=document.createElement("details"); d.className="yr";
+  d.innerHTML=`<summary><b>${label}</b> · ${bits.join(" · ")}</summary>`;
+  for(const p of loose) d.appendChild(p);                       // keeps their order (newest first)
+  w.prepend(d);
+}
 function pumpWire(all){
   const now=performance.now();
   const gap = all? 0 : wireQ.length>24? 140 : wireQ.length>10? 300 : (typeof brisk!=="undefined"&&brisk)? 260 : 650;
@@ -3025,11 +3046,14 @@ async function runSeason(auto){
   alertQ.length=0;                                   // a new review's chyrons, not last review's backlog
   try{
     const n=nextBatch();
+    { const lr=lastRow(); if(lr && !replaying){ const y0=eng.state.rows[Math.max(0,t-nextBatchWas)]; foldWire(lr.year+(lr.qtr==="Autumn"?"":" · "+lr.qtr.toLowerCase())); } }
+    nextBatchWas=n;
     for(let i=0;i<n && running;i++){ brisk=i<n-1; await runSeasonInner(auto); }
   }
   catch(e){ console.error("season error", e); wire(`<span class="tag tagr">FAULT</span> The season resolved with an error in the instrument: ${escapeHTML(e.message)}. The record stands.`,"att"); }
   finally{ brisk=false; resolving=false; $("resolve").disabled=!running; SEASON_MS=clockMs(); renderReviewButton(); if(running && seasonDeadline===null) seasonDeadline=performance.now()+SEASON_MS; }
 }
+let nextBatchWas=1;
 let pendingArchive=null;          // the campaign's final row, waiting for the player to open the archive
 let CLOCK_AUTO=false;             // the review clock counts down; it only runs the review for you if you ask
 function renderReviewButton(){

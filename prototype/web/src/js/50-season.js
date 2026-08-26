@@ -10,11 +10,14 @@ async function runSeason(auto){
   alertQ.length=0;                                   // a new review's chyrons, not last review's backlog
   try{
     const n=nextBatch();
+    { const lr=lastRow(); if(lr && !replaying){ const y0=eng.state.rows[Math.max(0,t-nextBatchWas)]; foldWire(lr.year+(lr.qtr==="Autumn"?"":" · "+lr.qtr.toLowerCase())); } }
+    nextBatchWas=n;
     for(let i=0;i<n && running;i++){ brisk=i<n-1; await runSeasonInner(auto); }
   }
   catch(e){ console.error("season error", e); wire(`<span class="tag tagr">FAULT</span> The season resolved with an error in the instrument: ${escapeHTML(e.message)}. The record stands.`,"att"); }
   finally{ brisk=false; resolving=false; $("resolve").disabled=!running; SEASON_MS=clockMs(); renderReviewButton(); if(running && seasonDeadline===null) seasonDeadline=performance.now()+SEASON_MS; }
 }
+let nextBatchWas=1;
 let pendingArchive=null;          // the campaign's final row, waiting for the player to open the archive
 let CLOCK_AUTO=false;             // the review clock counts down; it only runs the review for you if you ask
 function renderReviewButton(){

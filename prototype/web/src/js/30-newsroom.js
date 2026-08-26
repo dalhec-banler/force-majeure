@@ -26,6 +26,22 @@ function wire(html, cls, id){
   if(reduced) pumpWire(true);
 }
 let WIRE_PRIORITY=true;
+/* When a review begins, the wire folds: everything on it collapses into one
+   line for the period just closed — open it to read back. You look at one
+   review's worth of feed at a time. */
+function foldWire(label){
+  pumpWire(true);
+  const w=$("wire"); const loose=[...w.children].filter(el=>el.tagName==="P");
+  if(!loose.length) return;
+  const pri=loose.filter(p=>!p.classList.contains("lo"));
+  const dirs=pri.filter(p=>/DIRECTIVE/.test(p.textContent)).length, ops=pri.filter(p=>/SEALED/.test(p.textContent)).length;
+  const hot=pri.filter(p=>/INTERCEPT|HOSTILE|EXPOSED|MOTHBALLED|STANDS UP|WING|EARMARK|investigation/i.test(p.textContent)).length;
+  const bits=[`${pri.length} line${pri.length===1?"":"s"}`]; if(ops) bits.push(`${ops} op${ops===1?"":"s"}`); if(dirs) bits.push(`${dirs} directive${dirs===1?"":"s"}`); if(hot) bits.push(`${hot} alert${hot===1?"":"s"}`);
+  const d=document.createElement("details"); d.className="yr";
+  d.innerHTML=`<summary><b>${label}</b> · ${bits.join(" · ")}</summary>`;
+  for(const p of loose) d.appendChild(p);                       // keeps their order (newest first)
+  w.prepend(d);
+}
 function pumpWire(all){
   const now=performance.now();
   const gap = all? 0 : wireQ.length>24? 140 : wireQ.length>10? 300 : (typeof brisk!=="undefined"&&brisk)? 260 : 650;
