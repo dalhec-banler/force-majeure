@@ -67,7 +67,8 @@ let telemetry = false;
 let pendingTool = null;          // tool waiting for a globe click
 let slots = [];                  // armed ops, max 2: {cap, target}
 let sevStreak = REG.map(()=>0);  // consecutive severe seasons per region
-let iceMelt = 0;                 // 0..1, cumulative Arctic melt (visual + news)
+let iceMelt = 0;                 // 0..1, ice-sheet loss: permanent — the sea stays where it rose to
+let seaIce = 0;                  // 0..1, sea-ice loss: regrows over cold seasons (the white cap)
 let cumDead = 0, cumDeadYours = 0;   // estimated excess mortality (information)
 function devastation(){                 // 0..1 — how far gone the world is
   const row=lastRow(); if(!row) return 0;

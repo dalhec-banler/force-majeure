@@ -39,8 +39,12 @@ async function runSeason(auto){
   {
     const ai=REG.findIndex(r=>r.kind==="ice");
     if(ai>=0){
-      const prevIce=iceMelt;
-      iceMelt=Math.min(1, iceMelt + Math.max(0, row.anomalies[ai]-0.3)*0.15);
+      const prevIce=iceMelt, prevSea=seaIce;
+      const warm=Math.max(0, row.anomalies[ai]-0.3);
+      iceMelt=Math.min(1, iceMelt + warm*0.09);                 // the sheets: slow, and forever
+      seaIce=Math.max(0, Math.min(1, seaIce + warm*0.22 - (warm>0? 0 : 0.07)));   // the cap: fast, and it comes back
+      if(prevSea>0.25 && seaIce<=0.25 && iceMelt>0.15)
+        news("LONGYEARBYEN","The ice is back this winter, to the eye. The sea is not going back where it came from.");
       const MELT=[[0.2,"The ice is thinner every year. Captains talk about routes that did not used to exist."],
                   [0.5,"The Northwest Passage is open water in September. First cargo transits."],
                   [0.8,"The pole is blue. Nobody alive has seen this before."]];

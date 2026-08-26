@@ -137,6 +137,8 @@ function memos(row){
     out.push("Budget office: the committee sees a calm world. Calm worlds do not fund directorates.");
   if(row.treasury>=0 && row.treasury<25)
     out.push("Budget office: at current burn this programme fails within the year.");
+  if(iceMelt>=0.5 && t%6===0)
+    out.push("Science desk: the Greenland sheet is past recovering on any timescale we will see. The coastlines on the map are now the coastlines.");
   if(flagship && flagship.deadline-t<=1)
     out.unshift(`Budget office: the flagship earmark lapses ${flagship.deadline-t===0?"this season":"next season"}. Sixty million dollars, and nothing to show the committee.`);
   if(lapses>=2 && t%3===0)

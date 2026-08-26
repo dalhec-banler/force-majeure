@@ -179,7 +179,7 @@ function drawEarth(nowMs){
   gl.uniform1f(glU.Sea, 0.0066*Math.pow(iceMelt,0.8));   // the coasts go under as the ice goes
   gl.uniform1f(glU.DevG, devastation());
   gl.uniform1f(glU.T2, nowMs/1000);
-  gl.uniform1f(glU.IceEdge, (66+18*iceMelt)*Math.PI/180);
+  gl.uniform1f(glU.IceEdge, (66+18*seaIce)*Math.PI/180);
   gl.uniform1f(glU.Flat, FLAT?1:0);
   gl.uniform1f(glU.SunLon, (nowMs*0.000013)%(Math.PI*2)+2.6);
   gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
