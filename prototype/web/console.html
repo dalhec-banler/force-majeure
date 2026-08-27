@@ -386,6 +386,11 @@
 /* a wing the chest can carry: not dimmed, STAND UP in green, glowing until looked at */
 .tool.locked.standable{opacity:.9;filter:none;border-color:rgba(83,217,123,.6)}
 .tool.locked.standable .pr{color:var(--green)}
+
+/* boot → brief: a fade, not a cut */
+#boot{transition:opacity .9s ease} #boot.out{opacity:0;pointer-events:none}
+#bootgo{animation:bootgo 1.4s ease-in-out infinite} @keyframes bootgo{0%,100%{opacity:.35}50%{opacity:1}}
+#intro.in{opacity:0;transition:opacity .8s ease} #intro.in.shown{opacity:1}
 </style>
 
 <div id="app">
@@ -500,7 +505,8 @@
   <div class="cls">SECRET // NOFORN // DIRECTOR EYES ONLY</div>
   <p>DIRECTORATE OF CIVIL RESILIENCE</p>
   <p>OPERATIONS CONSOLE — TERMINAL 04</p>
-  <p style="margin-top:14px">■ ESTABLISHING SECURE LINK…</p>
+  <p style="margin-top:14px" id="bootline">■ ESTABLISHING SECURE LINK…</p>
+  <p id="bootgo" style="display:none;margin-top:26px;color:var(--green);letter-spacing:.34em;font-size:12px">▸ CLICK TO START</p>
 </div></div>
 <div id="flashbang"></div>
 
@@ -511,7 +517,9 @@
     <p class="q">Is it fun to nudge an invisible system and watch consequences
       arrive four to eight seasons later, in a country you did not target?</p>
     <p>You direct a national environmental warfare programme from 1946 to
-      2060. Homeland: <b id="introHome">the North American Plains</b> — <span id="introCrop">wheat and maize</span>.
+      2060. Your homeland is the programme you take over — <b>choose it
+      below</b>; the console is set for <b id="introHome">the North American Plains</b>
+      (<span id="introCrop">wheat and maize</span>) until you do.
       A calm world defunds you. A frightening one earns your appropriation.
       You begin as a lab with seeding planes and a budget line: decisions
       come once a year until the ENMOD era, twice a year after, every season
@@ -519,6 +527,7 @@
       sixteen regions now, thirty-six by 2010 — and so does the arsenal:
       the dimmed tools in the tray show the year they become possible and
       the chest you must hold to stand the wing up.</p>
+    <div id="homepick"><div class="hp-h">THE PROGRAMME YOU TAKE OVER</div><div id="homepickrow"></div></div>
     <ul>
       <li><b>Pick a tool from the tray. Click regions to aim it.</b> As many
         operations a review as the budget allows, on as many regions as you
@@ -544,7 +553,6 @@
     </ul>
     <p>One honest run, no undo. Write a prediction each season — the archive
       scores you against them at the end.</p>
-    <div id="homepick"><div class="hp-h">THE PROGRAMME YOU TAKE OVER</div><div id="homepickrow"></div></div>
     <button id="begin">ASSUME DIRECTION ▸</button>
     <button id="resume" style="display:none">RESUME THE PROGRAMME ▸</button>
   </div>
@@ -3985,10 +3993,19 @@ $("resume").addEventListener("click",async()=>{ $("intro").style.display="none";
   audioInit(); sfxClick(); $("resume").disabled=true;
   await replaySave(savedLog); });
 $("intro").style.display="none";
-const bootT=setTimeout(()=>{ $("boot").style.display="none";
-  $("intro").style.display="flex"; }, 2600);
-$("boot").addEventListener("click",()=>{ clearTimeout(bootT);
-  $("boot").style.display="none"; $("intro").style.display="flex"; });
+// the boot screen holds until you click: link established, then CLICK TO START;
+// the boot fades out and the operating brief fades in
+setTimeout(()=>{ $("bootline").textContent="■ SECURE LINK ESTABLISHED"; $("bootgo").style.display="block"; }, 2400);
+let bootDone=false;
+function leaveBoot(){
+  if(bootDone) return; bootDone=true;
+  const b=$("boot"), i=$("intro");
+  b.classList.add("out");
+  setTimeout(()=>{ b.style.display="none"; i.style.display="flex"; i.classList.add("in");
+    requestAnimationFrame(()=>requestAnimationFrame(()=>i.classList.add("shown"))); }, reduced?0:900);
+}
+$("boot").addEventListener("click",leaveBoot);
+addEventListener("keydown",(e)=>{ if($("boot").style.display!=="none" && !bootDone && (e.key==="Enter"||e.key===" ")) leaveBoot(); });
 function toggleView(){
   FLAT=!FLAT;
   $("viewtoggle").textContent="VIEW: "+(FLAT?"FLAT MAP":"GLOBE");

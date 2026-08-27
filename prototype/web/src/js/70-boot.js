@@ -24,10 +24,19 @@ $("resume").addEventListener("click",async()=>{ $("intro").style.display="none";
   audioInit(); sfxClick(); $("resume").disabled=true;
   await replaySave(savedLog); });
 $("intro").style.display="none";
-const bootT=setTimeout(()=>{ $("boot").style.display="none";
-  $("intro").style.display="flex"; }, 2600);
-$("boot").addEventListener("click",()=>{ clearTimeout(bootT);
-  $("boot").style.display="none"; $("intro").style.display="flex"; });
+// the boot screen holds until you click: link established, then CLICK TO START;
+// the boot fades out and the operating brief fades in
+setTimeout(()=>{ $("bootline").textContent="■ SECURE LINK ESTABLISHED"; $("bootgo").style.display="block"; }, 2400);
+let bootDone=false;
+function leaveBoot(){
+  if(bootDone) return; bootDone=true;
+  const b=$("boot"), i=$("intro");
+  b.classList.add("out");
+  setTimeout(()=>{ b.style.display="none"; i.style.display="flex"; i.classList.add("in");
+    requestAnimationFrame(()=>requestAnimationFrame(()=>i.classList.add("shown"))); }, reduced?0:900);
+}
+$("boot").addEventListener("click",leaveBoot);
+addEventListener("keydown",(e)=>{ if($("boot").style.display!=="none" && !bootDone && (e.key==="Enter"||e.key===" ")) leaveBoot(); });
 function toggleView(){
   FLAT=!FLAT;
   $("viewtoggle").textContent="VIEW: "+(FLAT?"FLAT MAP":"GLOBE");

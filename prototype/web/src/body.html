@@ -110,7 +110,8 @@
   <div class="cls">SECRET // NOFORN // DIRECTOR EYES ONLY</div>
   <p>DIRECTORATE OF CIVIL RESILIENCE</p>
   <p>OPERATIONS CONSOLE — TERMINAL 04</p>
-  <p style="margin-top:14px">■ ESTABLISHING SECURE LINK…</p>
+  <p style="margin-top:14px" id="bootline">■ ESTABLISHING SECURE LINK…</p>
+  <p id="bootgo" style="display:none;margin-top:26px;color:var(--green);letter-spacing:.34em;font-size:12px">▸ CLICK TO START</p>
 </div></div>
 <div id="flashbang"></div>
 
@@ -121,7 +122,9 @@
     <p class="q">Is it fun to nudge an invisible system and watch consequences
       arrive four to eight seasons later, in a country you did not target?</p>
     <p>You direct a national environmental warfare programme from 1946 to
-      2060. Homeland: <b id="introHome">the North American Plains</b> — <span id="introCrop">wheat and maize</span>.
+      2060. Your homeland is the programme you take over — <b>choose it
+      below</b>; the console is set for <b id="introHome">the North American Plains</b>
+      (<span id="introCrop">wheat and maize</span>) until you do.
       A calm world defunds you. A frightening one earns your appropriation.
       You begin as a lab with seeding planes and a budget line: decisions
       come once a year until the ENMOD era, twice a year after, every season
@@ -129,6 +132,7 @@
       sixteen regions now, thirty-six by 2010 — and so does the arsenal:
       the dimmed tools in the tray show the year they become possible and
       the chest you must hold to stand the wing up.</p>
+    <div id="homepick"><div class="hp-h">THE PROGRAMME YOU TAKE OVER</div><div id="homepickrow"></div></div>
     <ul>
       <li><b>Pick a tool from the tray. Click regions to aim it.</b> As many
         operations a review as the budget allows, on as many regions as you
@@ -154,7 +158,6 @@
     </ul>
     <p>One honest run, no undo. Write a prediction each season — the archive
       scores you against them at the end.</p>
-    <div id="homepick"><div class="hp-h">THE PROGRAMME YOU TAKE OVER</div><div id="homepickrow"></div></div>
     <button id="begin">ASSUME DIRECTION ▸</button>
     <button id="resume" style="display:none">RESUME THE PROGRAMME ▸</button>
   </div>
