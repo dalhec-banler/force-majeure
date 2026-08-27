@@ -119,6 +119,12 @@ const PRECEDENT={
  "ENSO Forcing":["tagr","[REDACTED]","Annex C is not available at your clearance. Proceed."],
  "Ionospheric Coupling [T3]":["tagr","[REDACTED]","There is no prior art. You are the prior art."],
  "Polar Destabilization":["tagr","[REDACTED]","Feasibility study withdrawn from circulation, all copies. Including this one."],
+ "Hurricane Steering":["tagd","DECLASSIFIED","Project Cirrus, October 1947 — a seeded hurricane turned and came ashore in Georgia. The Bureau stopped answering questions. Prior art."],
+ "Engineered Bloom":["tagd","DECLASSIFIED","Ocean iron fertilisation trials, published, peer-reviewed, twelve of them. Nobody thought to classify the results."],
+ "Marine Cloud Brightening":["tagd","DECLASSIFIED","Reef-cooling trials off Queensland. The vessels are on the shipping register under their own names."],
+ "Orbital Mirror":["tagr","[REDACTED]","Launch manifest sealed. The constellation is described in the budget as communications."],
+ "Engineered Biology":["tagr","[REDACTED]","The programme has no name. The strain has a catalogue number and nothing else."],
+ "The AMOC Lever":["tagr","[REDACTED]","There is no annex. There is no study. There is a valve and a decision."],
 };
 const usedCaps=new Set();
 let filedCount=0, punctureFired=false, briefSeason=0;

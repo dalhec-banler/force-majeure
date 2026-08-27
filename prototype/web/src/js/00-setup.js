@@ -95,7 +95,9 @@ const DATELINE = { "North American Plains":"OMAHA","Black Sea Steppe":"ODESSA",
 const TOOLICON = { "Climate Research":"🔬", "Cloud Seeding":"☁","Watershed Interference":"🚱",
   "Fire Enablement":"🔥","Adaptation Investment":"🛡","Ocean Thermal Forcing":"🌊",
   "Stratospheric Aerosol Inj.":"✈","ENSO Forcing":"🌀","Ionospheric Coupling [T3]":"⚡",
-  "Polar Destabilization":"🧊" };
+  "Polar Destabilization":"🧊",
+  "Hurricane Steering":"🌪","Engineered Bloom":"🦠","Marine Cloud Brightening":"🌫",
+  "Orbital Mirror":"🛰","Engineered Biology":"🧬","The AMOC Lever":"🔱" };
 const $ = (id) => document.getElementById(id);
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const MONO_FONT='"IBM Plex Mono", Menlo, monospace';    // cached once: canvas font strings are parsed per call

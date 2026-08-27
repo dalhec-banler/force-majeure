@@ -10,6 +10,12 @@ const DESC={
   "ENSO Forcing":"tips the Pacific into an artificial El Niño — the world's weather leans with it",
   "Ionospheric Coupling [T3]":"the directed-energy option — seismic coupling, no meteorological cause. It cannot be denied",
   "Polar Destabilization":"breaks the polar ice — the melt feeds the planet's fever, and everyone pays",
+  "Hurricane Steering":"nudges a storm the record already made onto a coast you choose",
+  "Engineered Bloom":"seeds the ocean — the only thing you have that cools the whole century",
+  "Marine Cloud Brightening":"brightens the marine cloud over one coast: cheap, brief, almost invisible",
+  "Orbital Mirror":"steals the sunlight from one region, this season, with no weather to blame",
+  "Engineered Biology":"puts something in the seed stock; the weather stops mattering there",
+  "The AMOC Lever":"stops the Atlantic conveyor. Once. There is no second one.",
 };
 /* the briefing card: what a tool is, what it does, and what it costs you */
 const BRIEF={
@@ -23,6 +29,12 @@ const BRIEF={
   "Ionospheric Coupling [T3]":"The directed-energy option: seismic coupling with no meteorological cause. Instant, and it cannot be denied. A coastal hub means a tsunami. <b>The day you use it, the geological record stops being canon</b> — every quake after is suspect, including the ones you did not cause.",
   "Climate Research":"Instruments, ship logs, a room of analysts pointed at one region. Next season the strongest hidden wire into it is on the board: which ocean moves its weather, and how long it takes. <b>Arm it and the unknown wires show as dotted stubs.</b> The committee counts research as output.",
   "Polar Destabilization":"Breaks the polar ice. Icebreakers north; the melt feeds global stress for a year and every coast pays later. Loud. The kind of thing the archive opens with.",
+  "Hurricane Steering":"Seeding flights into the eyewall of a storm the record already produced. You do not make the hurricane — you decide whose coast it crosses. <b>Instant</b>, and the Atlantic gives the energy back in three seasons. The wire will name the storm; nobody will name you.",
+  "Engineered Bloom":"Iron dust across a dead stretch of ocean; the bloom follows, and the drawdown with it. <b>The only tool that lowers the planet's stress instead of raising it</b> — every harvest on the board gets easier for a year. Nearly invisible. The dead water surfaces in the Indian Ocean later, and the monsoon notices.",
+  "Marine Cloud Brightening":"Spray vessels thicken the cloud over one coast. Cool and wet, this season, for a year — small, cheap, and so quiet the ladder does not move. What the craft looks like once you have stopped needing to be loud.",
+  "Orbital Mirror":"A constellation turns its face. Sunlight leaves one region and does not come back this season. <b>No lag and no meteorology to hide behind</b> — the anomaly appears with nothing in the record to explain it, and the file knows it.",
+  "Engineered Biology":"A rust in the seed stock, released at sowing. <b>It does not care what the weather does next</b> — it persists for years, decaying slowly, and no rainfall record will ever account for the loss. What the analysts call an agronomic event.",
+  "The AMOC Lever":"Freshwater at the sinking points until the Atlantic conveyor stops. Hemisphere-scale, permanent, and <b>you may do it once</b>. Requires everything you have ever built: the ocean wing, the Pacific wing, the polar wing. The archive will open with this.",
 };
 function toolCard(c){
   const reach=c.type==="DRIVER"? (()=>{ const di=DRV.indexOf(c.fixedTarget); if(di<0) return "";
@@ -59,10 +71,18 @@ const WHEN={
  "ENSO Forcing":"The Pacific is not understood until the 1982–83 Niño has been studied. 1990.",
  "Ionospheric Coupling [T3]":"The ionospheric heater is a 1990s machine. 1996.",
  "Polar Destabilization":"The Arctic is not open enough to work until the 2010s. 2014.",
+ "Hurricane Steering":"Cirrus seeded a hurricane in 1947 and it turned for the coast. Nobody will fund it on purpose until 1955.",
+ "Engineered Bloom":"Ocean iron fertilisation is a series of ship experiments through the 1990s. A programme can run one from 2008.",
+ "Marine Cloud Brightening":"Spray vessels are a 2020s technology. 2024.",
+ "Orbital Mirror":"There is no constellation to turn until the 2030s. 2032.",
+ "Engineered Biology":"The biology exists long before the delivery does. 2040.",
+ "The AMOC Lever":"The conveyor is understood, and weak, by the 2040s. 2046 — and only behind the whole arsenal.",
 };
 function wingLine(c){
   const ws=eng.eras? eng.wingStatus(c.name) : null; if(!ws) return "";
-  if(ws.online) return ws.upkeep? `<i>wing online · upkeep $${ws.upkeep}M/season</i>` : "";
+  if(ws.spent) return `<i>spent — it was only ever going to happen once</i>`;
+  if(ws.online) return (ws.once? `<i>one operation, ever</i>` : "")+(ws.upkeep? `<i>wing online · upkeep $${ws.upkeep}M/season</i>` : "");
+  if(ws.requires && ws.requires.length) return `<i>needs first: ${ws.requires.map(n=>n.replace(" [T3]","")).join(", ")}</i>`;
   if(!ws.eligible) return `<i>arrives ${ws.from}</i>`;
   return `<i>${ws.canStand? "the wing can stand up" : `needs $${Math.round(ws.need)}M in the chest`} · upkeep $${ws.upkeep}M/season</i>`;
 }
@@ -108,6 +128,8 @@ function toolClick(c){
   if(ws && !ws.online){                        // a wing that is not flying
     const i=wingOrders.standup.indexOf(c.name);
     if(i>=0){ wingOrders.standup.splice(i,1); renderTray(); sfxClick(); $("toolinfo").textContent=`${c.name} — the order is withdrawn.`; return; }
+    if(ws.spent){ $("toolinfo").innerHTML=`<span style="color:var(--amber)">${c.name.replace(" [T3]","")}</span> — <b>spent.</b> It was only ever going to happen once.`; sfxAlert(); return; }
+    if(ws.requires && ws.requires.length){ $("toolinfo").innerHTML=`<span style="color:var(--amber)">${c.name.replace(" [T3]","")}</span> — the committee will not hear of it until the programme has stood up: <b>${ws.requires.map(n=>n.replace(" [T3]","")).join(", ")}</b>.`; sfxAlert(); return; }
     if(!ws.eligible){ $("toolinfo").innerHTML=`<span style="color:var(--amber)">${c.name.replace(" [T3]","")}</span> — not yet. ${WHEN[c.name]||`This capability arrives in ${ws.from}.`}`; sfxAlert(); return; }
     if(!ws.canStand){ $("toolinfo").innerHTML=`<span style="color:var(--amber)">${c.name.replace(" [T3]","")}</span> — the committee stands a wing up when the programme can carry it: <b>$${Math.round(ws.need)}M in the chest</b> (you hold $${fmt(funds(),0)}M). Build the chest. Upkeep is $${ws.upkeep}M a season once it flies.`; sfxAlert(); return; }
     wingOrders.standup.push(c.name); renderTray(); sfxChime();
@@ -144,8 +166,8 @@ function renderTray(){
     b.classList.toggle("funded", funded && !locked);
     b.classList.toggle("poor", !locked && !canAfford(c) && cap!==pendingTool);
     const pr=b.querySelector(".pr");
-    if(pr) pr.textContent = ordered? "STANDING UP" : moth? "STANDING DOWN"
-      : locked? (ws.eligible? (ws.canStand? "STAND UP" : "CHEST $"+Math.round(ws.need)+"M") : String(ws.from))
+    if(pr) pr.textContent = ws&&ws.spent? "SPENT" : ordered? "STANDING UP" : moth? "STANDING DOWN"
+      : locked? (ws.requires&&ws.requires.length? "GATED" : ws.eligible? (ws.canStand? "STAND UP" : "CHEST $"+Math.round(ws.need)+"M") : String(ws.from))
       : (funded? "FUNDED" : "$"+c.cost+"M");
   }
   renderTab();

@@ -216,6 +216,7 @@ function renderDirective(){
    classified line for one demonstration: ENSO, T3, or Polar. Three seasons,
    then it goes to the Navy. Funds the fantasy; the signature is still yours. */
 const FLAGSHIP_CAPS=["ENSO Forcing","Ionospheric Coupling [T3]","Polar Destabilization"];
+const LATE_CAPS=["Orbital Mirror","Engineered Biology","Polar Destabilization","Ionospheric Coupling [T3]"];
 /* The committee funds the fantasy when the century makes it possible: an
    earmark arrives with each new tier of capability. It stands the wing up
    whether or not the chest could — the demonstration is the point. */
@@ -223,7 +224,7 @@ const EARMARKS=[
  {year:1982, amount:40, caps:["Stratospheric Aerosol Inj."], ask:"a stratospheric demonstration — AEROSOL", line:"El Chichón proved the sky can be veiled. The committee wants ours."},
  {year:1990, amount:60, caps:FLAGSHIP_CAPS, ask:"a flagship demonstration — ENSO", line:"The Pacific is understood well enough to be pushed. The committee wants to watch it move."},
  {year:2014, amount:60, caps:FLAGSHIP_CAPS, ask:"a flagship demonstration — ENSO, IONOSPHERIC, or POLAR", line:"The Arctic is open and the heater is warm. Something the committee can see from orbit."},
- {year:2035, amount:80, caps:FLAGSHIP_CAPS, ask:"a flagship demonstration — ENSO, IONOSPHERIC, or POLAR", line:"The world is louder than it was. The committee wants the programme to be louder than the world."},
+ {year:2035, amount:80, caps:LATE_CAPS, ask:"a flagship demonstration — ORBITAL, BIOLOGICAL, IONOSPHERIC or POLAR", line:"The world is louder than it was. The committee wants the programme to be louder than the world."},
 ];
 const FLAGSHIP_FUSE=3;
 let flagship=null; const earmarksOffered=new Set();

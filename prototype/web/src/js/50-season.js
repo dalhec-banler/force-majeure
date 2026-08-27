@@ -120,8 +120,8 @@ async function runSeasonInner(auto, cmdOverride){
     return c? `${c.qtr.toLowerCase()} ${c.year}` : "beyond the decade"; };
   const homePos = REGPOS[REG.find(r=>r.homeland).name];
   const landedCards=new Map();          // region -> the op card that landed there this season
-  const PLANES=["Cloud Seeding","Stratospheric Aerosol Inj.","Fire Enablement"];
-  const SHIPS=["Ocean Thermal Forcing","ENSO Forcing","Polar Destabilization"];   // icebreakers north
+  const PLANES=["Cloud Seeding","Stratospheric Aerosol Inj.","Fire Enablement","Hurricane Steering","Engineered Biology"];
+  const SHIPS=["Ocean Thermal Forcing","ENSO Forcing","Polar Destabilization","Engineered Bloom","Marine Cloud Brightening"];   // icebreakers north, spray vessels, dust ships
   for(const op of row.committed){
     if(!usedCaps.has(op.cap) && PRECEDENT[op.cap]){
       usedCaps.add(op.cap);
@@ -144,8 +144,12 @@ async function runSeasonInner(auto, cmdOverride){
                        start:performance.now(),dur:240000});
     }
   }
-  for(const o of (row.refused||[]))
-    wire(`TREASURY — ${o.cap}${o.target&&o.type!=="DRIVER"?" · "+o.target:""} refused: $${o.cost}M is not in the budget.`,"att");
+  for(const o of (row.refused||[])){
+    const why={ spent:"it was only ever going to happen once.",
+                locked:"the wing is not standing.",
+                offline:"that region is not on the board yet." }[o.why] || `$${o.cost}M is not in the budget.`;
+    wire(`TREASURY — ${o.cap.replace(" [T3]","")}${o.target&&o.type!=="DRIVER"?" · "+o.target:""} refused: ${why}`,"att");
+  }
   if(cmd.prediction) wire(`PREDICTION LOGGED — “${escapeHTML(cmd.prediction)}”`);
   await phaseShow(2);
   const nowMs=performance.now();
@@ -167,6 +171,15 @@ async function runSeasonInner(auto, cmdOverride){
       if(DRVPOS[e.target]) effects.push({type:"oceanheat",pos:DRVPOS[e.target],bornT:t,life:1});
     } else if(e.kind==="driver"){
       wireUpdate(`${e.committedT}:${e.cap}:${e.target}`, `takes hold in the ${e.target} system; the consequences are in transit`);
+      if(e.cap==="The AMOC Lever"&&e.first){
+        alarm(); shakeNow(); alertStrip("THE ATLANTIC CONVEYOR HAS STOPPED");
+        news("REYKJAVIK","The overturning circulation has stopped. Northern Europe will be a different place within the decade, and it will not be going back.",true);
+        wire(`<span class="tag tagr">ARCHIVE</span> <b>The conveyor is stopped.</b> Whatever else is written about this programme, it will be written after this sentence.`,"att");
+        const fb=$("flashbang"); if(!reduced){fb.classList.remove("on");void fb.offsetWidth;fb.classList.add("on");}
+        sfxBoom();
+      }
+      if(e.cap==="Engineered Bloom"&&e.first)
+        news("SOUTHERN OCEAN","A bloom five hundred kilometres across, visible from orbit, green as a field. Fisheries research calls it a natural event.",false);
       if(DRVPOS[e.target]) effects.push({type:"oceanheat",pos:DRVPOS[e.target],bornT:t,life:2});
       if(e.target==="GLOBAL")
         news("GENEVA","Sunsets have gone strange worldwide. Scientists point to stratospheric particulates.");
@@ -191,10 +204,24 @@ async function runSeasonInner(auto, cmdOverride){
           news("PACIFIC WARNING CENTER","Sea withdrawal reported. Wave train inbound. Cause unknown — there was no earthquake on any seismograph.",true);
         }
       }
-      if((e.cap.startsWith("Ionospheric")||e.cap==="Polar Destabilization")&&pos&&e.first){
+      if(e.cap==="Hurricane Steering"&&pos&&e.first){
+        effects.push({type:"storm",pos,bornT:t,life:2});
+        news(boardDateline(ri,DATELINE[e.target]),`The storm turns overnight and comes ashore at ${e.target}. Forecasters call the track unusual and leave it there.`,true);
+        alertStrip("LANDFALL — "+e.target.toUpperCase());
+        shocks.push({pos,until:performance.now()+1400,dur:1400}); sfxBoom();
+      }
+      if(e.cap==="Engineered Biology"&&pos&&e.first){
+        effects.push({type:"scar",pos,bornT:t,life:10});
+        news(boardDateline(ri,DATELINE[e.target]),`Agronomists report a rust in the ${(REG[ri].crop||"crop").toLowerCase()} of ${e.target}. It is in the seed stock; it will be there next year.`,true);
+      }
+      if(e.cap==="Marine Cloud Brightening"&&pos&&e.first)
+        effects.push({type:"storm",pos,bornT:t,life:1,scale:0.5});
+      if((e.cap.startsWith("Ionospheric")||e.cap==="Polar Destabilization"||e.cap==="Orbital Mirror")&&pos&&e.first){
         effects.push({type:"beam",pos,bornT:t,life:1,ms:performance.now()});
         if(e.cap.startsWith("Ionospheric"))
           effects.push({type:"fire",pos,bornT:t,life:2,scale:1.3});
+        if(e.cap==="Orbital Mirror")
+          news(boardDateline(ri,DATELINE[e.target]),`${e.target} is cold and bright and nothing in the record explains it. The mirrors are described in the budget as communications.`,true);
         shocks.push({pos,until:performance.now()+1800,dur:1800});
         const fb=$("flashbang"); if(!reduced){fb.classList.remove("on");void fb.offsetWidth;fb.classList.add("on");}
         sfxBoom(); shakeNow();
@@ -217,7 +244,7 @@ async function runSeasonInner(auto, cmdOverride){
      hand on your weather, your own landings — which get chyrons, sound and
      the card; the world last, on the quiet wire, three worst harvests a
      season and one line for the rest. */
-  const sevList=[]; let naturalN=0; const quiet=[];
+  const sevList=[]; let naturalN=0; const quiet=[]; const traceRest=[]; let traceShown=0;
   for(let ri=0;ri<REG.length;ri++){
     if(!isOnline(ri)) continue;
     const a=row.anomalies[ri], s=row.sigmas[ri];
@@ -286,7 +313,9 @@ async function runSeasonInner(auto, cmdOverride){
     if(tr.parts.length && pctYou>0.2){
       const card=landedCards.get(r.name);
       const traceTxt=`~${Math.round(pctYou*100)}% of the anomaly is yours (${tr.parts.join(", ")})${tr.unknown?"; part of it ran through a wire not on our board":""}`;
-      if(card) wireUpdate(card, traceTxt); else wire(`TRACE — ${traceTxt}.`,"op");
+      if(card) wireUpdate(card, traceTxt);
+      else if(traceShown<2){ wire(`TRACE — ${r.name}: ${traceTxt}.`,"op"); traceShown++; }
+      else traceRest.push({name:r.name, pct:pctYou, parts:tr.parts});
       if(a<0 && !r.kind && (t+ri)%2===0)
         wire(`ADVERTISEMENT — Halvorsen Yield Assurance: “Weather shouldn't decide a family's future.” Drought-tolerant cultivars, now available across ${r.name}.`,"ad");
     }
@@ -302,6 +331,11 @@ async function runSeasonInner(auto, cmdOverride){
     else if(tr.parts.length && pctYou>0.05)
       wire(`TRACE — trace contribution yours (${tr.parts.join(", ")}). Mostly the planet.${tr.unknown?" Some of yours came by a wire not on our board.":""}`,"op");
     else if(severe) naturalN++;
+  }
+  if(traceRest.length){                      // the rest of the board, in one line
+    const avg=Math.round(100*traceRest.reduce((s,x)=>s+x.pct,0)/traceRest.length);
+    const caps=[...new Set(traceRest.flatMap(x=>x.parts))].map(c=>c.replace(" [T3]",""));
+    wire(`TRACE — and <b>${traceRest.length} more harvest${traceRest.length===1?"":"s"}</b> carry your signal this season (~${avg}% on average): ${caps.join(", ")}. This is what the board looks like when one operation is in everything.`,"att");
   }
   if(quiet.length) wire(`Elsewhere, outside the envelope: ${quiet.slice(0,5).join(", ")}${quiet.length>5?` and ${quiet.length-5} more`:""}. The world, as recorded.`,"news");
   if(naturalN>0 && eng.state.ops.some(o=>o.owner==="player"&&o.sig>0&&o.t+o.lag>=t-2))

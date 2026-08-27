@@ -134,7 +134,10 @@ if LONG:
      "Climate Research": (1950, 40, 1), "Watershed Interference": (1962, 70, 3),
      "Fire Enablement": (1966, 60, 2), "Ocean Thermal Forcing": (1972, 110, 5),
      "Stratospheric Aerosol Inj.": (1980, 140, 6), "ENSO Forcing": (1990, 180, 8),
-     "Ionospheric Coupling [T3]": (1996, 220, 10), "Polar Destabilization": (2014, 200, 8)}
+     "Ionospheric Coupling [T3]": (1996, 220, 10), "Polar Destabilization": (2014, 200, 8),
+     "Hurricane Steering": (1955, 55, 2), "Engineered Bloom": (2008, 120, 5),
+     "Marine Cloud Brightening": (2024, 60, 2), "Orbital Mirror": (2032, 170, 9),
+     "Engineered Biology": (2040, 150, 6), "The AMOC Lever": (2046, 300, 16)}
     # dates brought forward 2026-08-26 (author: arrivals felt laggy): Cirrus seeded
     # a hurricane in 1947 and Stormfury ran from 1962, so a watershed wing in
     # 1962 is fair; Budyko 1974 → 1980; the 1982–83 Niño → ENSO 1990; HAARP 1993 → 1996
@@ -161,6 +164,29 @@ M["capabilities"].append({"name":"Climate Research","type":"REGION",
 M["capabilities"].append({"name":"Polar Destabilization","type":"REGION",
     "fixedTarget":0,"mag":2.2,"lag":4,"sig":16,"cost":38,"dispTo":"GLOBAL",
     "dispFactor":0.35,"dispExtraLag":3,"needsDrought":False,"resil":0})
+# --- the century's later arsenal (ADR-0026): a wing arrives every 12–30
+# reviews so the situation-room decades are not a long tail. Each is a real
+# capability with its own shape, not a reskin.
+def CAP(name, **kw):
+    c={"name":name,"type":"REGION","fixedTarget":0,"mag":0,"lag":1,"sig":0,"cost":0,
+       "dispTo":"","dispFactor":0,"dispExtraLag":0,"needsDrought":False,"resil":0}
+    c.update(kw); M["capabilities"].append(c)
+# Cirrus 1947, Stormfury 1962: you cannot make a hurricane, you can aim one.
+CAP("Hurricane Steering", mag=1.5, lag=0, sig=6, cost=16,
+    dispTo="NATL", dispFactor=-0.3, dispExtraLag=3)
+# Iron fertilisation: the only lever that pushes back on the century's warming.
+CAP("Engineered Bloom", type="DRIVER", fixedTarget="GLOBAL", mag=-0.85, lag=2, sig=4, cost=30,
+    dispTo="IOD", dispFactor=0.45, dispExtraLag=5)
+# Brightened marine cloud: cheap, brief, nearly invisible — the late-game scalpel.
+CAP("Marine Cloud Brightening", mag=0.65, lag=0, sig=1, cost=10)
+# Orbital insolation: no lag, no weather to hide behind.
+CAP("Orbital Mirror", mag=-1.6, lag=0, sig=14, cost=45)
+# A pathogen in the seed stock: it does not care what the weather does next.
+CAP("Engineered Biology", mag=-1.35, lag=1, sig=8, cost=34)
+# The lever: hemisphere-scale, once, and never undone.
+CAP("The AMOC Lever", type="DRIVER", fixedTarget="NATL", mag=2.6, lag=4, sig=34, cost=90,
+    dispTo="GLOBAL", dispFactor=0.5, dispExtraLag=6, once=True,
+    requires=["Ocean Thermal Forcing","ENSO Forcing","Polar Destabilization"])
 if LONG:
     for c in M["capabilities"]:
         if c["name"] in WING: c["from"], c["chest"], c["upkeep"] = WING[c["name"]]
@@ -169,6 +195,12 @@ if LONG:
 # sheet arrival distance from the commit. Signature charges once, on the
 # first landing.
 TUNE = {  # name: (lag, dur, decay)
+ "Hurricane Steering": (0,1,1.0),
+ "Engineered Bloom": (2,4,0.8),
+ "Marine Cloud Brightening": (0,2,0.5),
+ "Orbital Mirror": (0,2,0.6),
+ "Engineered Biology": (1,4,0.88),      # it stays in the soil
+ "The AMOC Lever": (4,40,0.985),        # a decade of it, and the ledger after
  "Cloud Seeding": (0,2,0.5),
  "Watershed Interference": (1,3,0.7),
  "Fire Enablement": (0,3,0.6),
@@ -179,7 +211,8 @@ TUNE = {  # name: (lag, dur, decay)
  "Polar Destabilization": (1,3,0.7),
 }
 SHEET_ARRIVAL = {"Ocean Thermal Forcing":8,"Stratospheric Aerosol Inj.":7,
-                 "ENSO Forcing":11,"Polar Destabilization":7}
+                 "ENSO Forcing":11,"Polar Destabilization":7,
+                 "Hurricane Steering":4,"Engineered Bloom":8,"The AMOC Lever":12}
 for c in M["capabilities"]:
     if c["name"] in TUNE:
         lag,dur,dec = TUNE[c["name"]]

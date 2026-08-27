@@ -5,9 +5,12 @@
    lessons the numbers support. Hover anything. One x-axis per chart; tool
    classes carry a glyph shape as well as a colour. */
 const TOOL_CLASS={"Cloud Seeding":"relief","Adaptation Investment":"relief","Climate Research":"relief",
+  "Marine Cloud Brightening":"relief","Engineered Bloom":"relief",
   "Watershed Interference":"strike","Fire Enablement":"strike",
+  "Hurricane Steering":"strike","Engineered Biology":"strike",
   "Ocean Thermal Forcing":"ocean","Stratospheric Aerosol Inj.":"ocean","ENSO Forcing":"ocean",
-  "Ionospheric Coupling [T3]":"heavy","Polar Destabilization":"heavy"};
+  "Ionospheric Coupling [T3]":"heavy","Polar Destabilization":"heavy",
+  "Orbital Mirror":"heavy","The AMOC Lever":"heavy"};
 const CLASS_COL={relief:"#53d97b",strike:"#e0a458",ocean:"#5bc8e8",heavy:"#e05252",rival:"#e05252",wing:"#c8e6cf",dir:"#c8e6cf"};
 const CLASS_NAME={relief:"relief & research",strike:"regional strikes",ocean:"ocean & atmosphere",heavy:"lithosphere & polar"};
 function esc(x){ return escapeHTML(x); }

@@ -162,8 +162,12 @@ function createEngine(MODEL, opts) {
     const tt = state.rows.length + 1, yr = yearOf(tt);
     const prevT = state.rows.length ? state.rows[state.rows.length - 1].treasury : P.startingTreasury;
     const need = (cap.chest || 0) * (w.ever ? 0.75 : 1);
-    return { online: w.online, eligible: !cap.from || yr >= cap.from, from: cap.from || null,
-             chest: cap.chest || 0, need, canStand: (!cap.from || yr >= cap.from) && prevT >= need,
+    const behind = !cap.requires || cap.requires.every((n) => state.wings[n] && state.wings[n].ever);
+    const eligible = (!cap.from || yr >= cap.from) && behind;
+    return { online: w.online, eligible, from: cap.from || null, behind,
+             requires: (cap.requires || []).filter((n) => !(state.wings[n] && state.wings[n].ever)),
+             chest: cap.chest || 0, need, canStand: eligible && prevT >= need,
+             once: !!cap.once, spent: !!cap.once && state.ops.some((o) => o.owner === "player" && o.cap === name),
              upkeep: cap.upkeep || 0, ever: w.ever, wanted: w.wanted };
   }
   function wingsSnapshot() { const o = {}; for (const k of Object.keys(state.wings)) o[k] = state.wings[k].online; return o; }
@@ -366,7 +370,9 @@ function createEngine(MODEL, opts) {
       for (const cap of MODEL.capabilities) {
         if (cap.type === "NONE") continue;
         const w = state.wings[cap.name];
-        const eligible = !cap.from || yr >= cap.from;
+        // a wing may need the whole tree behind it before it is even possible
+        const behind = !cap.requires || cap.requires.every((n) => state.wings[n] && state.wings[n].ever);
+        const eligible = (!cap.from || yr >= cap.from) && behind;
         if (cmd.mothball && cmd.mothball.includes(cap.name)) {
           w.wanted = false;
           if (w.online) { w.online = false; w.low = 0;
@@ -405,6 +411,10 @@ function createEngine(MODEL, opts) {
       if (!op) continue;
       if (eras) {
         if (!wingOnline(op.cap)) { refused.push(Object.assign({ why: "locked" }, op)); continue; }
+        // some things are done once in a century or not at all
+        if (capByName[op.cap] && capByName[op.cap].once
+            && state.ops.some((o) => o.owner === "player" && o.cap === op.cap)) {
+          refused.push(Object.assign({ why: "spent" }, op)); continue; }
         const tri = regionIndex[op.target];
         if (op.type === "REGION" && tri !== undefined && !regionOnline(tri, t)) {
           refused.push(Object.assign({ why: "offline" }, op)); continue; }

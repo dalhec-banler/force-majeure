@@ -24,9 +24,12 @@ Open it locally (`cd prototype/web && python3 -m http.server 8471`, then
   twice a year to 2029, every season in the situation room after. The clock
   only nags (footer: CLOCK MANUAL/AUTO); **RUN THE YEAR** commits what is armed.
 - **The board grows** — sixteen regions in 1946, thirty-six by 2010 — and so
-  does the arsenal: dimmed tools show the year they become possible and the
-  chest you must hold to stand the wing up. Wings charge upkeep, mothball when
-  the chest collapses, and reopen at three-quarters.
+  does the arsenal: fourteen wings arrive on their own dates between 1950 and
+  2046, from cloud seeding to the AMOC lever. Dimmed tools show the year they
+  become possible and the chest you must hold to stand the wing up. Wings
+  charge upkeep, mothball when the chest collapses, and reopen at
+  three-quarters. **The record is real forcing** — the century's droughts,
+  famines and floods move the harvests you can see, and you can push back.
 - **The wire** opens in PRIORITY mode (the committee, your operations, hostile
   action, wings, the ladder, BREAKING events); each operation is one card that
   grows as it lands and is filed; each review folds into one line when the
@@ -50,7 +53,7 @@ prototype/
     engine.js               Exact port of the sheet + gated mechanisms (opts).
     model-data.json         Pristine sheet extraction (conformance target).
     build.py                Assembles console.html: the expanded world
-                            (36 regions, 10 tools, 460 seasons), src/ parts.
+                            (36 regions, 16 tools, 460 seasons), src/ parts.
     src/                    Console source (head, css, body, js/NN-topic.js).
     history.json            The record 1946–2022 (built by tools/extract-history.py).
     tools/                  playharness.js + campaign-*.js (scripted playtests),
@@ -85,7 +88,7 @@ engine option, default off, listed in `prototype/web/src/README.md`.
 - [x] Deliverable 2 — Data ingestion layer (driver series + basin activity)
 - [x] Playable console: the century, reviews, the arsenal on the calendar, the
       growing board, the ladder with teeth, counterfactual PROFIT, the record
-      to 2022, nation starts (ADR-0013 → ADR-0025)
+      to 2022, nation starts, the later arsenal (ADR-0013 → ADR-0026)
 - [ ] Core loop validated by the author playing the century
 - [ ] ERA5/FAOSTAT ingest — gated on the authored region list
 - [ ] `sim/` — gated on the playtest

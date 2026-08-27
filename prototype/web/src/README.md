@@ -35,7 +35,8 @@ feature list in the night report before publishing. Engine opts that must be
 present in `00-setup.js`: `rivals:true, idleTrim:0.6, jetstream:true, forensics:true,
 knowledge:true, budgetGate:true, priceCap:300, scrutiny:true, grainSupply:true,
 priceElasticity:3.0, rivalEras:true, shadow:true, eras:true, envelopeWidening:0.0006,
-windfall:2, reserveCap:400`. `model-expanded.json` is the
+windfall:2, reserveCap:400`. Capabilities may carry `once` (one operation a
+campaign) and `requires` (wings that must have stood up first) — ADR-0026. `model-expanded.json` is the
 console's world for engine-level tests (`HTML=` overrides the harness page).
 
 ## The long campaign (ADR-0023)
