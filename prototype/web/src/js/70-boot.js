@@ -17,10 +17,11 @@ buildTray(); clampContainment(); renderTray(); renderDirective(); renderReviewBu
 requestAnimationFrame(drawGlobe);            // every part has run; the loop may start
 const savedLog=loadSave();
 if(savedLog){ $("resume").style.display=""; $("begin").textContent="NEW PROGRAMME ▸"; }
-$("begin").addEventListener("click",()=>{ $("intro").style.display="none";
+let introDismissed=false;
+$("begin").addEventListener("click",()=>{ introDismissed=true; $("intro").style.display="none";
   clearSave(); audioInit(); sfxClick();
   SEASON_MS=clockMs(); seasonDeadline=performance.now()+SEASON_MS; });
-$("resume").addEventListener("click",async()=>{ $("intro").style.display="none";
+$("resume").addEventListener("click",async()=>{ introDismissed=true; $("intro").style.display="none";
   audioInit(); sfxClick(); $("resume").disabled=true;
   await replaySave(savedLog); });
 $("intro").style.display="none";
@@ -32,7 +33,7 @@ function leaveBoot(){
   if(bootDone) return; bootDone=true;
   const b=$("boot"), i=$("intro");
   b.classList.add("out");
-  setTimeout(()=>{ b.style.display="none"; i.style.display="flex"; i.classList.add("in");
+  setTimeout(()=>{ b.style.display="none"; if(introDismissed) return; i.style.display="flex"; i.classList.add("in");
     requestAnimationFrame(()=>requestAnimationFrame(()=>i.classList.add("shown"))); }, reduced?0:900);
 }
 $("boot").addEventListener("click",leaveBoot);
