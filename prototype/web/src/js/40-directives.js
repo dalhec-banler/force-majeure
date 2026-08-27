@@ -68,10 +68,11 @@ const STANDING=[
   tool:"🔬 CLIMATE RESEARCH — regions whose seasons you cannot explain",
   text:"Two wires. The committee has read the analysts' estimate of how much of the world we understand, and did not enjoy it.",
   check:(row,d)=>eng.state.rows.slice(d.issued).reduce((n,r)=>n+(r.revealed||[]).filter(x=>x.how!=="exhausted").length,0)>=2},
- {key:"relief", title:"Put rain on it", reward:9, window:2,
-  tool:"☁ CLOUD SEEDING — the driest region on the board",
-  text:"The committee funds programmes that do things. Find the driest harvest on the board and put rain on it — photographs for the hearing, and a market that remembers who fed it.",
-  check:(row,d)=>eng.state.ops.some(o=>o.owner==="player"&&o.cap==="Cloud Seeding"&&o.t>d.issued)},
+ {key:"relief", when:(row)=>driestInNeed(row)!==null, title:"Put rain on it", reward:9, window:2,
+  make:(row,d)=>{ const r=driestInNeed(row); if(!r) return; d.region=r.name;
+    d.tool=`☁ CLOUD SEEDING — ${r.name}`;
+    d.text=`${r.name} is ${r.y<60?"failing":"drying"} — harvest at ${Math.round(r.y)}%${r.a<-0.45?", and the season is still going against it":""}. Put rain on it: photographs for the hearing, and a market that remembers who fed it.`; },
+  check:(row,d)=>eng.state.ops.some(o=>o.owner==="player"&&o.cap==="Cloud Seeding"&&o.target===d.region&&o.t>d.issued)},
  {key:"hold", title:"Hold the line", reward:12, window:2, goal:true,
   tool:"🛡 ADAPTATION or ☁ CLOUD SEEDING — homeland",
   text:"Four seasons. The homeland harvest does not drop below 94%. The Secretary has said as much on television.",
@@ -79,6 +80,16 @@ const STANDING=[
     return eng.state.rows.slice(d.issued).every(r=>r.yields[h]>=94); },
   fail:(row,d)=>{ const h=REG.findIndex(r=>r.homeland); return row.yields[h]<94; }},
 ];
+/* the driest harvest that genuinely needs rain: strained, or still drying */
+function driestInNeed(row){
+  let best=null;
+  REG.forEach((r,ri)=>{ if(r.kind||!isOnline(ri)) return;
+    const y=row.yields[ri], a=row.anomalies[ri];
+    if(y>=88 && a>=-0.45) return;                 // green and not going anywhere bad
+    if(a>=0) return;                              // it is not dry
+    if(!best||y<best.y) best={name:r.name,y,a}; });
+  return best;
+}
 function clientInNeed(row){
   let best=null;
   REG.forEach((r,ri)=>{ if(r.kind||r.homeland||r.name===START.rival||!isOnline(ri)) return;

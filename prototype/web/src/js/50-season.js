@@ -528,12 +528,16 @@ function historyBeats(row){
     const WET=new Set(["flood","typhoon","cyclone","tornado","blizzard","avalanche","locusts"]);
     const tr=traceFor(ri,row), sign=WET.has(w.kind)? 1 : -1;
     const push=tr.mine*sign;                       // >0 with the record, <0 against it
+    // unmaking the record means actually offsetting it: half the event's own
+    // forcing, not a token seeding
+    const force=Math.abs((EXO.find(x=>x.record&&x.t===w.t&&x.region===w.region)||{}).mag||0.6);
+    const need=Math.max(0.3, force*0.5);
     if(w.canon){ news(boardDateline(ri,w.dl), w.line, (w.toll||0)>=5000); if((w.toll||0)>=20000) alertStrip(`${w.kind.toUpperCase()} — ${w.region.toUpperCase()}`); histAsRecorded++; cumDead+=w.toll||0; continue; }
-    if(push<-0.3){
+    if(push<-need){
       news(boardDateline(ri,w.dl), w.unmade);
       wire(`TRACE — the record said ${w.kind} in ${w.region}. <b>You unmade it.</b>`,"op");
       histAltered.push({t, what:`the ${w.date} ${w.region} ${w.kind}`, how:"unmade"});
-    } else if(push>0.3){
+    } else if(push>need){
       news(boardDateline(ri,w.dl), w.worse, true); alertStrip(`${w.kind.toUpperCase()} — ${w.region.toUpperCase()}`);
       cumDead+=(w.toll||0)*1.5; cumDeadYours+=(w.toll||0)*0.5;
       wire(`TRACE — the record said ${w.kind} in ${w.region}. <b>You made it worse.</b>`,"op");

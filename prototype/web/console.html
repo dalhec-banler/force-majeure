@@ -391,6 +391,8 @@
 #boot{transition:opacity .9s ease} #boot.out{opacity:0;pointer-events:none}
 #bootgo{animation:bootgo 1.4s ease-in-out infinite} @keyframes bootgo{0%,100%{opacity:.35}50%{opacity:1}}
 #intro.in{opacity:0;transition:opacity .8s ease} #intro.in.shown{opacity:1}
+
+#legend i.ring{background:none!important;border:1.5px dashed;box-sizing:border-box}
 </style>
 
 <div id="app">
@@ -425,6 +427,7 @@
     <div id="tl">
     <div id="legend">
       <span><i style="background:#53d97b"></i>thriving</span>
+      <span><i class="ring" style="border-color:#e0a458"></i>drying — seed it</span>
       <span><i style="background:#e0a458"></i>strained</span>
       <span><i style="background:#e05252"></i>failing</span>
       <span class="legx" style="color:var(--ink-faint)">⚠ famine · ring = envelope · dashed = forecast</span>
@@ -1328,6 +1331,18 @@ for(const e of HISTORY.eruptions){
 }
 for(const q of HISTORY.quakes) for(const h of (q.hit||[]))
   EXO.push({t:q.t, region:h.region, mag:h.mag, dur:h.dur||1, cap:q.name+" earthquake"});
+/* The record's droughts, famines, floods and plagues are FORCING, not
+   narration (fix 2026-08-27): each pushes its region's anomaly for as long
+   as the record says it ran, so the marker goes amber, the harvest falls,
+   and the player can push back against it. Epidemics and tornadoes carry no
+   weather anomaly — they are canon, and they are not the weather. */
+const WEATHER_MAG={ famine:-1.7, drought:-1.2, fire:-0.8, cold:-0.7, blizzard:-0.6, avalanche:-0.3,
+                    flood:1.5, typhoon:1.3, cyclone:1.3, locusts:1.6, epidemic:0, tornado:0 };
+for(const w of HISTORY.weather){
+  const base=WEATHER_MAG[w.kind]; if(!base) continue;
+  const heavy=1+Math.min(0.45,(w.toll||0)/2e6);       // the ones the century remembers bite harder
+  EXO.push({t:w.t, region:w.region, mag:+(base*heavy).toFixed(3), dur:w.dur||1, cap:`the ${w.date} ${w.kind}`, record:true});
+}
 /* Nation starts — the superpowers. The choice sets starting position only
    (homeland, the rival's home, the chest); never the systems available. */
 /* Difficulty is the programme you take over. Strengths and weaknesses are
@@ -2404,13 +2419,23 @@ function drawGlobeInner(now){
       cx.beginPath(); cx.arc(p.x,p.y,k*Math.abs(f),0,7); cx.stroke(); cx.setLineDash([]); }
     // condition-coded target marker on a dark halo — visible on any terrain
     const yv = row? row.yields[ri] : 100;
+    const an = row? row.anomalies[ri] : 0;
     const cond = yv>=90? "#53d97b" : yv>=60? "#e0a458" : "#e05252";
+    // drying: the harvest still stands, but the season is going against it —
+    // the signal to seed BEFORE the collapse
+    const drying = yv>=90 && an<-0.45, wetting = yv>=90 && an>0.9;
     cx.fillStyle="rgba(3,7,5,.6)";
     cx.beginPath(); cx.arc(p.x,p.y,7.5,0,7); cx.fill();
     cx.save(); cx.translate(p.x,p.y); cx.rotate(Math.PI/4);
     cx.fillStyle=cond; cx.fillRect(-3.4,-3.4,6.8,6.8);
     cx.strokeStyle="rgba(3,7,5,.9)"; cx.lineWidth=1; cx.strokeRect(-3.4,-3.4,6.8,6.8);
     cx.restore();
+    if(drying||wetting){                    // a warning ring: it is going wrong
+      cx.strokeStyle = drying? "rgba(224,164,88,.85)" : "rgba(91,200,232,.85)";
+      cx.setLineDash([2,2]); cx.lineWidth=1.4;
+      cx.beginPath(); cx.arc(p.x,p.y,9,0,7); cx.stroke();
+      cx.setLineDash([]); cx.lineWidth=1;
+    }
     if(yv<60){                              // failing: pulsing distress ring
       const ph=(nowMs/900)%1;
       cx.strokeStyle=`rgba(224,82,82,${0.7*(1-ph)})`;
@@ -3040,10 +3065,11 @@ const STANDING=[
   tool:"🔬 CLIMATE RESEARCH — regions whose seasons you cannot explain",
   text:"Two wires. The committee has read the analysts' estimate of how much of the world we understand, and did not enjoy it.",
   check:(row,d)=>eng.state.rows.slice(d.issued).reduce((n,r)=>n+(r.revealed||[]).filter(x=>x.how!=="exhausted").length,0)>=2},
- {key:"relief", title:"Put rain on it", reward:9, window:2,
-  tool:"☁ CLOUD SEEDING — the driest region on the board",
-  text:"The committee funds programmes that do things. Find the driest harvest on the board and put rain on it — photographs for the hearing, and a market that remembers who fed it.",
-  check:(row,d)=>eng.state.ops.some(o=>o.owner==="player"&&o.cap==="Cloud Seeding"&&o.t>d.issued)},
+ {key:"relief", when:(row)=>driestInNeed(row)!==null, title:"Put rain on it", reward:9, window:2,
+  make:(row,d)=>{ const r=driestInNeed(row); if(!r) return; d.region=r.name;
+    d.tool=`☁ CLOUD SEEDING — ${r.name}`;
+    d.text=`${r.name} is ${r.y<60?"failing":"drying"} — harvest at ${Math.round(r.y)}%${r.a<-0.45?", and the season is still going against it":""}. Put rain on it: photographs for the hearing, and a market that remembers who fed it.`; },
+  check:(row,d)=>eng.state.ops.some(o=>o.owner==="player"&&o.cap==="Cloud Seeding"&&o.target===d.region&&o.t>d.issued)},
  {key:"hold", title:"Hold the line", reward:12, window:2, goal:true,
   tool:"🛡 ADAPTATION or ☁ CLOUD SEEDING — homeland",
   text:"Four seasons. The homeland harvest does not drop below 94%. The Secretary has said as much on television.",
@@ -3051,6 +3077,16 @@ const STANDING=[
     return eng.state.rows.slice(d.issued).every(r=>r.yields[h]>=94); },
   fail:(row,d)=>{ const h=REG.findIndex(r=>r.homeland); return row.yields[h]<94; }},
 ];
+/* the driest harvest that genuinely needs rain: strained, or still drying */
+function driestInNeed(row){
+  let best=null;
+  REG.forEach((r,ri)=>{ if(r.kind||!isOnline(ri)) return;
+    const y=row.yields[ri], a=row.anomalies[ri];
+    if(y>=88 && a>=-0.45) return;                 // green and not going anywhere bad
+    if(a>=0) return;                              // it is not dry
+    if(!best||y<best.y) best={name:r.name,y,a}; });
+  return best;
+}
 function clientInNeed(row){
   let best=null;
   REG.forEach((r,ri)=>{ if(r.kind||r.homeland||r.name===START.rival||!isOnline(ri)) return;
@@ -3758,12 +3794,16 @@ function historyBeats(row){
     const WET=new Set(["flood","typhoon","cyclone","tornado","blizzard","avalanche","locusts"]);
     const tr=traceFor(ri,row), sign=WET.has(w.kind)? 1 : -1;
     const push=tr.mine*sign;                       // >0 with the record, <0 against it
+    // unmaking the record means actually offsetting it: half the event's own
+    // forcing, not a token seeding
+    const force=Math.abs((EXO.find(x=>x.record&&x.t===w.t&&x.region===w.region)||{}).mag||0.6);
+    const need=Math.max(0.3, force*0.5);
     if(w.canon){ news(boardDateline(ri,w.dl), w.line, (w.toll||0)>=5000); if((w.toll||0)>=20000) alertStrip(`${w.kind.toUpperCase()} — ${w.region.toUpperCase()}`); histAsRecorded++; cumDead+=w.toll||0; continue; }
-    if(push<-0.3){
+    if(push<-need){
       news(boardDateline(ri,w.dl), w.unmade);
       wire(`TRACE — the record said ${w.kind} in ${w.region}. <b>You unmade it.</b>`,"op");
       histAltered.push({t, what:`the ${w.date} ${w.region} ${w.kind}`, how:"unmade"});
-    } else if(push>0.3){
+    } else if(push>need){
       news(boardDateline(ri,w.dl), w.worse, true); alertStrip(`${w.kind.toUpperCase()} — ${w.region.toUpperCase()}`);
       cumDead+=(w.toll||0)*1.5; cumDeadYours+=(w.toll||0)*0.5;
       wire(`TRACE — the record said ${w.kind} in ${w.region}. <b>You made it worse.</b>`,"op");

@@ -104,13 +104,23 @@ function drawGlobeInner(now){
       cx.beginPath(); cx.arc(p.x,p.y,k*Math.abs(f),0,7); cx.stroke(); cx.setLineDash([]); }
     // condition-coded target marker on a dark halo — visible on any terrain
     const yv = row? row.yields[ri] : 100;
+    const an = row? row.anomalies[ri] : 0;
     const cond = yv>=90? "#53d97b" : yv>=60? "#e0a458" : "#e05252";
+    // drying: the harvest still stands, but the season is going against it —
+    // the signal to seed BEFORE the collapse
+    const drying = yv>=90 && an<-0.45, wetting = yv>=90 && an>0.9;
     cx.fillStyle="rgba(3,7,5,.6)";
     cx.beginPath(); cx.arc(p.x,p.y,7.5,0,7); cx.fill();
     cx.save(); cx.translate(p.x,p.y); cx.rotate(Math.PI/4);
     cx.fillStyle=cond; cx.fillRect(-3.4,-3.4,6.8,6.8);
     cx.strokeStyle="rgba(3,7,5,.9)"; cx.lineWidth=1; cx.strokeRect(-3.4,-3.4,6.8,6.8);
     cx.restore();
+    if(drying||wetting){                    // a warning ring: it is going wrong
+      cx.strokeStyle = drying? "rgba(224,164,88,.85)" : "rgba(91,200,232,.85)";
+      cx.setLineDash([2,2]); cx.lineWidth=1.4;
+      cx.beginPath(); cx.arc(p.x,p.y,9,0,7); cx.stroke();
+      cx.setLineDash([]); cx.lineWidth=1;
+    }
     if(yv<60){                              // failing: pulsing distress ring
       const ph=(nowMs/900)%1;
       cx.strokeStyle=`rgba(224,82,82,${0.7*(1-ph)})`;

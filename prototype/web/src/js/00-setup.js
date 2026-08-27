@@ -12,6 +12,18 @@ for(const e of HISTORY.eruptions){
 }
 for(const q of HISTORY.quakes) for(const h of (q.hit||[]))
   EXO.push({t:q.t, region:h.region, mag:h.mag, dur:h.dur||1, cap:q.name+" earthquake"});
+/* The record's droughts, famines, floods and plagues are FORCING, not
+   narration (fix 2026-08-27): each pushes its region's anomaly for as long
+   as the record says it ran, so the marker goes amber, the harvest falls,
+   and the player can push back against it. Epidemics and tornadoes carry no
+   weather anomaly — they are canon, and they are not the weather. */
+const WEATHER_MAG={ famine:-1.7, drought:-1.2, fire:-0.8, cold:-0.7, blizzard:-0.6, avalanche:-0.3,
+                    flood:1.5, typhoon:1.3, cyclone:1.3, locusts:1.6, epidemic:0, tornado:0 };
+for(const w of HISTORY.weather){
+  const base=WEATHER_MAG[w.kind]; if(!base) continue;
+  const heavy=1+Math.min(0.45,(w.toll||0)/2e6);       // the ones the century remembers bite harder
+  EXO.push({t:w.t, region:w.region, mag:+(base*heavy).toFixed(3), dur:w.dur||1, cap:`the ${w.date} ${w.kind}`, record:true});
+}
 /* Nation starts — the superpowers. The choice sets starting position only
    (homeland, the rival's home, the chest); never the systems available. */
 /* Difficulty is the programme you take over. Strengths and weaknesses are
