@@ -393,6 +393,13 @@
 #intro.in{opacity:0;transition:opacity .8s ease} #intro.in.shown{opacity:1}
 
 #legend i.ring{background:none!important;border:1.5px dashed;box-sizing:border-box}
+
+/* sixteen wings across a century: the ones you cannot touch yet are a stub */
+.tool.mini{min-width:34px;padding:4px 2px 3px;gap:1px}
+.tool.mini .nm{display:none} .tool.mini .ic{font-size:14px;opacity:.75} .tool.mini .pr{font-size:8px;letter-spacing:0}
+.tool.mini .mb{display:none}
+@container pane (max-width:820px){ .tool.mini{min-width:28px} .tool.mini .ic{font-size:12px} }
+#toolbar{flex-wrap:wrap;max-height:none}
 </style>
 
 <div id="app">
@@ -1595,8 +1602,10 @@ function wingLine(c){
 }
 function buildTray(){
   const bar=$("toolbar"); bar.innerHTML="";
-  for(const c of CAPS){
-    if(c.type==="NONE") continue;
+  // the tray IS the timeline: what you have, then everything the century
+  // still owes you, in the order it arrives
+  const ordered=CAPS.filter(c=>c.type!=="NONE").slice().sort((a,b)=>(a.from||1946)-(b.from||1946)||a.cost-b.cost);
+  for(const c of ordered){
     const b=document.createElement("button");
     b.className="tool"; b.dataset.cap=c.name;
     b.innerHTML=`<span class="ic">${TOOLICON[c.name]||"◈"}</span>
@@ -1670,6 +1679,10 @@ function renderTray(){
     b.classList.toggle("standable", !!ws && !ws.online && ws.eligible && ws.canStand && !ordered);
     b.classList.toggle("ordered", ordered||moth);
     b.classList.toggle("wing", !!ws && ws.online && ws.upkeep>0);
+    // a wing you can do nothing about yet takes an icon's worth of room;
+    // anything you can act on this review stays full size
+    const actionable = !ws || ws.online || ordered || moth || (ws.eligible && !ws.spent);
+    b.classList.toggle("mini", !actionable);
     b.classList.toggle("funded", funded && !locked);
     b.classList.toggle("poor", !locked && !canAfford(c) && cap!==pendingTool);
     const pr=b.querySelector(".pr");

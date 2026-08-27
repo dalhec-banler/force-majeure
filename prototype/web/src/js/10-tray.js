@@ -88,8 +88,10 @@ function wingLine(c){
 }
 function buildTray(){
   const bar=$("toolbar"); bar.innerHTML="";
-  for(const c of CAPS){
-    if(c.type==="NONE") continue;
+  // the tray IS the timeline: what you have, then everything the century
+  // still owes you, in the order it arrives
+  const ordered=CAPS.filter(c=>c.type!=="NONE").slice().sort((a,b)=>(a.from||1946)-(b.from||1946)||a.cost-b.cost);
+  for(const c of ordered){
     const b=document.createElement("button");
     b.className="tool"; b.dataset.cap=c.name;
     b.innerHTML=`<span class="ic">${TOOLICON[c.name]||"◈"}</span>
@@ -163,6 +165,10 @@ function renderTray(){
     b.classList.toggle("standable", !!ws && !ws.online && ws.eligible && ws.canStand && !ordered);
     b.classList.toggle("ordered", ordered||moth);
     b.classList.toggle("wing", !!ws && ws.online && ws.upkeep>0);
+    // a wing you can do nothing about yet takes an icon's worth of room;
+    // anything you can act on this review stays full size
+    const actionable = !ws || ws.online || ordered || moth || (ws.eligible && !ws.spent);
+    b.classList.toggle("mini", !actionable);
     b.classList.toggle("funded", funded && !locked);
     b.classList.toggle("poor", !locked && !canAfford(c) && cap!==pendingTool);
     const pr=b.querySelector(".pr");
