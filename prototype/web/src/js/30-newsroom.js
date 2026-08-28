@@ -126,6 +126,54 @@ const PRECEDENT={
  "Engineered Biology":["tagr","[REDACTED]","The programme has no name. The strain has a catalogue number and nothing else."],
  "The AMOC Lever":["tagr","[REDACTED]","There is no annex. There is no study. There is a valve and a decision."],
 };
+/* THE STORM WATCH — a cyclone the record is about to produce, and a wing
+   that can be over it in days. A hurricane is the fastest thing in the game,
+   so the offer is a flash, not a directive: take a coast or let it go. It
+   stands for this review only. */
+let stormOffer=null;
+function hideStormCard(){ const el=$("stormcard"); if(el) el.style.display="none"; stormOffer=null; }
+function stormWatch(){
+  if(!running || !eng.eras || !eng.wingOnline("Hurricane Steering")) return hideStormCard();
+  const cap=CAPS.find(c=>c.name==="Hurricane Steering"); if(!cap) return hideStormCard();
+  const nx=t+1, f=atlanticForcing();
+  const cand=HISTORY.storms.filter(s=>s.t===nx && s.cat>=2 && stormShown(s, basinFactor(s.basin)));
+  if(!cand.length) return hideStormCard();
+  const s=cand.slice().sort((a,b)=>b.peak-a.peak||b.cat-a.cat)[0];
+  const pts=s.track||[];
+  if(!pts.length) return hideStormCard();
+  const near=REG.map((r,ri)=>({r,ri}))
+    .filter(x=>isOnline(x.ri)&&REGPOS[x.r.name])
+    .map(x=>{ const [la,lo]=REGPOS[x.r.name];
+      const d=Math.min(...pts.map(p=>Math.hypot(p[0]-la,(p[1]-lo)*Math.cos(la*Math.PI/180))));
+      return {name:x.r.name, d, home:x.r.homeland}; })
+    .filter(x=>x.d<70).sort((a,b)=>a.d-b.d).slice(0,3);
+  if(!near.length) return hideStormCard();
+  stormOffer={s, near, cost:capCost("Hurricane Steering")};
+  renderStormCard();
+}
+function renderStormCard(){
+  if(!stormOffer) return hideStormCard();
+  const {s, near, cost}=stormOffer, el=$("stormcard");
+  const word=STORM_WORD[s.basin]||"Hurricane";
+  const nm=s.name? `${word} ${s.name}` : `an unnamed ${word.toLowerCase()}`;
+  $("sctitle").textContent=(s.name? `${word} ${s.name}` : `UNNAMED ${word}`).toUpperCase();
+  $("sctext").innerHTML=`The record has ${nm} forming — <b>Category ${s.cat}</b>, ${s.peak?`${s.peak} knots at peak, `:""}making for ${placeName(s.dl)}.
+    The seeding flights can be over the eyewall in days. <b>Choose a coast below — or click the storm on the globe and aim it yourself.</b>`;
+  const armed=slots.some(x=>x.cap==="Hurricane Steering");
+  $("scopts").innerHTML=near.map((n,i)=>
+    `<button data-n="${i}"${armed?" disabled":""}>${n.name.toUpperCase()}${n.home?" · OURS":""}</button>`).join("");
+  for(const b of $("scopts").querySelectorAll("button"))
+    b.addEventListener("click",()=>{
+      const n=near[+b.dataset.n];
+      if(budgetRefuse(CAPS.find(c=>c.name==="Hurricane Steering"))) return;
+      slots.push({cap:"Hurricane Steering", target:n.name});
+      clampContainment(); renderTray(); sfxClick();
+      wire(`<span class="tag tagd">FLASH</span> The flights are ordered onto ${nm}. It will cross at <b>${n.name}</b>.`,"op");
+      hideStormCard();
+    });
+  $("sccost").textContent=armed? "flights already ordered" : `$${cost}M · the wing is standing`;
+  el.style.display="block";
+}
 const usedCaps=new Set();
 let filedCount=0, punctureFired=false, briefSeason=0;
 

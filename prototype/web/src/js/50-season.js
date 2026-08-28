@@ -420,6 +420,7 @@ async function runSeasonInner(auto, cmdOverride){
   }
   directiveStep(row);
   flagshipStep(row);
+  stormWatch();
   memos(row);
   updateHUD(row, prev);
   $("phasename").textContent="FORECAST";

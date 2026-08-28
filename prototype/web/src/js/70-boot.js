@@ -98,6 +98,7 @@ $("sndtoggle").addEventListener("click",()=>{
 });
 $("wire").classList.add("priority");
 $("dcclose").addEventListener("click",()=>{ hideDirCard(); renderDirective(); sfxClick(); });
+$("scclose").addEventListener("click",()=>{ hideStormCard(); sfxClick(); });
 $("diropen").addEventListener("click",()=>{ const d=curDir(); if(d&&!gated(d)) showDirCard(d); renderDirective(); sfxClick(); });
 $("wiremode").addEventListener("click",()=>{
   WIRE_PRIORITY=!WIRE_PRIORITY;

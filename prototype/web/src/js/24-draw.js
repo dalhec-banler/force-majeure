@@ -2,11 +2,15 @@ function drawGlobe(now){
   try{ drawGlobeInner(now); }catch(e){ console.error("frame error", e); }
   finally{ requestAnimationFrame(drawGlobe); }
 }
+let sizeCheck=0;
 function drawGlobeInner(now){
-  // the pane changed under us (a window resize the observer missed, a rail
-  // reflow, a tray that grew): re-size before drawing a single frame wrong
-  { const dpr=devicePixelRatio||1, pw=cv.clientWidth, ph=cv.clientHeight;
-    if(pw && (Math.round(pw*dpr)!==cv.width || Math.round(ph*dpr)!==cv.height)) sizeGlobe(); }
+  // a safety net for a resize the observer missed — measured from the same
+  // source sizeGlobe uses, with a tolerance, and only twice a second: a
+  // per-frame layout read is both jank and a source of oscillation
+  if((sizeCheck=(sizeCheck+1)%30)===0){
+    const rect=cv.parentElement.getBoundingClientRect(), dpr=devicePixelRatio||1;
+    if(rect.width && (Math.abs(rect.width*dpr-cv.width)>1.5 || Math.abs(rect.height*dpr-cv.height)>1.5)) relayout();
+  }
   if(!dragging && !reduced && !FLAT) rot += 0.022;
   const nowMs=now||0;
   cx.clearRect(0,0,W,H);
@@ -337,7 +341,8 @@ function hoverCheck(e){
     : a>0.7? "Unusually wet season" : "Seasonal norms";
   h.innerHTML=`<b>${r.name.toUpperCase()}</b>${r.homeland?" · HOMELAND":""}<br>
     ${read}. ${r.crop} ${r.kind?"output":"harvest"} at <span class="num">${y.toFixed(0)}%</span>
-    · ${r.weight.toFixed(1)}% of world supply${res?` · hardened`:""}<br>
+    · ${r.weight.toFixed(1)}% of world supply<br>
+    ${investmentLine(best)}<br>
     <span style="color:var(--ink-faint)">anomaly ${a.toFixed(2)} vs natural range ±${s.toFixed(2)}${Math.abs(a)>s?" — outside":""}</span>${(()=>{
       if(!eng.knowledge.on) return "";
       const fc=eng.knowledge.forecast(slots); if(!fc) return "";
@@ -346,6 +351,37 @@ function hoverCheck(e){
         · next season ${f.anomaly>0.2?"wet ":f.anomaly<-0.2?"dry ":""}${(f.anomaly>=0?"+":"")+f.anomaly.toFixed(2)} by known wiring</span>`; })()}`;
   h.style.display="block";
   h.style.left=Math.min(mx+14,W-250)+"px"; h.style.top=(my+10)+"px";
+}
+/* What this target has already had from you, and what it can still take.
+   Only the CUMULATIVE things — the ones you top up and that reach a cap:
+   hardening, the wiring, a pathogen that persists, and the pattern of
+   repeat strikes that the file is building against you. */
+function investmentLine(ri){
+  const r=REG[ri], row=lastRow(), out=[];
+  // hardening: the engine caps the benefit at 90
+  const res=eng.state.ops.filter(o=>o.owner==="player"&&o.target===r.name&&o.resil>0)
+                         .reduce((s,o)=>s+o.resil,0);
+  const cap=Math.min(90,res);
+  out.push(res>=90
+    ? `<span style="color:var(--green)">hardened 90% — at capacity</span>`
+    : `hardened <span class="num">${cap}%</span> of 90${res? "" : ""}`);
+  // the wiring: what research still has to find here
+  if(eng.knowledge.on){
+    const es=eng.knowledge.edges.filter(e=>e.ri===ri);
+    const kn=es.filter(e=>eng.knowledge.isKnown(e.di,e.ri)).length;
+    out.push(es.length===0? "no wiring"
+      : kn>=es.length? `<span style="color:var(--green)">wiring ${kn}/${es.length} — complete</span>`
+      : `wiring <span class="num">${kn}/${es.length}</span> known`);
+  }
+  const bits=[`<span style="color:var(--ink-faint)">${out.join(" · ")}</span>`];
+  // a pathogen in the seed stock, and how long it has left
+  const bio=eng.state.ops.filter(o=>o.owner==="player"&&o.target===r.name&&o.cap==="Engineered Biology")
+    .map(o=>o.t+o.lag+(o.dur||1)-t).filter(n=>n>0).sort((a,b)=>b-a)[0];
+  if(bio) bits.push(`<span style="color:var(--red)">rust in the seed stock — ${bio} season${bio===1?"":"s"} left</span>`);
+  // the pattern the file is building: repeat signature strikes inside the window
+  const rep=eng.state.ops.filter(o=>o.owner==="player"&&o.sig>0&&o.mag<0&&o.target===r.name&&o.t>t-12).length;
+  if(rep>=2) bits.push(`<span style="color:var(--amber)">${rep} strikes here in twelve seasons — a pattern is evidence</span>`);
+  return bits.join("<br>");
 }
 /* kick-off happens in 70-boot.js once every part has run */
 

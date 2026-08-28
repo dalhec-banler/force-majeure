@@ -3,24 +3,39 @@ const cv = $("globe"), cx = cv.getContext("2d");
 let W=0,H=0,CXp=0,CYp=0,Rp=0,Rbase=0,zoom=1,
     rot = -30, tilt = -18, dragging=false, moved=0, lastX=0;
 /* The globe is sized and centred on the FREE pane — the strip between the
-   top instruments and the tool tray — not on the whole pane, so a short or
-   narrow window shrinks the world instead of burying it under the tray. */
+   legend and the tool tray. The insets are CACHED and re-measured only when
+   the layout itself changes: a chyron, a banner, a briefing card or an
+   armed-op pill appears and disappears constantly, and the world must not
+   resize every time one does. */
+let insetTop=56, insetBot=112;
+function measureInsets(){
+  const rect = cv.parentElement.getBoundingClientRect();
+  const lg=$("legend"), tb=$("toolbar");
+  if(lg){ const b=lg.getBoundingClientRect(); if(b.height) insetTop=Math.max(24, b.bottom-rect.top+10); }
+  if(tb){ const b=tb.getBoundingClientRect();
+    // the tray plus the hint line above it; if the tray has not been built
+    // yet, reserve what it will take rather than letting the globe run under it
+    insetBot = b.height? Math.max(84, rect.bottom-b.top+28) : 112; }
+}
 function sizeGlobe(){
   const rect = cv.parentElement.getBoundingClientRect();
   const dpr = devicePixelRatio||1;
-  if(cv.width!==Math.round(rect.width*dpr)||cv.height!==Math.round(rect.height*dpr)){
-    cv.width = Math.round(rect.width*dpr); cv.height = Math.round(rect.height*dpr); }
+  const bw=Math.round(rect.width*dpr), bh=Math.round(rect.height*dpr);
+  if(cv.width!==bw||cv.height!==bh){ cv.width=bw; cv.height=bh; }
   cx.setTransform(dpr,0,0,dpr,0,0);
   W=rect.width; H=rect.height;
-  const ts=$("topstrip"), tb=$("toolbar");
-  const top = ts? Math.max(0,(ts.getBoundingClientRect().bottom-rect.top)) : 0;
-  const bot = tb? Math.max(top+80, tb.getBoundingClientRect().top-rect.top-26) : H;   // the tray's own top (the hint line above it), never a floating card
-  const free=Math.max(120, bot-top);
-  CXp=W/2; CYp=top+free/2;
+  const free=Math.max(120, H-insetTop-insetBot);
+  CXp=W/2; CYp=insetTop+free/2;
   Rbase=Math.min(W*0.44, free*0.5); Rp=Rbase*zoom;
 }
-addEventListener("resize", sizeGlobe); sizeGlobe();
-if(typeof ResizeObserver!=="undefined"){ const ro=new ResizeObserver(()=>sizeGlobe()); ro.observe(cv.parentElement); const tb=$("toolbar"); if(tb) ro.observe(tb); }   // the tray itself, not the wrapper — the floating card must not move the globe
+function relayout(){ measureInsets(); sizeGlobe(); }
+addEventListener("resize", relayout); relayout();
+if(typeof ResizeObserver!=="undefined"){
+  // the pane and the tray are the only things that may move the world;
+  // #alerts, #banner, #briefcard and #armed come and go over the top of it
+  const ro=new ResizeObserver(()=>relayout());
+  ro.observe(cv.parentElement); const tb=$("toolbar"); if(tb) ro.observe(tb); const lg=$("legend"); if(lg) ro.observe(lg);
+}
 let lastY=0;
 cv.addEventListener("pointerdown",e=>{dragging=true;moved=0;lastX=e.clientX;lastY=e.clientY;cv.setPointerCapture(e.pointerId)});
 cv.addEventListener("pointerup",e=>{ dragging=false; if(moved<5) globeClick(e); });

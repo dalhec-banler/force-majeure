@@ -407,6 +407,17 @@
 .tool.mini .mb{display:none}
 @container pane (max-width:820px){ .tool.mini{min-width:28px} .tool.mini .ic{font-size:12px} }
 #toolbar{flex-wrap:wrap;max-height:none}
+
+#toolcard .tc-w{margin-top:6px;padding-top:5px;border-top:1px solid var(--line);font-size:10.5px;color:var(--ink-dim)}
+#toolcard .tc-w b{color:var(--ink)}
+
+/* the storm watch: a flash, not a directive */
+.dircard.storm{top:auto;bottom:120px;right:14px;border-color:var(--cyan)}
+.dircard.storm .dc-h{color:var(--cyan)}
+.sc-opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.sc-opts button{background:var(--panel2);border:1px solid var(--cyan);color:var(--ink);font-family:var(--mono);font-size:10px;letter-spacing:.1em;padding:5px 9px;cursor:pointer}
+.sc-opts button:hover{background:rgba(91,200,232,.15)}
+.sc-opts button:disabled{opacity:.4;cursor:default;border-color:var(--line)}
 </style>
 
 <div id="app">
@@ -428,6 +439,12 @@
 
 <main>
   <div id="globe-wrap">
+    <div id="stormcard" class="dircard storm" style="display:none">
+      <div class="dc-h"><span>FLASH — METEOROLOGY DESK</span><button id="scclose">LET IT GO ✕</button></div>
+      <div id="sctitle"></div><div id="sctext"></div>
+      <div id="scopts" class="sc-opts"></div>
+      <div class="dc-f"><span id="sccost"></span><span>this review only</span></div>
+    </div>
     <div id="dircard" class="dircard" style="display:none">
       <div class="dc-h"><span id="dctag">CABLE — FROM THE COMMITTEE</span><button id="dcclose">NOTED ✕</button></div>
       <div id="dctitle"></div><div id="dctext"></div><div id="dcuse"></div>
@@ -1570,7 +1587,29 @@ function toolCard(c){
     ${BRIEF[c.name]||DESC[c.name]||""}
     <div class="tc-f"><i>${when}${burn}</i><i>${sig}</i>${c.needsDrought?"<i>wants drought</i>":""}${c.resil?"<i>permanent</i>":""}${reach}${wingLine(c)}</div>`;
 }
-function showToolCard(c){ const el=$("toolcard"); el.innerHTML=toolCard(c); el.style.display="block"; }
+function whereToPoint(c){                  // the targets this tool still has room in
+  if(!lastRow()) return "";
+  const on=(ri)=>isOnline(ri);
+  if(c.research && eng.knowledge.on){
+    const left=REG.map((r,ri)=>({r,ri})).filter(x=>on(x.ri))
+      .map(x=>{ const es=eng.knowledge.edges.filter(e=>e.ri===x.ri);
+                return {name:x.r.name, unk:es.filter(e=>!eng.knowledge.isKnown(e.di,e.ri)).length}; })
+      .filter(x=>x.unk>0).sort((a,b)=>b.unk-a.unk);
+    const kc=eng.knowledge.count();
+    if(!left.length) return `<div class="tc-w"><b>${kc.known}/${kc.total} wires known — the board is complete.</b></div>`;
+    return `<div class="tc-w"><b>${kc.known}/${kc.total} wires known.</b> Most still dark: ${left.slice(0,3).map(x=>`${x.name} (${x.unk})`).join(", ")}</div>`;
+  }
+  if(c.resil>0){
+    const res=(name)=>eng.state.ops.filter(o=>o.owner==="player"&&o.target===name&&o.resil>0).reduce((s,o)=>s+o.resil,0);
+    const room=REG.map((r,ri)=>({r,ri})).filter(x=>on(x.ri)&&!x.r.kind).map(x=>({name:x.r.name, r:res(x.r.name)}));
+    const full=room.filter(x=>x.r>=90).length;
+    const thin=room.filter(x=>x.r<90).sort((a,b)=>a.r-b.r);
+    const home=room.find(x=>x.name===REG.find(r2=>r2.homeland).name);
+    return `<div class="tc-w">Homeland hardened <b>${Math.min(90,home?home.r:0)}%</b> of 90${full?` · ${full} region${full===1?"":"s"} at capacity`:""}${thin.length?` · thinnest: ${thin.slice(0,2).map(x=>`${x.name} (${x.r}%)`).join(", ")}`:""}</div>`;
+  }
+  return "";
+}
+function showToolCard(c){ const el=$("toolcard"); el.innerHTML=toolCard(c)+whereToPoint(c); el.style.display="block"; }
 function hideToolCard(){ $("toolcard").style.display="none"; }
 function capInfo(c){
   if(c.research) return `${DESC[c.name]} · $${c.cost}M · the strongest unknown wire is on the board next season · invisible`;
@@ -1602,7 +1641,8 @@ const WHEN={
 function wingLine(c){
   const ws=eng.eras? eng.wingStatus(c.name) : null; if(!ws) return "";
   if(ws.spent) return `<i>spent — it was only ever going to happen once</i>`;
-  if(ws.online) return (ws.once? `<i>one operation, ever</i>` : "")+(ws.upkeep? `<i>wing online · upkeep $${ws.upkeep}M/season</i>` : "");
+  if(ws.online) return (ws.once? `<i>one operation, ever</i>` : "")
+    +(ws.upkeep? `<i>wing online · upkeep $${ws.upkeep}M/season</i><i>⏏ stands it down — the upkeep stops, it reopens at $${Math.round(ws.chest*0.75)}M</i>` : "");
   if(ws.requires && ws.requires.length) return `<i>needs first: ${ws.requires.map(n=>n.replace(" [T3]","")).join(", ")}</i>`;
   if(!ws.eligible) return `<i>arrives ${ws.from}</i>`;
   return `<i>${ws.canStand? "the wing can stand up" : `needs $${Math.round(ws.need)}M in the chest`} · upkeep $${ws.upkeep}M/season</i>`;
@@ -1631,6 +1671,7 @@ function buildTray(){
     b.addEventListener("blur",hideToolCard);
     bar.appendChild(b);
   }
+  if(typeof relayout==="function") relayout();     // the tray now has a height: give the globe its room
 }
 function budgetRefuse(c){                 // true if the purse says no (and says why)
   if(canAfford(c)) return false;
@@ -1710,24 +1751,39 @@ const cv = $("globe"), cx = cv.getContext("2d");
 let W=0,H=0,CXp=0,CYp=0,Rp=0,Rbase=0,zoom=1,
     rot = -30, tilt = -18, dragging=false, moved=0, lastX=0;
 /* The globe is sized and centred on the FREE pane — the strip between the
-   top instruments and the tool tray — not on the whole pane, so a short or
-   narrow window shrinks the world instead of burying it under the tray. */
+   legend and the tool tray. The insets are CACHED and re-measured only when
+   the layout itself changes: a chyron, a banner, a briefing card or an
+   armed-op pill appears and disappears constantly, and the world must not
+   resize every time one does. */
+let insetTop=56, insetBot=112;
+function measureInsets(){
+  const rect = cv.parentElement.getBoundingClientRect();
+  const lg=$("legend"), tb=$("toolbar");
+  if(lg){ const b=lg.getBoundingClientRect(); if(b.height) insetTop=Math.max(24, b.bottom-rect.top+10); }
+  if(tb){ const b=tb.getBoundingClientRect();
+    // the tray plus the hint line above it; if the tray has not been built
+    // yet, reserve what it will take rather than letting the globe run under it
+    insetBot = b.height? Math.max(84, rect.bottom-b.top+28) : 112; }
+}
 function sizeGlobe(){
   const rect = cv.parentElement.getBoundingClientRect();
   const dpr = devicePixelRatio||1;
-  if(cv.width!==Math.round(rect.width*dpr)||cv.height!==Math.round(rect.height*dpr)){
-    cv.width = Math.round(rect.width*dpr); cv.height = Math.round(rect.height*dpr); }
+  const bw=Math.round(rect.width*dpr), bh=Math.round(rect.height*dpr);
+  if(cv.width!==bw||cv.height!==bh){ cv.width=bw; cv.height=bh; }
   cx.setTransform(dpr,0,0,dpr,0,0);
   W=rect.width; H=rect.height;
-  const ts=$("topstrip"), tb=$("toolbar");
-  const top = ts? Math.max(0,(ts.getBoundingClientRect().bottom-rect.top)) : 0;
-  const bot = tb? Math.max(top+80, tb.getBoundingClientRect().top-rect.top-26) : H;   // the tray's own top (the hint line above it), never a floating card
-  const free=Math.max(120, bot-top);
-  CXp=W/2; CYp=top+free/2;
+  const free=Math.max(120, H-insetTop-insetBot);
+  CXp=W/2; CYp=insetTop+free/2;
   Rbase=Math.min(W*0.44, free*0.5); Rp=Rbase*zoom;
 }
-addEventListener("resize", sizeGlobe); sizeGlobe();
-if(typeof ResizeObserver!=="undefined"){ const ro=new ResizeObserver(()=>sizeGlobe()); ro.observe(cv.parentElement); const tb=$("toolbar"); if(tb) ro.observe(tb); }   // the tray itself, not the wrapper — the floating card must not move the globe
+function relayout(){ measureInsets(); sizeGlobe(); }
+addEventListener("resize", relayout); relayout();
+if(typeof ResizeObserver!=="undefined"){
+  // the pane and the tray are the only things that may move the world;
+  // #alerts, #banner, #briefcard and #armed come and go over the top of it
+  const ro=new ResizeObserver(()=>relayout());
+  ro.observe(cv.parentElement); const tb=$("toolbar"); if(tb) ro.observe(tb); const lg=$("legend"); if(lg) ro.observe(lg);
+}
 let lastY=0;
 cv.addEventListener("pointerdown",e=>{dragging=true;moved=0;lastX=e.clientX;lastY=e.clientY;cv.setPointerCapture(e.pointerId)});
 cv.addEventListener("pointerup",e=>{ dragging=false; if(moved<5) globeClick(e); });
@@ -1959,7 +2015,21 @@ function nearestRegion(e){
   return best;
 }
 function globeClick(e){
-  if(!pendingTool || resolving) return;
+  if(resolving) return;
+  // click the storm itself to pick the wing up, then click the coast to aim it
+  if(!pendingTool && eng.eras && eng.wingOnline("Hurricane Steering")){
+    const rc=cv.getBoundingClientRect();
+    const hh=nearestHistory(e.clientX-rc.left, e.clientY-rc.top);
+    if(hh && hh.type==="storm"){
+      const c=CAPS.find(x=>x.name==="Hurricane Steering");
+      if(budgetRefuse(c)) return;
+      pendingTool="Hurricane Steering"; renderTray(); sfxClick();
+      const s=hh.st.s, word=STORM_WORD[s.basin]||"Hurricane";
+      $("toolinfo").innerHTML=`<b>${(s.name? word+" "+s.name : "the "+word.toLowerCase()).toUpperCase()}</b> — the flights are ready. <b>Click the coast you want it to cross.</b>`;
+      return;
+    }
+  }
+  if(!pendingTool) return;
   const c=CAPS.find(x=>x.name===pendingTool);
   if(budgetRefuse(c)) return;
   const ri=nearestRegion(e);
@@ -2371,11 +2441,15 @@ function drawGlobe(now){
   try{ drawGlobeInner(now); }catch(e){ console.error("frame error", e); }
   finally{ requestAnimationFrame(drawGlobe); }
 }
+let sizeCheck=0;
 function drawGlobeInner(now){
-  // the pane changed under us (a window resize the observer missed, a rail
-  // reflow, a tray that grew): re-size before drawing a single frame wrong
-  { const dpr=devicePixelRatio||1, pw=cv.clientWidth, ph=cv.clientHeight;
-    if(pw && (Math.round(pw*dpr)!==cv.width || Math.round(ph*dpr)!==cv.height)) sizeGlobe(); }
+  // a safety net for a resize the observer missed — measured from the same
+  // source sizeGlobe uses, with a tolerance, and only twice a second: a
+  // per-frame layout read is both jank and a source of oscillation
+  if((sizeCheck=(sizeCheck+1)%30)===0){
+    const rect=cv.parentElement.getBoundingClientRect(), dpr=devicePixelRatio||1;
+    if(rect.width && (Math.abs(rect.width*dpr-cv.width)>1.5 || Math.abs(rect.height*dpr-cv.height)>1.5)) relayout();
+  }
   if(!dragging && !reduced && !FLAT) rot += 0.022;
   const nowMs=now||0;
   cx.clearRect(0,0,W,H);
@@ -2706,7 +2780,8 @@ function hoverCheck(e){
     : a>0.7? "Unusually wet season" : "Seasonal norms";
   h.innerHTML=`<b>${r.name.toUpperCase()}</b>${r.homeland?" · HOMELAND":""}<br>
     ${read}. ${r.crop} ${r.kind?"output":"harvest"} at <span class="num">${y.toFixed(0)}%</span>
-    · ${r.weight.toFixed(1)}% of world supply${res?` · hardened`:""}<br>
+    · ${r.weight.toFixed(1)}% of world supply<br>
+    ${investmentLine(best)}<br>
     <span style="color:var(--ink-faint)">anomaly ${a.toFixed(2)} vs natural range ±${s.toFixed(2)}${Math.abs(a)>s?" — outside":""}</span>${(()=>{
       if(!eng.knowledge.on) return "";
       const fc=eng.knowledge.forecast(slots); if(!fc) return "";
@@ -2715,6 +2790,37 @@ function hoverCheck(e){
         · next season ${f.anomaly>0.2?"wet ":f.anomaly<-0.2?"dry ":""}${(f.anomaly>=0?"+":"")+f.anomaly.toFixed(2)} by known wiring</span>`; })()}`;
   h.style.display="block";
   h.style.left=Math.min(mx+14,W-250)+"px"; h.style.top=(my+10)+"px";
+}
+/* What this target has already had from you, and what it can still take.
+   Only the CUMULATIVE things — the ones you top up and that reach a cap:
+   hardening, the wiring, a pathogen that persists, and the pattern of
+   repeat strikes that the file is building against you. */
+function investmentLine(ri){
+  const r=REG[ri], row=lastRow(), out=[];
+  // hardening: the engine caps the benefit at 90
+  const res=eng.state.ops.filter(o=>o.owner==="player"&&o.target===r.name&&o.resil>0)
+                         .reduce((s,o)=>s+o.resil,0);
+  const cap=Math.min(90,res);
+  out.push(res>=90
+    ? `<span style="color:var(--green)">hardened 90% — at capacity</span>`
+    : `hardened <span class="num">${cap}%</span> of 90${res? "" : ""}`);
+  // the wiring: what research still has to find here
+  if(eng.knowledge.on){
+    const es=eng.knowledge.edges.filter(e=>e.ri===ri);
+    const kn=es.filter(e=>eng.knowledge.isKnown(e.di,e.ri)).length;
+    out.push(es.length===0? "no wiring"
+      : kn>=es.length? `<span style="color:var(--green)">wiring ${kn}/${es.length} — complete</span>`
+      : `wiring <span class="num">${kn}/${es.length}</span> known`);
+  }
+  const bits=[`<span style="color:var(--ink-faint)">${out.join(" · ")}</span>`];
+  // a pathogen in the seed stock, and how long it has left
+  const bio=eng.state.ops.filter(o=>o.owner==="player"&&o.target===r.name&&o.cap==="Engineered Biology")
+    .map(o=>o.t+o.lag+(o.dur||1)-t).filter(n=>n>0).sort((a,b)=>b-a)[0];
+  if(bio) bits.push(`<span style="color:var(--red)">rust in the seed stock — ${bio} season${bio===1?"":"s"} left</span>`);
+  // the pattern the file is building: repeat signature strikes inside the window
+  const rep=eng.state.ops.filter(o=>o.owner==="player"&&o.sig>0&&o.mag<0&&o.target===r.name&&o.t>t-12).length;
+  if(rep>=2) bits.push(`<span style="color:var(--amber)">${rep} strikes here in twelve seasons — a pattern is evidence</span>`);
+  return bits.join("<br>");
 }
 /* kick-off happens in 70-boot.js once every part has run */
 
@@ -2846,6 +2952,54 @@ const PRECEDENT={
  "Engineered Biology":["tagr","[REDACTED]","The programme has no name. The strain has a catalogue number and nothing else."],
  "The AMOC Lever":["tagr","[REDACTED]","There is no annex. There is no study. There is a valve and a decision."],
 };
+/* THE STORM WATCH — a cyclone the record is about to produce, and a wing
+   that can be over it in days. A hurricane is the fastest thing in the game,
+   so the offer is a flash, not a directive: take a coast or let it go. It
+   stands for this review only. */
+let stormOffer=null;
+function hideStormCard(){ const el=$("stormcard"); if(el) el.style.display="none"; stormOffer=null; }
+function stormWatch(){
+  if(!running || !eng.eras || !eng.wingOnline("Hurricane Steering")) return hideStormCard();
+  const cap=CAPS.find(c=>c.name==="Hurricane Steering"); if(!cap) return hideStormCard();
+  const nx=t+1, f=atlanticForcing();
+  const cand=HISTORY.storms.filter(s=>s.t===nx && s.cat>=2 && stormShown(s, basinFactor(s.basin)));
+  if(!cand.length) return hideStormCard();
+  const s=cand.slice().sort((a,b)=>b.peak-a.peak||b.cat-a.cat)[0];
+  const pts=s.track||[];
+  if(!pts.length) return hideStormCard();
+  const near=REG.map((r,ri)=>({r,ri}))
+    .filter(x=>isOnline(x.ri)&&REGPOS[x.r.name])
+    .map(x=>{ const [la,lo]=REGPOS[x.r.name];
+      const d=Math.min(...pts.map(p=>Math.hypot(p[0]-la,(p[1]-lo)*Math.cos(la*Math.PI/180))));
+      return {name:x.r.name, d, home:x.r.homeland}; })
+    .filter(x=>x.d<70).sort((a,b)=>a.d-b.d).slice(0,3);
+  if(!near.length) return hideStormCard();
+  stormOffer={s, near, cost:capCost("Hurricane Steering")};
+  renderStormCard();
+}
+function renderStormCard(){
+  if(!stormOffer) return hideStormCard();
+  const {s, near, cost}=stormOffer, el=$("stormcard");
+  const word=STORM_WORD[s.basin]||"Hurricane";
+  const nm=s.name? `${word} ${s.name}` : `an unnamed ${word.toLowerCase()}`;
+  $("sctitle").textContent=(s.name? `${word} ${s.name}` : `UNNAMED ${word}`).toUpperCase();
+  $("sctext").innerHTML=`The record has ${nm} forming — <b>Category ${s.cat}</b>, ${s.peak?`${s.peak} knots at peak, `:""}making for ${placeName(s.dl)}.
+    The seeding flights can be over the eyewall in days. <b>Choose a coast below — or click the storm on the globe and aim it yourself.</b>`;
+  const armed=slots.some(x=>x.cap==="Hurricane Steering");
+  $("scopts").innerHTML=near.map((n,i)=>
+    `<button data-n="${i}"${armed?" disabled":""}>${n.name.toUpperCase()}${n.home?" · OURS":""}</button>`).join("");
+  for(const b of $("scopts").querySelectorAll("button"))
+    b.addEventListener("click",()=>{
+      const n=near[+b.dataset.n];
+      if(budgetRefuse(CAPS.find(c=>c.name==="Hurricane Steering"))) return;
+      slots.push({cap:"Hurricane Steering", target:n.name});
+      clampContainment(); renderTray(); sfxClick();
+      wire(`<span class="tag tagd">FLASH</span> The flights are ordered onto ${nm}. It will cross at <b>${n.name}</b>.`,"op");
+      hideStormCard();
+    });
+  $("sccost").textContent=armed? "flights already ordered" : `$${cost}M · the wing is standing`;
+  el.style.display="block";
+}
 const usedCaps=new Set();
 let filedCount=0, punctureFired=false, briefSeason=0;
 
@@ -3747,6 +3901,7 @@ async function runSeasonInner(auto, cmdOverride){
   }
   directiveStep(row);
   flagshipStep(row);
+  stormWatch();
   memos(row);
   updateHUD(row, prev);
   $("phasename").textContent="FORECAST";
@@ -4205,6 +4360,7 @@ $("sndtoggle").addEventListener("click",()=>{
 });
 $("wire").classList.add("priority");
 $("dcclose").addEventListener("click",()=>{ hideDirCard(); renderDirective(); sfxClick(); });
+$("scclose").addEventListener("click",()=>{ hideStormCard(); sfxClick(); });
 $("diropen").addEventListener("click",()=>{ const d=curDir(); if(d&&!gated(d)) showDirCard(d); renderDirective(); sfxClick(); });
 $("wiremode").addEventListener("click",()=>{
   WIRE_PRIORITY=!WIRE_PRIORITY;

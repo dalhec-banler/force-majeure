@@ -200,7 +200,21 @@ function nearestRegion(e){
   return best;
 }
 function globeClick(e){
-  if(!pendingTool || resolving) return;
+  if(resolving) return;
+  // click the storm itself to pick the wing up, then click the coast to aim it
+  if(!pendingTool && eng.eras && eng.wingOnline("Hurricane Steering")){
+    const rc=cv.getBoundingClientRect();
+    const hh=nearestHistory(e.clientX-rc.left, e.clientY-rc.top);
+    if(hh && hh.type==="storm"){
+      const c=CAPS.find(x=>x.name==="Hurricane Steering");
+      if(budgetRefuse(c)) return;
+      pendingTool="Hurricane Steering"; renderTray(); sfxClick();
+      const s=hh.st.s, word=STORM_WORD[s.basin]||"Hurricane";
+      $("toolinfo").innerHTML=`<b>${(s.name? word+" "+s.name : "the "+word.toLowerCase()).toUpperCase()}</b> — the flights are ready. <b>Click the coast you want it to cross.</b>`;
+      return;
+    }
+  }
+  if(!pendingTool) return;
   const c=CAPS.find(x=>x.name===pendingTool);
   if(budgetRefuse(c)) return;
   const ri=nearestRegion(e);

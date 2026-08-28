@@ -49,7 +49,29 @@ function toolCard(c){
     ${BRIEF[c.name]||DESC[c.name]||""}
     <div class="tc-f"><i>${when}${burn}</i><i>${sig}</i>${c.needsDrought?"<i>wants drought</i>":""}${c.resil?"<i>permanent</i>":""}${reach}${wingLine(c)}</div>`;
 }
-function showToolCard(c){ const el=$("toolcard"); el.innerHTML=toolCard(c); el.style.display="block"; }
+function whereToPoint(c){                  // the targets this tool still has room in
+  if(!lastRow()) return "";
+  const on=(ri)=>isOnline(ri);
+  if(c.research && eng.knowledge.on){
+    const left=REG.map((r,ri)=>({r,ri})).filter(x=>on(x.ri))
+      .map(x=>{ const es=eng.knowledge.edges.filter(e=>e.ri===x.ri);
+                return {name:x.r.name, unk:es.filter(e=>!eng.knowledge.isKnown(e.di,e.ri)).length}; })
+      .filter(x=>x.unk>0).sort((a,b)=>b.unk-a.unk);
+    const kc=eng.knowledge.count();
+    if(!left.length) return `<div class="tc-w"><b>${kc.known}/${kc.total} wires known — the board is complete.</b></div>`;
+    return `<div class="tc-w"><b>${kc.known}/${kc.total} wires known.</b> Most still dark: ${left.slice(0,3).map(x=>`${x.name} (${x.unk})`).join(", ")}</div>`;
+  }
+  if(c.resil>0){
+    const res=(name)=>eng.state.ops.filter(o=>o.owner==="player"&&o.target===name&&o.resil>0).reduce((s,o)=>s+o.resil,0);
+    const room=REG.map((r,ri)=>({r,ri})).filter(x=>on(x.ri)&&!x.r.kind).map(x=>({name:x.r.name, r:res(x.r.name)}));
+    const full=room.filter(x=>x.r>=90).length;
+    const thin=room.filter(x=>x.r<90).sort((a,b)=>a.r-b.r);
+    const home=room.find(x=>x.name===REG.find(r2=>r2.homeland).name);
+    return `<div class="tc-w">Homeland hardened <b>${Math.min(90,home?home.r:0)}%</b> of 90${full?` · ${full} region${full===1?"":"s"} at capacity`:""}${thin.length?` · thinnest: ${thin.slice(0,2).map(x=>`${x.name} (${x.r}%)`).join(", ")}`:""}</div>`;
+  }
+  return "";
+}
+function showToolCard(c){ const el=$("toolcard"); el.innerHTML=toolCard(c)+whereToPoint(c); el.style.display="block"; }
 function hideToolCard(){ $("toolcard").style.display="none"; }
 function capInfo(c){
   if(c.research) return `${DESC[c.name]} · $${c.cost}M · the strongest unknown wire is on the board next season · invisible`;
@@ -81,7 +103,8 @@ const WHEN={
 function wingLine(c){
   const ws=eng.eras? eng.wingStatus(c.name) : null; if(!ws) return "";
   if(ws.spent) return `<i>spent — it was only ever going to happen once</i>`;
-  if(ws.online) return (ws.once? `<i>one operation, ever</i>` : "")+(ws.upkeep? `<i>wing online · upkeep $${ws.upkeep}M/season</i>` : "");
+  if(ws.online) return (ws.once? `<i>one operation, ever</i>` : "")
+    +(ws.upkeep? `<i>wing online · upkeep $${ws.upkeep}M/season</i><i>⏏ stands it down — the upkeep stops, it reopens at $${Math.round(ws.chest*0.75)}M</i>` : "");
   if(ws.requires && ws.requires.length) return `<i>needs first: ${ws.requires.map(n=>n.replace(" [T3]","")).join(", ")}</i>`;
   if(!ws.eligible) return `<i>arrives ${ws.from}</i>`;
   return `<i>${ws.canStand? "the wing can stand up" : `needs $${Math.round(ws.need)}M in the chest`} · upkeep $${ws.upkeep}M/season</i>`;
@@ -110,6 +133,7 @@ function buildTray(){
     b.addEventListener("blur",hideToolCard);
     bar.appendChild(b);
   }
+  if(typeof relayout==="function") relayout();     // the tray now has a height: give the globe its room
 }
 function budgetRefuse(c){                 // true if the purse says no (and says why)
   if(canAfford(c)) return false;
