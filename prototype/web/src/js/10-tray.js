@@ -50,7 +50,6 @@ function toolCard(c){
     <div class="tc-f"><i>${when}${burn}</i><i>${sig}</i>${c.needsDrought?"<i>wants drought</i>":""}${c.resil?"<i>permanent</i>":""}${reach}${wingLine(c)}</div>`;
 }
 function whereToPoint(c){                  // the targets this tool still has room in
-  if(!lastRow()) return "";
   const on=(ri)=>isOnline(ri);
   if(c.research && eng.knowledge.on){
     const left=REG.map((r,ri)=>({r,ri})).filter(x=>on(x.ri))

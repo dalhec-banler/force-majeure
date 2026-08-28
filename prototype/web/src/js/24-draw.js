@@ -357,7 +357,7 @@ function hoverCheck(e){
    hardening, the wiring, a pathogen that persists, and the pattern of
    repeat strikes that the file is building against you. */
 function investmentLine(ri){
-  const r=REG[ri], row=lastRow(), out=[];
+  const r=REG[ri], out=[];
   // hardening: the engine caps the benefit at 90
   const res=eng.state.ops.filter(o=>o.owner==="player"&&o.target===r.name&&o.resil>0)
                          .reduce((s,o)=>s+o.resil,0);

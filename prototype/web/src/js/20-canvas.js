@@ -15,7 +15,7 @@ function measureInsets(){
   if(tb){ const b=tb.getBoundingClientRect();
     // the tray plus the hint line above it; if the tray has not been built
     // yet, reserve what it will take rather than letting the globe run under it
-    insetBot = b.height? Math.max(84, rect.bottom-b.top+28) : 112; }
+    insetBot = b.height? Math.max(72, rect.bottom-b.top+12) : 112; }
 }
 function sizeGlobe(){
   const rect = cv.parentElement.getBoundingClientRect();
