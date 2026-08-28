@@ -12,7 +12,8 @@ function measureInsets(){
   const rect = cv.parentElement.getBoundingClientRect();
   const lg=$("legend"), tb=$("toolbar");
   if(lg){ const b=lg.getBoundingClientRect(); if(b.height) insetTop=Math.max(24, b.bottom-rect.top+10); }
-  if(tb){ const b=tb.getBoundingClientRect();
+  const wb=$("wingbar"); const anchor=(wb && wb.getBoundingClientRect().height)? wb : tb;
+  if(anchor){ const b=anchor.getBoundingClientRect();
     // the tray plus the hint line above it; if the tray has not been built
     // yet, reserve what it will take rather than letting the globe run under it
     insetBot = b.height? Math.max(72, rect.bottom-b.top+12) : 112; }
@@ -34,7 +35,7 @@ if(typeof ResizeObserver!=="undefined"){
   // the pane and the tray are the only things that may move the world;
   // #alerts, #banner, #briefcard and #armed come and go over the top of it
   const ro=new ResizeObserver(()=>relayout());
-  ro.observe(cv.parentElement); const tb=$("toolbar"); if(tb) ro.observe(tb); const lg=$("legend"); if(lg) ro.observe(lg);
+  ro.observe(cv.parentElement); const tb=$("toolbar"); if(tb) ro.observe(tb); const lg=$("legend"); if(lg) ro.observe(lg); const wb=$("wingbar"); if(wb) ro.observe(wb);
 }
 let lastY=0;
 cv.addEventListener("pointerdown",e=>{dragging=true;moved=0;lastX=e.clientX;lastY=e.clientY;cv.setPointerCapture(e.pointerId)});

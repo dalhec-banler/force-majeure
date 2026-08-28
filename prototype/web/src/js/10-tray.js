@@ -118,14 +118,8 @@ function buildTray(){
     b.className="tool"; b.dataset.cap=c.name;
     b.innerHTML=`<span class="ic">${TOOLICON[c.name]||"◈"}</span>
       <span class="nm">${c.name.replace(" [T3]","")}</span>
-      <span class="pr">$${c.cost}M</span><span class="mb" title="stand this wing down (mothball)">⏏</span>`;
+      <span class="pr">$${c.cost}M</span>`;
     b.addEventListener("click",()=>toolClick(c));
-    const mb=b.querySelector? b.querySelector(".mb") : null;
-    if(mb) mb.addEventListener("click",(ev)=>{ ev.stopPropagation(); if(!running||resolving) return;
-      const i=wingOrders.mothball.indexOf(c.name);
-      if(i>=0){ wingOrders.mothball.splice(i,1); $("toolinfo").textContent=`${c.name} — the wing stays.`; }
-      else { wingOrders.mothball.push(c.name); $("toolinfo").innerHTML=`<b>${c.name.replace(" [T3]","").toUpperCase()} WING</b> stands down at the next review — no upkeep, no capability. It reopens at three-quarters of the chest. Click ⏏ again to keep it.`; }
-      sfxClick(); renderTray(); });
     b.addEventListener("mouseenter",()=>showToolCard(c));
     b.addEventListener("focus",()=>showToolCard(c));
     b.addEventListener("mouseleave",hideToolCard);
@@ -173,6 +167,42 @@ function toolClick(c){
     $("toolinfo").textContent=`${c.name} — click regions to target; click the tool again to put it down · ${capInfo(c)}`;
   }
 }
+/* THE WING BAR — what the programme is paying for, on top of the tool box.
+   One chip per wing: standing (with its upkeep), ready to stand up, or
+   ordered either way. Click a chip to give the order. Fixed height, so the
+   world below it never resizes when a wing comes or goes. */
+function renderWingBar(){
+  const bar=$("wingbar"); if(!bar) return;
+  if(!eng.eras){ bar.style.display="none"; return; }
+  const chips=[]; let upkeep=0;
+  for(const c of CAPS){
+    if(c.type==="NONE") continue;
+    const ws=eng.wingStatus(c.name); if(!ws || !(c.upkeep>0)) continue;
+    const nm=(TOOLICON[c.name]||"")+" "+c.name.replace(" [T3]","").replace(" Interference","").replace(" Investment","").replace(" Enablement","").replace(" Forcing","").replace(" Inj.","").replace("Destabilization","Destab.").toUpperCase();
+    const down=wingOrders.mothball.includes(c.name), up=wingOrders.standup.includes(c.name);
+    if(ws.online){ upkeep+=ws.upkeep;
+      chips.push(`<button class="wc ${down?"down":"on"}" data-w="${escapeHTML(c.name)}">${nm} <i>${down?"STANDING DOWN":"$"+ws.upkeep+"M"}</i></button>`); }
+    else if(up) chips.push(`<button class="wc ordered" data-w="${escapeHTML(c.name)}">${nm} <i>STANDING UP</i></button>`);
+    else if(ws.eligible && ws.canStand && !ws.spent)
+      chips.push(`<button class="wc up" data-w="${escapeHTML(c.name)}">${nm} <i>STAND UP · $${ws.upkeep}M/season</i></button>`);
+  }
+  const lbl=chips.length
+    ? `<span class="wl">WINGS <b>$${upkeep}M</b>/season</span>`
+    : `<span class="wl">WINGS <b>none standing</b></span>`;
+  bar.innerHTML=lbl+chips.join("");
+  for(const b of bar.querySelectorAll("button.wc")) b.addEventListener("click",()=>{
+    if(!running||resolving) return;
+    const name=b.dataset.w, ws=eng.wingStatus(name);
+    const di=wingOrders.mothball.indexOf(name), ui=wingOrders.standup.indexOf(name);
+    if(di>=0){ wingOrders.mothball.splice(di,1); $("toolinfo").textContent=`${name.replace(" [T3]","")} — the wing stays.`; }
+    else if(ui>=0){ wingOrders.standup.splice(ui,1); $("toolinfo").textContent=`${name.replace(" [T3]","")} — the order is withdrawn.`; }
+    else if(ws.online){ wingOrders.mothball.push(name);
+      $("toolinfo").innerHTML=`<b>${name.replace(" [T3]","").toUpperCase()}</b> stands down at the next review — the $${ws.upkeep}M upkeep stops and the capability goes. It reopens at $${Math.round(ws.chest*0.75)}M. Click again to keep it.`; }
+    else { wingOrders.standup.push(name);
+      $("toolinfo").innerHTML=`<b>${name.replace(" [T3]","").toUpperCase()}</b> stands up at the next review — $${ws.upkeep}M a season for as long as you keep it.`; }
+    sfxClick(); renderTray();
+  });
+}
 function renderTray(){
   $("globe").classList.toggle("aiming", !!pendingTool);
   for(const b of $("toolbar").children){
@@ -199,6 +229,7 @@ function renderTray(){
       : locked? (ws.requires&&ws.requires.length? "GATED" : ws.eligible? (ws.canStand? "STAND UP" : "CHEST $"+Math.round(ws.need)+"M") : String(ws.from))
       : (funded? "FUNDED" : "$"+c.cost+"M");
   }
+  renderWingBar();
   renderTab();
   $("armed").innerHTML = slots.map((s,i)=>
     `<span class="pill">${s.cap.toUpperCase()}${s.target? " · "+s.target:""}

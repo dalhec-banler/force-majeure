@@ -322,9 +322,6 @@
 .tool.locked{opacity:.42;filter:grayscale(.75)}
 .tool.locked .pr{color:var(--amber)}
 .tool.ordered{box-shadow:inset 0 0 0 1px var(--amber);opacity:.85}
-.tool .mb{display:none;margin-left:4px;font-size:9px;opacity:.55;cursor:pointer}
-.tool.wing .mb{display:inline}
-.tool .mb:hover{opacity:1;color:var(--amber)}
 #resume{margin-left:8px}
 #homepick{margin:14px 0 12px}
 #homepick .hp-h{font-size:9px;letter-spacing:.22em;color:var(--ink-dim);margin-bottom:8px}
@@ -404,7 +401,6 @@
 /* sixteen wings across a century: the ones you cannot touch yet are a stub */
 .tool.mini{min-width:34px;padding:4px 2px 3px;gap:1px}
 .tool.mini .nm{display:none} .tool.mini .ic{font-size:14px;opacity:.75} .tool.mini .pr{font-size:8px;letter-spacing:0}
-.tool.mini .mb{display:none}
 @container pane (max-width:820px){ .tool.mini{min-width:28px} .tool.mini .ic{font-size:12px} }
 #toolbar{flex-wrap:wrap;max-height:none}
 
@@ -418,6 +414,20 @@
 .sc-opts button{background:var(--panel2);border:1px solid var(--cyan);color:var(--ink);font-family:var(--mono);font-size:10px;letter-spacing:.1em;padding:5px 9px;cursor:pointer}
 .sc-opts button:hover{background:rgba(91,200,232,.15)}
 .sc-opts button:disabled{opacity:.4;cursor:default;border-color:var(--line)}
+
+/* the wing bar: what you are paying for, above the tool box */
+#wingbar{display:flex;align-items:center;gap:5px;height:24px;max-width:100%;overflow-x:auto;overflow-y:hidden;
+         background:rgba(15,23,18,.94);border:1px solid var(--line);padding:0 8px;font-family:var(--mono);white-space:nowrap}
+#wingbar::-webkit-scrollbar{height:0}
+#wingbar .wl{font-size:9px;letter-spacing:.2em;color:var(--ink-dim);flex:0 0 auto} #wingbar .wl b{color:var(--ink)}
+.wc{flex:0 0 auto;background:none;border:1px solid var(--line);color:var(--ink-dim);font:inherit;font-size:9.5px;
+    letter-spacing:.08em;padding:2px 7px;cursor:pointer;line-height:1.5}
+.wc i{font-style:normal;color:var(--ink-faint);margin-left:4px}
+.wc.on{border-color:rgba(83,217,123,.55);color:var(--ink)} .wc.on i{color:var(--green)}
+.wc.on:hover{border-color:var(--red)} .wc.on:hover i::after{content:" — STAND DOWN";color:var(--red)}
+.wc.up{border-color:var(--green);color:var(--ink)} .wc.up i{color:var(--green)}
+.wc.ordered{border-color:var(--amber);color:var(--ink)} .wc.ordered i{color:var(--amber)}
+.wc.down{border-color:var(--red);color:var(--ink-dim)} .wc.down i{color:var(--red)}
 </style>
 
 <div id="app">
@@ -478,6 +488,7 @@
       <div id="toolcard"></div>
       <div id="armed"></div>
       <div id="toolinfo">Pick a tool. Aim it at the world. Scroll to zoom.</div>
+      <div id="wingbar" title="The wings you are paying for. Click one to stand it down; click a ready wing to stand it up."></div>
       <div id="toolbar"></div>
     </div>
   </div>
@@ -1656,14 +1667,8 @@ function buildTray(){
     b.className="tool"; b.dataset.cap=c.name;
     b.innerHTML=`<span class="ic">${TOOLICON[c.name]||"◈"}</span>
       <span class="nm">${c.name.replace(" [T3]","")}</span>
-      <span class="pr">$${c.cost}M</span><span class="mb" title="stand this wing down (mothball)">⏏</span>`;
+      <span class="pr">$${c.cost}M</span>`;
     b.addEventListener("click",()=>toolClick(c));
-    const mb=b.querySelector? b.querySelector(".mb") : null;
-    if(mb) mb.addEventListener("click",(ev)=>{ ev.stopPropagation(); if(!running||resolving) return;
-      const i=wingOrders.mothball.indexOf(c.name);
-      if(i>=0){ wingOrders.mothball.splice(i,1); $("toolinfo").textContent=`${c.name} — the wing stays.`; }
-      else { wingOrders.mothball.push(c.name); $("toolinfo").innerHTML=`<b>${c.name.replace(" [T3]","").toUpperCase()} WING</b> stands down at the next review — no upkeep, no capability. It reopens at three-quarters of the chest. Click ⏏ again to keep it.`; }
-      sfxClick(); renderTray(); });
     b.addEventListener("mouseenter",()=>showToolCard(c));
     b.addEventListener("focus",()=>showToolCard(c));
     b.addEventListener("mouseleave",hideToolCard);
@@ -1711,6 +1716,42 @@ function toolClick(c){
     $("toolinfo").textContent=`${c.name} — click regions to target; click the tool again to put it down · ${capInfo(c)}`;
   }
 }
+/* THE WING BAR — what the programme is paying for, on top of the tool box.
+   One chip per wing: standing (with its upkeep), ready to stand up, or
+   ordered either way. Click a chip to give the order. Fixed height, so the
+   world below it never resizes when a wing comes or goes. */
+function renderWingBar(){
+  const bar=$("wingbar"); if(!bar) return;
+  if(!eng.eras){ bar.style.display="none"; return; }
+  const chips=[]; let upkeep=0;
+  for(const c of CAPS){
+    if(c.type==="NONE") continue;
+    const ws=eng.wingStatus(c.name); if(!ws || !(c.upkeep>0)) continue;
+    const nm=(TOOLICON[c.name]||"")+" "+c.name.replace(" [T3]","").replace(" Interference","").replace(" Investment","").replace(" Enablement","").replace(" Forcing","").replace(" Inj.","").replace("Destabilization","Destab.").toUpperCase();
+    const down=wingOrders.mothball.includes(c.name), up=wingOrders.standup.includes(c.name);
+    if(ws.online){ upkeep+=ws.upkeep;
+      chips.push(`<button class="wc ${down?"down":"on"}" data-w="${escapeHTML(c.name)}">${nm} <i>${down?"STANDING DOWN":"$"+ws.upkeep+"M"}</i></button>`); }
+    else if(up) chips.push(`<button class="wc ordered" data-w="${escapeHTML(c.name)}">${nm} <i>STANDING UP</i></button>`);
+    else if(ws.eligible && ws.canStand && !ws.spent)
+      chips.push(`<button class="wc up" data-w="${escapeHTML(c.name)}">${nm} <i>STAND UP · $${ws.upkeep}M/season</i></button>`);
+  }
+  const lbl=chips.length
+    ? `<span class="wl">WINGS <b>$${upkeep}M</b>/season</span>`
+    : `<span class="wl">WINGS <b>none standing</b></span>`;
+  bar.innerHTML=lbl+chips.join("");
+  for(const b of bar.querySelectorAll("button.wc")) b.addEventListener("click",()=>{
+    if(!running||resolving) return;
+    const name=b.dataset.w, ws=eng.wingStatus(name);
+    const di=wingOrders.mothball.indexOf(name), ui=wingOrders.standup.indexOf(name);
+    if(di>=0){ wingOrders.mothball.splice(di,1); $("toolinfo").textContent=`${name.replace(" [T3]","")} — the wing stays.`; }
+    else if(ui>=0){ wingOrders.standup.splice(ui,1); $("toolinfo").textContent=`${name.replace(" [T3]","")} — the order is withdrawn.`; }
+    else if(ws.online){ wingOrders.mothball.push(name);
+      $("toolinfo").innerHTML=`<b>${name.replace(" [T3]","").toUpperCase()}</b> stands down at the next review — the $${ws.upkeep}M upkeep stops and the capability goes. It reopens at $${Math.round(ws.chest*0.75)}M. Click again to keep it.`; }
+    else { wingOrders.standup.push(name);
+      $("toolinfo").innerHTML=`<b>${name.replace(" [T3]","").toUpperCase()}</b> stands up at the next review — $${ws.upkeep}M a season for as long as you keep it.`; }
+    sfxClick(); renderTray();
+  });
+}
 function renderTray(){
   $("globe").classList.toggle("aiming", !!pendingTool);
   for(const b of $("toolbar").children){
@@ -1737,6 +1778,7 @@ function renderTray(){
       : locked? (ws.requires&&ws.requires.length? "GATED" : ws.eligible? (ws.canStand? "STAND UP" : "CHEST $"+Math.round(ws.need)+"M") : String(ws.from))
       : (funded? "FUNDED" : "$"+c.cost+"M");
   }
+  renderWingBar();
   renderTab();
   $("armed").innerHTML = slots.map((s,i)=>
     `<span class="pill">${s.cap.toUpperCase()}${s.target? " · "+s.target:""}
@@ -1759,7 +1801,8 @@ function measureInsets(){
   const rect = cv.parentElement.getBoundingClientRect();
   const lg=$("legend"), tb=$("toolbar");
   if(lg){ const b=lg.getBoundingClientRect(); if(b.height) insetTop=Math.max(24, b.bottom-rect.top+10); }
-  if(tb){ const b=tb.getBoundingClientRect();
+  const wb=$("wingbar"); const anchor=(wb && wb.getBoundingClientRect().height)? wb : tb;
+  if(anchor){ const b=anchor.getBoundingClientRect();
     // the tray plus the hint line above it; if the tray has not been built
     // yet, reserve what it will take rather than letting the globe run under it
     insetBot = b.height? Math.max(72, rect.bottom-b.top+12) : 112; }
@@ -1781,7 +1824,7 @@ if(typeof ResizeObserver!=="undefined"){
   // the pane and the tray are the only things that may move the world;
   // #alerts, #banner, #briefcard and #armed come and go over the top of it
   const ro=new ResizeObserver(()=>relayout());
-  ro.observe(cv.parentElement); const tb=$("toolbar"); if(tb) ro.observe(tb); const lg=$("legend"); if(lg) ro.observe(lg);
+  ro.observe(cv.parentElement); const tb=$("toolbar"); if(tb) ro.observe(tb); const lg=$("legend"); if(lg) ro.observe(lg); const wb=$("wingbar"); if(wb) ro.observe(wb);
 }
 let lastY=0;
 cv.addEventListener("pointerdown",e=>{dragging=true;moved=0;lastX=e.clientX;lastY=e.clientY;cv.setPointerCapture(e.pointerId)});
