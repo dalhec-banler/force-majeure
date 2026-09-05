@@ -13,6 +13,10 @@ instrument, not the game.
 
 ## Play it
 
+**[Play the latest version in your browser](https://dalhec-banler.github.io/force-majeure/)** — no download or installation. The public game follows `main`.
+
+Choose the full **1946–2060 long record** or the **sixteen-review crisis (2030–33)** in the operating brief, then select your country.
+
 The playtest console is a single HTML file: `prototype/web/console.html`.
 Open it locally (`cd prototype/web && python3 -m http.server 8471`, then
 `http://localhost:8471/console.html`) or use the published artifact.
@@ -34,7 +38,7 @@ Open it locally (`cd prototype/web && python3 -m http.server 8471`, then
   action, wings, the ladder, BREAKING events); each operation is one card that
   grows as it lands and is filed; each review folds into one line when the
   next begins.
-- One save slot per programme, in the browser; RESUME replays it.
+- Separate save slots per programme and campaign format, in the browser; RESUME replays your orders.
 
 ## Layout
 

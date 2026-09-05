@@ -134,7 +134,7 @@
 <div id="flashbang"></div>
 
 <div class="overlay" id="intro">
-  <div class="sheet">
+  <div class="sheet" id="briefsheet">
     <h2>OPERATING BRIEF — READ BEFORE FIRST COMMIT</h2>
     <div class="cls">CLASSIFICATION: DIRECTOR EYES ONLY</div>
     <p class="q">The weather is public. Your orders are not.</p>
@@ -149,12 +149,17 @@
       sixteen regions now, thirty-six by 2010 — and so does the arsenal:
       the dimmed tools in the tray show the year they become possible and
       the chest you must hold to stand the wing up.</p>
+    <div id="campaignpick">
+      <div id="campaignlabel" class="hp-h"></div>
+      <button id="campaignmode" class="ghost" type="button">PLAY THE SIXTEEN-REVIEW CRISIS ▸</button>
+      <p id="campaignbrief"></p>
+    </div>
     <div id="homepick"><div class="hp-h">THE PROGRAMME YOU TAKE OVER</div><div id="homepickrow"></div></div>
     <ul>
       <li><b>Pick a tool from the tray. Click regions to aim it.</b> As many
         operations a review as the budget allows, on as many regions as you
         like — stack a seeding and an adaptation on the same harvest if you
-        want. The overhead is reserved, the rest is yours. <b>RUN THE YEAR</b>
+        want. The overhead is reserved, the rest is yours. <b id="introresolve">RUN THE YEAR</b>
         commits what is armed; the clock only nags. Tools act by next season;
         the knock-on consequences take longer and land somewhere else — watch
         the countdown board.</li>
@@ -175,7 +180,6 @@
     </ul>
     <p>One honest run, no undo. Write a prediction each season — the archive
       pairs your words with the recorded outcomes at the end.</p>
-    <p id="campaignbrief"></p><button id="campaignmode" class="ghost" type="button">PLAY THE SIXTEEN-REVIEW CRISIS ▸</button>
     <button id="begin">ASSUME DIRECTION ▸</button>
     <p id="saverules" hidden>This programme was recorded under earlier rules. Resuming reconstructs its orders with updated funding, targeting, national economics, and attribution rules; past balances and exposure may change. The saved orders remain intact until you advance.</p>
     <button id="resume" style="display:none">RESUME THE PROGRAMME ▸</button>

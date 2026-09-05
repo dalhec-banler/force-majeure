@@ -337,8 +337,8 @@
 #resume{margin-left:8px}
 #homepick{margin:14px 0 12px}
 #homepick .hp-h{font-size:9px;letter-spacing:.22em;color:var(--ink-dim);margin-bottom:8px}
-#homepickrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:8px;align-items:stretch}
-.sheet button.hp{background:var(--panel2);border:1px solid var(--line);color:var(--ink);font:inherit;letter-spacing:0;text-align:left;padding:10px 12px 11px;margin:0;cursor:pointer;display:flex;flex-direction:column;gap:5px;min-height:100%}
+#homepickrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:8px;align-items:stretch}
+.sheet button.hp{background:var(--panel2);border:1px solid var(--line);color:var(--ink);font:inherit;letter-spacing:0;text-align:left;padding:10px 12px 11px;margin:0;cursor:pointer;display:flex;flex-direction:column;gap:5px;min-width:0}
 .hp .hp-li,.hp .hp-meta{letter-spacing:0}
 .hp .hp-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .hp .hp-nation{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.16em}
@@ -447,6 +447,20 @@
 #regionreadout p:first-child{color:var(--ink)}
 .wmode:disabled{opacity:.4;cursor:default}
 #campaignbrief{border-left:2px solid var(--green);padding-left:12px}
+
+/* Country briefing: retain the original dossier and readable comparisons. */
+#campaignpick{margin:16px 0;padding:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+#campaignlabel{font:10px var(--mono);letter-spacing:.16em;color:var(--ink-dim)}
+#campaignpick #campaignmode{font-size:10px;padding:8px 12px;margin:8px 0}
+#campaignpick #campaignbrief{font-size:12px;margin:4px 0 0;border:0;padding:0}
+#intro .sheet{width:min(760px,94vw);min-width:0}
+@media(max-width:480px){
+  #intro{padding:12px}
+  #intro .sheet{width:100%;padding:16px 14px}
+  .hp .hp-cols{grid-template-columns:1fr}
+  .hp .hp-top{flex-wrap:wrap}
+  #intro #resume{margin-left:0}
+}
 </style>
 
 <div id="app">
@@ -585,7 +599,7 @@
 <div id="flashbang"></div>
 
 <div class="overlay" id="intro">
-  <div class="sheet">
+  <div class="sheet" id="briefsheet">
     <h2>OPERATING BRIEF — READ BEFORE FIRST COMMIT</h2>
     <div class="cls">CLASSIFICATION: DIRECTOR EYES ONLY</div>
     <p class="q">The weather is public. Your orders are not.</p>
@@ -600,12 +614,17 @@
       sixteen regions now, thirty-six by 2010 — and so does the arsenal:
       the dimmed tools in the tray show the year they become possible and
       the chest you must hold to stand the wing up.</p>
+    <div id="campaignpick">
+      <div id="campaignlabel" class="hp-h"></div>
+      <button id="campaignmode" class="ghost" type="button">PLAY THE SIXTEEN-REVIEW CRISIS ▸</button>
+      <p id="campaignbrief"></p>
+    </div>
     <div id="homepick"><div class="hp-h">THE PROGRAMME YOU TAKE OVER</div><div id="homepickrow"></div></div>
     <ul>
       <li><b>Pick a tool from the tray. Click regions to aim it.</b> As many
         operations a review as the budget allows, on as many regions as you
         like — stack a seeding and an adaptation on the same harvest if you
-        want. The overhead is reserved, the rest is yours. <b>RUN THE YEAR</b>
+        want. The overhead is reserved, the rest is yours. <b id="introresolve">RUN THE YEAR</b>
         commits what is armed; the clock only nags. Tools act by next season;
         the knock-on consequences take longer and land somewhere else — watch
         the countdown board.</li>
@@ -626,7 +645,6 @@
     </ul>
     <p>One honest run, no undo. Write a prediction each season — the archive
       pairs your words with the recorded outcomes at the end.</p>
-    <p id="campaignbrief"></p><button id="campaignmode" class="ghost" type="button">PLAY THE SIXTEEN-REVIEW CRISIS ▸</button>
     <button id="begin">ASSUME DIRECTION ▸</button>
     <p id="saverules" hidden>This programme was recorded under earlier rules. Resuming reconstructs its orders with updated funding, targeting, national economics, and attribution rules; past balances and exposure may change. The saved orders remain intact until you advance.</p>
     <button id="resume" style="display:none">RESUME THE PROGRAMME ▸</button>
@@ -4668,15 +4686,26 @@ function showArchive(finalRow){
 }
 /* --------------------------------------------------------------- misc */
 buildTray(); clampContainment(); renderTray(); renderDirective(); renderReviewButton();
+/* Briefing intent: a prospective director chooses a country and understands
+   its tradeoffs. Preserve the original ruled terminal dossier, phosphor
+   palette, Plex type hierarchy and 8/12px card spacing. Country names lead;
+   authored strengths/weaknesses explain the numbers. No metric-only cards. */
+const CRISIS_START_BRIEFS={
+ "North American Plains":{plus:["the largest harvest — export price rises reach your whole crop","steady weather and the lowest drought sensitivity among the big exporters"],minus:["repeated homeland interventions attract the rival's attention","protecting a large harvest also lowers the world price you sell into"]},
+ "Black Sea Steppe":{plus:["a committee that funds fear generously (+4 mandate)","a major wheat exporter — scarcity abroad can pay at home"],minus:["weather swings wider and drought bites harder than in the Plains","the American programme can reach your watershed too"]},
+ "North China Plain":{plus:["more of the harvest feeds home — less exposure to world-price swings","the Pacific's connection to your plain is known from the start"],minus:["little grain is exported, so foreign shortages bring smaller windfalls","a demanding climate and a parsimonious committee (−2 mandate)"]},
+ "Northern European Plain":{plus:["the most drought-resistant harvest of the five programmes","your Atlantic connection is known — ocean operations can reach home"],minus:["a smaller harvest means less revenue from a price rise","a parsimonious committee (−2 mandate) makes unused wings expensive"]},
+ "South Asia":{plus:["a large rice and wheat harvest — recovery matters to the whole market","the steadiest underlying weather of the five programmes"],minus:["drought bites hardest; a failed monsoon can undo a good year","the least generous committee (−4 mandate), with limited export windfalls"]},
+};
 // the nation picker: choosing another programme stores the choice and reloads the console with it
 { const home=REG.find(r=>r.homeland);
   $("introHome").textContent="the "+home.name; $("introCrop").textContent=(home.crop||"").toLowerCase();
   const row=$("homepickrow");
   const crop=r=>(REG.find(x=>x.name===r)||{}).crop||"";
   for(const [region,original] of Object.entries(STARTS).sort((a,b)=>(a[1].rank||9)-(b[1].rank||9))){
-    const rr=REG.find(r=>r.name===region);
-    const st=CRISIS?{...original,treasury:120,plus:[`Export participation ${Math.round(rr.export*100)}%`,`Production weight ${fmt(rr.weight,1)}`],minus:[`Drought sensitivity ${rr.sens}`,`Weather variability ${rr.sigma}`]}:original;
+    const st=CRISIS?{...original,treasury:120,...CRISIS_START_BRIEFS[region]}:original;
     const b=document.createElement("button"); b.className="hp"+(region===HOMELAND?" on":"");
+    b.setAttribute("aria-pressed",String(region===HOMELAND));
     b.innerHTML=`<div class="hp-top"><span class="hp-nation">${st.nation}</span><span class="hp-diff" style="color:${st.dcol};border-color:${st.dcol}">${st.difficulty}</span></div>
       <div class="hp-meta">${region} · ${crop(region).toLowerCase()}</div>
       <div class="hp-meta">chest <b>$${st.treasury}M</b> · committee <b>${(st.mandate||0)>=0?"+":""}${st.mandate||0}</b> · rival <b>${st.rivalName}</b></div>
@@ -4721,7 +4750,7 @@ function fadeTo(el, to, ms, done){
 }
 function showIntro(instant){                // fade the brief up
   const i=$("intro"); if(introDismissed) return;
-  i.style.display="flex";
+  i.style.display="flex"; $("briefsheet").scrollTop=0;
   if(reduced||instant){ i.style.transition="none"; i.style.opacity="1"; return; }
   i.style.transition="none"; i.style.opacity="0"; void i.offsetWidth;
   fadeTo(i,1,FADE);
@@ -4794,7 +4823,8 @@ $("teltoggle").addEventListener("click",()=>{
 
 $("campaignbrief").textContent=CRISIS ? "THE SIXTEEN-REVIEW CRISIS · 2030–33. Failed rains, an export squeeze, then the floods. Finish sixteen reviews, average at least 85% homeland output over the last four, and retain $100M. Each nation has a $120M emergency chest. Eight wings are available; their upkeep still costs money. This scenario is fictional." : "THE LONG RECORD · 1946–2060. Or take command of a sixteen-review crisis with a defined recovery objective.";
 $("campaignmode").textContent=CRISIS?"RETURN TO THE LONG RECORD ▸":"PLAY THE SIXTEEN-REVIEW CRISIS ▸";
-$("campaignmode").addEventListener('click',()=>{try{localStorage.setItem('fm.mode',CRISIS?'long':'crisis');}catch(e){} location.reload();});
+$("campaignmode").addEventListener('click',()=>{try{localStorage.setItem('fm.mode',CRISIS?'long':'crisis');sessionStorage.setItem(SKIP,"1");}catch(e){} location.reload();});
+$("campaignlabel").textContent=CRISIS?"CAMPAIGN · SIXTEEN-REVIEW CRISIS · 2030–33":"CAMPAIGN · THE LONG RECORD · 1946–2060";
 
 for(const r of REG){ const option=document.createElement('option');option.value=r.name;option.textContent=r.name;$("regionpick").appendChild(option); }
 $("regionpick").addEventListener('change',()=>{focusObservation($("regionpick").value);});
@@ -4802,7 +4832,8 @@ $("regionarm").addEventListener('click',()=>armRegion($("regionpick").value));
 renderRegionInspector();
 
 if(CRISIS){
-  $("longbrief").textContent='2030. An emergency directorate inherits a harvest crisis and a $120M chest. Choose your homeland below. Sixteen seasonal reviews: protect output, manage the cost of your wings, and retain enough money to keep the programme alive. The rival has limited funds and watches repeated interventions.';
+  $("longbrief").innerHTML=`You direct a national environmental warfare programme. Your homeland is the programme you take over — <b>choose it below</b>; the console is set for <b>the ${HOMELAND}</b>. A calm world defunds you. A frightening one earns your appropriation. In this shorter campaign, you take command in 2030 with a $120M emergency chest and eight wings already standing. The failed rains become an export crisis; then the rain returns. Every season is a decision: protect your harvest, move a competitor's weather, investigate the ocean connections, or close a wing to save its upkeep. The rival protects its own harvest and watches your repeated interventions. Sixteen reviews decide whether the programme survives. The instructions below explain how to operate it.`;
+  $("introresolve").textContent="RUN SEASON";
   $("clock").textContent='2030 · WINTER · CRISIS';
   $("hFunds").textContent='$120.0M';$("hFree").textContent='$'+fmt(spendable(),0)+'M';
   $("wire").innerHTML='<p><span class="stamp">2030·W</span> Emergency authority established. Failed rains are expected next season. The committee requires recovery and a $100M closing reserve.</p>';
