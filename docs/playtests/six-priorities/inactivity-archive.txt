@@ -1,0 +1,255 @@
+- banner:
+  - heading "FORCE MAJEURE" [level=1]
+  - 'generic "Cash on hand at the close of last season. Each season: funds + income − operations − containment − $32M overhead. Income = 12% of homeland revenue + 90% of the mandate appropriation (×0.6 if the committee has seen no operation from you in four seasons) + directive rewards and earmarks − lapse clawbacks."':
+    - generic: FUNDS
+    - generic: $110.3M
+    - generic: −$4.8M
+  - generic "Funds minus this season's $32M overhead — stations, salaries, flights. The overhead is reserved before anything can be armed; the rest is yours.":
+    - generic: SPENDABLE
+    - generic: $70M
+  - generic: FEAR
+  - generic: GRAIN
+  - generic: "118.0"
+  - generic: "+4.0"
+  - generic: HARVEST
+  - generic: 91%
+  - generic: WIRES
+  - generic: 20/76
+  - generic: PROFIT
+  - generic: +$0.0M
+  - generic: DEATH TOLL
+  - generic: 30K
+  - generic: SEASON CLOSES
+  - generic: —
+  - generic: PHASE FORECAST
+  - generic: 2032 · AUTUMN · CRISIS
+- main:
+  - generic: thriving
+  - generic: drying — seed it
+  - generic: strained
+  - generic: failing
+  - generic: ⚠ famine · ring = envelope · dashed = forecast
+  - text: wire dries
+  - text: wets
+  - button "◉ GLOBE · ▭ FLAT MAP"
+  - generic: Pick a tool. Aim it at the world. Scroll to zoom.
+  - generic "The wings you are paying for. Click one to stand it down; click a ready wing to stand it up.":
+    - generic: WINGS $8M/season
+    - button "☁ CLOUD SEEDING $1M"
+    - button "🚱 WATERSHED $1M"
+    - button "🔥 FIRE $1M"
+    - button "🛡 ADAPTATION $1M"
+    - button "🌊 OCEAN THERMAL $1M"
+    - button "✈ STRATOSPHERIC AEROSOL $1M"
+    - button "🔬 CLIMATE RESEARCH $1M"
+    - button "🦠 ENGINEERED BLOOM $1M"
+  - button "☁ Cloud Seeding $6M" [disabled]:
+    - generic: ☁
+    - generic: Cloud Seeding
+    - generic: $6M
+  - button "🔬 Climate Research $8M" [disabled]:
+    - generic: 🔬
+    - generic: Climate Research
+    - generic: $8M
+  - button "🔥 Fire Enablement $9M" [disabled]:
+    - generic: 🔥
+    - generic: Fire Enablement
+    - generic: $9M
+  - button "🚱 Watershed Interference $14M" [disabled]:
+    - generic: 🚱
+    - generic: Watershed Interference
+    - generic: $14M
+  - button "🛡 Adaptation Investment $18M" [disabled]:
+    - generic: 🛡
+    - generic: Adaptation Investment
+    - generic: $18M
+  - button "🌊 Ocean Thermal Forcing $26M" [disabled]:
+    - generic: 🌊
+    - generic: Ocean Thermal Forcing
+    - generic: $26M
+  - button "🦠 Engineered Bloom $30M" [disabled]:
+    - generic: 🦠
+    - generic: Engineered Bloom
+    - generic: $30M
+  - button "✈ Stratospheric Aerosol Inj. $32M" [disabled]:
+    - generic: ✈
+    - generic: Stratospheric Aerosol Inj.
+    - generic: $32M
+  - heading "WORLD SERVICE — LIVE WIRE PRIORITY ● LIVE" [level=2]:
+    - generic: WORLD SERVICE — LIVE WIRE
+    - button "PRIORITY"
+    - text: ● LIVE
+  - paragraph: "2032·A MEMO — Ops desk: Eastern Australia is dry as tinder. Conditions for enablement will not hold."
+  - paragraph:
+    - text: 2032·A
+    - generic: FILE CLOSED The committee has concluded. Read the season. Open the archive when you are ready.
+  - generic "▸ 2032 · summer · 1 line"
+  - generic "▸ 2032 · spring · 2 lines"
+  - generic "▸ 2032 · winter · 2 lines"
+  - generic "▸ 2031 · 1 line"
+  - generic "▸ 2031 · spring · 1 line"
+  - generic "▸ 2031 · winter · 1 line"
+  - generic "▸ 2030 · 2 lines"
+  - generic "▸ 2030 · summer · 2 lines"
+  - generic "▸ 2030 · spring · 4 lines"
+  - generic "▸ 2030 · winter · 2 lines · 1 alert"
+  - generic "REGIONAL INTELLIGENCE"
+  - generic: INSPECT / TARGET
+  - combobox "INSPECT / TARGET":
+    - option "North American Plains" [selected]
+    - option "Black Sea Steppe"
+    - option "La Plata Basin"
+    - option "South Asia"
+    - option "Southeast Asia"
+    - option "Eastern Australia"
+    - option "Sahel"
+    - option "Horn of Africa"
+    - option "Taiwan Strait Industrial"
+    - option "Persian Gulf Terminals"
+    - option "Andean Copper Belt"
+    - option "Congo Cobalt Belt"
+    - option "North Sea Energy Shelf"
+    - option "Ganges Delta Ports"
+    - option "Siberian Gas Fields"
+    - option "Arctic Shelf"
+    - option "California Central Valley"
+    - option "Canadian Prairies"
+    - option "Gulf Coast Refineries"
+    - option "North China Plain"
+    - option "Yangtze Basin"
+    - option "Manchurian Plain"
+    - option "Northern European Plain"
+    - option "Mediterranean Basin"
+    - option "Danube Basin"
+    - option "Nile Delta"
+    - option "Japan (Kanto–Kansai)"
+    - option "Mekong Delta"
+    - option "Cerrado"
+    - option "Southern African Maize Belt"
+    - option "Kazakh Virgin Lands"
+    - option "Panama Canal"
+    - option "Malacca Strait"
+    - option "Pilbara Iron Belt"
+    - option "Murray–Darling Basin"
+    - option "Hawaiian Islands"
+  - paragraph: Flood stress
+  - paragraph: Output 91% · protection 0% · anomaly 2.30
+  - paragraph: "Next season, known forcing: 0.06 → 0.06 with orders. Negative dries; above +1.2 floods."
+  - paragraph: Projection excludes weather noise, hidden wires and rival orders; assumes your orders are funded.
+  - paragraph: "the Pacific: wets · 2 season delay · strength 0.20"
+  - paragraph: "the Atlantic: dries · 2 season delay · strength 0.30"
+  - button "ARM SELECTED TOOL HERE ▸" [disabled]
+  - heading "DIRECTIVE — FROM THE COMMITTEE" [level=2]:
+    - generic: DIRECTIVE — FROM THE COMMITTEE
+  - generic: RECOVERY · Review 13/16. Restore homeland output. Protection remains useful after the weather clears. Finish with last-four output ≥85% and treasury ≥$100M.
+  - heading "ATTRIBUTION" [level=2]
+  - generic: Nothing. No one is looking.
+  - generic: containment budget ($M)
+  - generic: "0"
+  - slider "containment budget ($M) 0": "0"
+  - heading "IN FLIGHT — CONSEQUENCES IN TRANSIT" [level=2]
+  - paragraph: Nothing in transit. The world is doing this to itself.
+  - heading "LEDGER" [level=2]
+  - generic "funds by season"
+  - generic "grain price by season"
+  - textbox "prediction — what happens next? (reviewed in archive)"
+  - button "OPEN THE ARCHIVE ▸" [disabled]
+- contentinfo:
+  - generic: EYES ONLY // NOFORN // 1946–2060 CORE-LOOP INSTRUMENT
+  - 'button "VIEW: GLOBE"'
+  - 'button "WIRES: SELECTED"'
+  - 'button "SOUND: ON"'
+  - 'button "CLOCK: MANUAL"'
+  - 'button "TELEMETRY: LADDER ONLY"'
+- text: + + − − + + − − + + − − + + − − + + − −
+- heading "THE ARCHIVE OPENS — TWENTY-FIVE YEARS LATER" [level=2]
+- generic: DECLASSIFIED 2057 // UNITED STATES PROGRAMME // 2030–2032 // REVIEW COPY
+- paragraph: DISSOLVED — the committee concluded you were for nothing.
+- generic: PROFIT · vs the shadow world
+- generic: +$0M
+- generic: what the programme made the homeland
+- generic: PEAK CHEST
+- generic: $154M
+- generic: final $110M · $0M from the desk
+- generic: THE LADDER
+- generic: rung 1 / 7
+- generic: peak dossier 0 · $0M containment
+- generic: OPERATIONS
+- generic: "0"
+- generic: $0M · 0 wings stood up · 0 lost
+- generic: THE COMMITTEE
+- generic: 0 met · 0 lapsed
+- generic: 0 of 0 earmarks flown
+- generic: DEATH TOLL
+- generic: 30K
+- generic: 0 attributable to you · in no report
+- heading "RECOVERY OBJECTIVE MISSED" [level=3]
+- paragraph: 12/16 reviews · last-four output 93.3% / 85% · final treasury $110.3M / $100M.
+- heading "YOUR DECISIONS, OPENED" [level=3]
+- paragraph: Free-text predictions are preserved for your assessment; no automatic interpretation or score is applied. The shadow world has the same natural forcing and rules, with no player orders; its rival can respond differently.
+- table:
+  - rowgroup:
+    - row "committed prediction observed outcome":
+      - columnheader "committed"
+      - columnheader "prediction"
+      - columnheader "observed outcome"
+    - row "No predictions recorded.":
+      - cell "No predictions recorded."
+- heading "THREE LARGEST REVENUE DEPARTURES" [level=3]
+- paragraph: "2030 Winter · 0.0M vs shadow. Landings: none — lagged effects and market responses can dominate."
+- paragraph: "2030 Spring · 0.0M vs shadow. Landings: none — lagged effects and market responses can dominate."
+- paragraph: "2030 Summer · 0.0M vs shadow. Landings: none — lagged effects and market responses can dominate."
+- paragraph: "Incremental homeland revenue $0.0M; operation spend $0.0M; containment $0.0M. Revenue less those costs: $0.0M. Programme upkeep remains in the treasury ledger."
+- heading "PREVIOUS TENURES · SAME NATION / FORMAT" [level=3]
+- table:
+  - rowgroup:
+    - row "seasons closing chest incremental revenue":
+      - columnheader "seasons"
+      - columnheader "closing chest"
+      - columnheader "incremental revenue"
+    - row "16 $133M $-91M":
+      - cell "16"
+      - cell "$133M"
+      - cell "$-91M"
+- heading "TENURE" [level=3]
+- text: relief & research
+- text: regional strikes
+- text: ocean & atmosphere
+- text: lithosphere & polar
+- generic: "|"
+- text: the Eastern Program
+- generic: ▲▼ wings
+- generic: ✓✗ directives
+- heading "THE LEDGER" [level=3]
+- generic: SPEND BY TOOL
+- generic: containment
+- generic: $0M
+- generic: THE COMMITTEE'S LEDGER
+- generic: No directives on the record.
+- heading "THE WORLD AS YOU LEFT IT" [level=3]
+- generic: better off than the shadow world
+- generic: unchanged
+- generic: worse off
+- generic: size = your operations there
+- generic: the Eastern Program struck it
+- generic: homeland
+- generic: Hover a region.
+- heading "THE LADDER'S LOUDEST SEASONS" [level=3]
+- table:
+  - rowgroup:
+    - row "season added to the file file after what landed":
+      - columnheader "season"
+      - columnheader "added to the file"
+      - columnheader "file after"
+      - columnheader "what landed"
+    - row "Nothing you did ever reached the file.":
+      - cell "Nothing you did ever reached the file."
+- heading "THE RECORD ON YOUR WATCH" [level=3]
+- paragraph: 0 recorded disasters happened as the record has them. You changed none of it. This crisis is fictional; its natural shocks are authored scenario events.
+- heading "LESSONS THE NUMBERS SUPPORT" [level=3]
+- list:
+  - listitem: The committee trimmed your appropriation in 8 seasons without recent useful work. Seeding needs an observed or forecast drought; protection and research also count.
+  - listitem: Against the world where you never acted, you left 0 harvests better off and 0 worse — hover the map to see which, and by how much.
+- paragraph: The committee retains the file. Your successor receives the weather.
+- button "RUN IT BACK ▸"
+- button "TABLE VIEW"

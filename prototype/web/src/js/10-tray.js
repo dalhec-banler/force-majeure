@@ -14,7 +14,7 @@ const DESC={
   "Engineered Bloom":"seeds the ocean — the only thing you have that cools the whole century",
   "Marine Cloud Brightening":"brightens the marine cloud over one coast: cheap, brief, almost invisible",
   "Orbital Mirror":"steals the sunlight from one region, this season, with no weather to blame",
-  "Engineered Biology":"puts something in the seed stock; the weather stops mattering there",
+  "Engineered Biology":"puts something in the seed stock; rain cannot cure the seed-stock damage",
   "The AMOC Lever":"stops the Atlantic conveyor. Once. There is no second one.",
 };
 /* the briefing card: what a tool is, what it does, and what it costs you */
@@ -33,7 +33,7 @@ const BRIEF={
   "Engineered Bloom":"Iron dust across a dead stretch of ocean; the bloom follows, and the drawdown with it. <b>The only tool that lowers the planet's stress instead of raising it</b> — every harvest on the board gets easier for a year. Nearly invisible. The dead water surfaces in the Indian Ocean later, and the monsoon notices.",
   "Marine Cloud Brightening":"Spray vessels thicken the cloud over one coast. Cool and wet, this season, for a year — small, cheap, and so quiet the ladder does not move. What the craft looks like once you have stopped needing to be loud.",
   "Orbital Mirror":"A constellation turns its face. Sunlight leaves one region and does not come back this season. <b>No lag and no meteorology to hide behind</b> — the anomaly appears with nothing in the record to explain it, and the file knows it.",
-  "Engineered Biology":"A rust in the seed stock, released at sowing. <b>It does not care what the weather does next</b> — it persists for years, decaying slowly, and no rainfall record will ever account for the loss. What the analysts call an agronomic event.",
+  "Engineered Biology":"A rust in the seed stock, released at sowing. <b>It does not care what the weather does next</b> — it persists for four seasons, decaying slowly, and no rainfall record will ever account for the loss. What the analysts call an agronomic event.",
   "The AMOC Lever":"Freshwater at the sinking points until the Atlantic conveyor stops. Hemisphere-scale, permanent, and <b>you may do it once</b>. Requires everything you have ever built: the ocean wing, the Pacific wing, the polar wing. The archive will open with this.",
 };
 function toolCard(c){
@@ -112,7 +112,7 @@ function buildTray(){
   const bar=$("toolbar"); bar.innerHTML="";
   // the tray IS the timeline: what you have, then everything the century
   // still owes you, in the order it arrives
-  const ordered=CAPS.filter(c=>c.type!=="NONE").slice().sort((a,b)=>(a.from||1946)-(b.from||1946)||a.cost-b.cost);
+  const ordered=CAPS.filter(c=>c.type!=="NONE"&&(!CRISIS||c.from<=2033)).slice().sort((a,b)=>(a.from||1946)-(b.from||1946)||a.cost-b.cost);
   for(const c of ordered){
     const b=document.createElement("button");
     b.className="tool"; b.dataset.cap=c.name;
@@ -190,6 +190,7 @@ function renderWingBar(){
     ? `<span class="wl">WINGS <b>$${upkeep}M</b>/season</span>`
     : `<span class="wl">WINGS <b>none standing</b></span>`;
   bar.innerHTML=lbl+chips.join("");
+  for(const b of bar.querySelectorAll("button.wc")) b.disabled=resolving||!running;
   for(const b of bar.querySelectorAll("button.wc")) b.addEventListener("click",()=>{
     if(!running||resolving) return;
     const name=b.dataset.w, ws=eng.wingStatus(name);
@@ -204,9 +205,11 @@ function renderWingBar(){
   });
 }
 function renderTray(){
+  clampContainment(); renderRegionInspector();
   $("globe").classList.toggle("aiming", !!pendingTool);
   for(const b of $("toolbar").children){
     const cap=b.dataset.cap, c=CAPS.find(x=>x.name===cap);
+    b.disabled=resolving||!running;
     b.classList.toggle("sel", cap===pendingTool);
     b.classList.remove("off");
     const funded=!!flagship && (flagship.caps||FLAGSHIP_CAPS).includes(cap);

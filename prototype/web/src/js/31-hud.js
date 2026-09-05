@@ -79,7 +79,7 @@ function updateHUD(row, prev){
   if(row.status==="obsolescence-warning"){
     const lim=Math.max(4, 3*tierFor(row.t).every), left=Math.max(1, Math.ceil((lim-row.obsStreak)/tierFor(row.t).every));
     b.style.display="block";
-    b.textContent=`▲ NO REAL OPERATION IN ${tierFor(row.t).every>=4?"THREE YEARS":"TWO YEARS"} — COMMITTEE ASKING WHAT YOU ARE FOR (${left} review${left===1?"":"s"} to dissolution — run anything)`;
+    b.textContent=`▲ NO USEFUL WORK IN ${tierFor(row.t).every>=4?"THREE YEARS":"TWO YEARS"} — COMMITTEE ASKING WHAT YOU ARE FOR (${left} review${left===1?"":"s"} to dissolution — address a drought, invest in protection or research)`;
   } else if(row.status==="starved"){
     b.style.display="block";
     b.textContent=`▲ THE PURSE CANNOT BUY AN OPERATION — the wings go to the desert first; the programme survives on its appropriation. Wait, and keep the chest.`;
@@ -91,14 +91,11 @@ function updateHUD(row, prev){
 function traceFor(ri, row){
   const parts=[]; let mine=0, theirs=0, unknown=false;
   for(let di=0; di<ND; di++){
-    const ts=t-MODEL.lags[di][ri];
+    const ts=row.t-MODEL.lags[di][ri];
     if(ts>=1){
-      for(const o of eng.state.ops){
-        const start=o.t+o.lag, dur=o.dur||1;
-        let hit=0;
-        if(o.target===DRV[di] && ts>=start && ts<start+dur && o.mag!==0)
-          hit=o.mag*Math.pow(o.decay===undefined?1:o.decay, ts-start);
-        if(o.disp && o.t+o.disp.lag===ts && o.disp.to===DRV[di]) hit+=o.disp.mag;
+      // Read the resolved ledger, including stacking discounts and decay.
+      for(const o of (eng.state.rows[ts-1]?.landed||[])){
+        const hit=o.kind==="driver" && o.target===DRV[di] ? o.mag : 0;
         if(!hit) continue;
         const c=hit*MODEL.coeff[di][ri];
         if(o.owner==="player"){ mine+=c; parts.push(o.cap);
@@ -108,7 +105,7 @@ function traceFor(ri, row){
     }
   }
   for(const e of row.landed)
-    if(e.kind==="region" && e.target===REG[ri].name){
+    if(e.kind==="region" && e.target===REG[ri].name && e.cap!=="Engineered Biology"){
       if(e.owner==="player"){ mine+=e.mag;
         if(!e.cap.includes("displacement")) parts.push(e.cap); }
       else if(e.owner==="rival") theirs+=e.mag;
@@ -160,4 +157,3 @@ function memos(row){
   // one memo a season, and never the same memo twice in a year
   for(const m of out){ const key=m.slice(0,28); if(memoSeen.get(key)>t-4) continue; memoSeen.set(key,t); wire(`MEMO — ${m}`,"memo"); break; }
 }
-

@@ -10,6 +10,8 @@
 "use strict";
 
 function createEngine(MODEL, opts) {
+  MODEL = Object.assign({}, MODEL, {regions: MODEL.regions.map(r => Object.assign({}, r))});
+  const strategic = !!(opts && opts.strategic);
   const rivalsOn = !!(opts && opts.rivals);
   // idle appropriation trim: with no player op in the last 4 seasons the
   // committee pays the mandate appropriation at this fraction. Default 1
@@ -133,7 +135,7 @@ function createEngine(MODEL, opts) {
   const capByName = Object.fromEntries(
     MODEL.capabilities.map((c) => [c.name, c]));
 
-  const state = { ops: [], rows: [], jetUntil: 0, dossierFloor: 0, wings: {} };  // rows[t-1] = season t
+  const state = { ops: [], rows: [], jetUntil: 0, dossierFloor: 0, wings: {}, rivalTreasury: 30, rivalLast: -4 };  // rows[t-1] = season t
   for (const c of MODEL.capabilities) if (c.type !== "NONE") {
     // the lab (upkeep ≤ $1M) stands itself up — from the first season if
     // its year has come; wings are ordered
@@ -146,6 +148,7 @@ function createEngine(MODEL, opts) {
   // directorate by ENMOD, a standing programme by the century's end
   const MANDATE_RAMP = [[1946,0],[1960,2],[1976,10],[1990,18],[2000,24],[2015,32],[2030,40],[2060,48]];
   function mandateLift(year) {
+    if (opts && opts.crisis) return 10;
     if (!eras) return 0;
     for (let i = 0; i + 1 < MANDATE_RAMP.length; i++) {
       const [y0, v0] = MANDATE_RAMP[i], [y1, v1] = MANDATE_RAMP[i + 1];
@@ -211,8 +214,15 @@ function createEngine(MODEL, opts) {
     if (tn > MODEL.climate.length) return null;
     const prevA = state.rows.length ? state.rows[state.rows.length - 1].anomalies : new Array(NR).fill(0);
     const pend = (extra || []).map((x) => makeOp(tn, x.cap, x.target, prevA, "player")).filter(Boolean);
+    const knownJet = jetOn && (tn <= state.jetUntil || state.ops.concat(pend).some(op=>{
+      const r=REGIONS[regionIndex[op.target]],age=tn-op.t-op.lag;
+      return op.owner==='player'&&r&&(r.lat||0)>=55&&age>=0&&age<(op.dur||1)&&Math.abs(op.mag*Math.pow(op.decay,age))>=1;
+    }) || exogenous.some(x=>{
+      const r=REGIONS[regionIndex[x.region]],age=tn-x.t;
+      return r&&(r.lat||0)>=55&&age>=0&&age<(x.dur||1)&&Math.abs(x.mag*Math.pow(x.decay===undefined?1:x.decay,age))>=1;
+    }));
     return REGIONS.map((r, ri) => {
-      let v = 0, kn = 0, tot = 0;
+      let v = knownJet && (r.lat||0)>=40 ? .6*Math.sin(tn*2.399+ri*1.73) : 0, kn = 0, tot = 0;
       for (let di = 0; di < ND; di++) {
         if (MODEL.coeff[di][ri] === 0) continue;
         const g = DRIVERS[di] === "GLOBAL";
@@ -223,13 +233,13 @@ function createEngine(MODEL, opts) {
         if (ts >= 1) v += state.rows[ts - 1].driverTotals[di] * MODEL.coeff[di][ri];
       }
       for (const op of state.ops) {
-        if (op.owner !== "player" || op.mag === 0 || op.target !== r.name) continue;
+        if (op.owner !== "player" || op.mag === 0 || op.target !== r.name || (strategic && op.cap === "Engineered Biology")) continue;
         const start = op.t + op.lag, dur = op.dur || 1;
         if (tn >= start && tn < start + dur) v += op.mag * Math.pow(op.decay, tn - start);
       }
-      for (const op of pend) if (op.lag === 0 && op.mag !== 0 && op.target === r.name) v += op.mag;
+      for (const op of pend) if (op.lag === 0 && op.mag !== 0 && op.target === r.name && !(strategic && op.cap === "Engineered Biology")) v += op.mag;
       for (const x of exogenous)   // the record's ashfall next season
-        if (x.region === r.name && tn >= x.t && tn < x.t + (x.dur || 1)) v += x.mag;
+        if (x.region === r.name && tn >= x.t && tn < x.t + (x.dur || 1)) v += x.mag * Math.pow(x.decay === undefined ? 1 : x.decay, tn - x.t);
       return { anomaly: v, known: kn, total: tot };
     });
   }
@@ -238,7 +248,9 @@ function createEngine(MODEL, opts) {
     const cap = capByName[capName];
     if (!cap || cap.type === "NONE") return null;
     const target = cap.type === "DRIVER" ? cap.fixedTarget : targetRegion;
-    if (!target) return null;
+    if (!target || (cap.type === "DRIVER" ? !DRIVERS.includes(target) : regionIndex[target] === undefined)) return null;
+    if (cap.research && knowledgeOn && !EDGES.some(e=>e.ri===regionIndex[target]&&!known.has(ekey(e.di,e.ri)))) return null;
+    if (strategic && cap.name==='Engineered Biology' && REGIONS[regionIndex[target]].kind && !REGIONS[regionIndex[target]].grain) return null;
     let mag = cap.mag;
     if (cap.needsDrought) {
       // Precondition binds at commitment against S[t-1]; t=1 sees 0,
@@ -247,13 +259,27 @@ function createEngine(MODEL, opts) {
       const prior = (t > 1 && ri !== undefined) ? prevAnomalies[ri] : 0;
       mag *= prior < P.dryThreshold ? 1 : P.dryPenalty;
     }
+    let resil = cap.resil || 0, cost = cap.cost;
+    if (resil) {
+      const installed = state.ops.filter(o=>o.target===target).reduce((v,o)=>v+(o.resil||0),0);
+      resil = Math.min(resil, Math.max(0,90-installed));
+      if (!resil) return null;
+      cost = Math.round(cap.cost * resil / cap.resil * 100) / 100;
+    }
+    let expected = 0;
+    const targetIdx=regionIndex[target];
+    if(targetIdx!==undefined){
+      for(let di=0;di<ND;di++){const ts=t-MODEL.lags[di][targetIdx];if(ts>=1&&isKnown(di,targetIdx))expected+=state.rows[ts-1].driverTotals[di]*MODEL.coeff[di][targetIdx];}
+      for(const x of exogenous)if(x.region===target&&t>=x.t&&t<x.t+(x.dur||1))expected+=x.mag*Math.pow(x.decay===undefined?1:x.decay,t-x.t);
+    }
+    const useful = cap.name === "Cloud Seeding" ? prevAnomalies[targetIdx] < -0.25 || expected < -.25 : !!(resil || cap.research || mag);
     const disp = (typeof cap.dispTo === "string" && cap.dispTo)
       ? { to: cap.dispTo, mag: cap.mag * cap.dispFactor,
           lag: cap.lag + cap.dispExtraLag }
       : null;
     return { t, cap: cap.name, type: cap.type, target, mag, lag: cap.lag,
-             dur: cap.dur || 1, decay: cap.decay === undefined ? 1 : cap.decay,
-             sig: cap.sig, cost: cap.cost, disp, resil: cap.resil,
+             dur: strategic && cap.name === "The AMOC Lever" ? MODEL.climate.length : cap.dur || 1, decay: strategic && cap.name === "The AMOC Lever" ? 1 : cap.decay === undefined ? 1 : cap.decay,
+             sig: cap.sig, cost, disp, resil, useful,
              owner: owner || "player", research: !!cap.research };
   }
 
@@ -271,6 +297,19 @@ function createEngine(MODEL, opts) {
   function rivalPlan(tt) {
     if (!rivalsOn || tt < 6) return [];
     const plan = [];
+    if (strategic) {
+      state.rivalTreasury = Math.min(90, state.rivalTreasury + 5);
+      if (tt-state.rivalLast < 3 || (rivalEras && rivalEra(yearOf(tt))===0)) return [];
+      const prev = state.rows[tt-2], ri=regionIndex[RHOME];
+      const repeats=state.ops.filter(o=>o.owner==='player' && o.target===HOME && o.t>tt-8).length;
+      const choice=prev && prev.anomalies[ri]<-.5 ? {cap:'Cloud Seeding',target:RHOME}
+        : repeats>=2 || (prev && prev.price>140) ? {cap:'Watershed Interference',target:HOME} : null;
+      if (!choice) return [];
+      const c=capByName[choice.cap];
+      if (!c || (eras && c.from>yearOf(tt)) || c.cost>state.rivalTreasury) return [];
+      state.rivalTreasury-=c.cost; state.rivalLast=tt;
+      return [choice];
+    }
     if (rivalEras) {
       const era = rivalEra(MODEL.climate[tt - 1].year);
       if (era === 0) return plan;
@@ -378,7 +417,7 @@ function createEngine(MODEL, opts) {
           if (w.online) { w.online = false; w.low = 0;
             wingEvents.push({ cap: cap.name, what: "mothballed", why: "order" }); } }
         if (cmd.standup && cmd.standup.includes(cap.name)) w.wanted = true;
-        const fundedNow = earmark && earmark.caps.includes(cap.name);
+        const fundedNow = earmark && earmark.caps.includes(cap.name) && (cmd.ops || [{cap:cmd.opA},{cap:cmd.opB}]).some(o=>o.cap===cap.name && makeOp(t,o.cap,o.target,prevAnom,"player"));
         if (!w.online && eligible && (w.wanted || fundedNow)) {
           const need = (cap.chest || 0) * (w.ever ? 0.75 : 1);
           const funded = fundedNow;
@@ -408,7 +447,7 @@ function createEngine(MODEL, opts) {
       : [[cmd.opA, cmd.targetA], [cmd.opB, cmd.targetB]];
     for (const [capName, target] of wanted) {
       const op = makeOp(t, capName, target, prevAnom, "player");
-      if (!op) continue;
+      if (!op) { if (capName && capName !== "None") refused.push({cap:capName,target,why:"invalid"}); continue; }
       if (eras) {
         if (!wingOnline(op.cap)) { refused.push(Object.assign({ why: "locked" }, op)); continue; }
         // some things are done once in a century or not at all
@@ -437,7 +476,8 @@ function createEngine(MODEL, opts) {
       if (op) state.ops.push(op);
     }
     let containment = Math.max(0, cmd.containment || 0);
-    if (budgetGate) containment = Math.min(containment, Math.max(0, purse));
+    if (budgetGate) containment = Math.min(containment,
+      Math.max(0, purse - (earmark && !earmarkUsed ? earmark.amount : 0)));
 
     // R2 — maturation scan: effects landing at t from strictly prior commits.
     const landed = [];
@@ -473,7 +513,7 @@ function createEngine(MODEL, opts) {
     if (forensics) {
       const seen = {};
       for (const e of landed) {
-        if (e.owner !== "player" || e.kind !== "driver" || !e.first || e.cap.includes("displacement")) continue;
+        if (e.owner !== "player" || e.kind !== "driver" || e.cap.includes("displacement")) continue;
         const k = seen[e.cap + "|" + e.target] = (seen[e.cap + "|" + e.target] || 0) + 1;
         if (k > 1) e.mag *= Math.pow(0.65, k - 1);
       }
@@ -520,7 +560,7 @@ function createEngine(MODEL, opts) {
         else if (ts === t) throw new Error("lag 0 edge: forbidden");
       }
       for (const e of landed)
-        if (e.kind === "region" && e.target === r.name) v += e.mag;
+        if (e.kind === "region" && e.target === r.name && !(strategic && e.cap === "Engineered Biology")) v += e.mag;
       if (jetActive && (r.lat || 0) >= 40)
         v += 0.6 * Math.sin(t * 2.399 + ri * 1.73);   // the broken jet meanders
       return v;
@@ -563,13 +603,14 @@ function createEngine(MODEL, opts) {
         if (op.t <= t && op.target === r.name) v += op.resil;
       return v;
     });
+    const biologicalDamage = REGIONS.map(r=>strategic ? landed.filter(e=>e.cap==='Engineered Biology'&&e.target===r.name).reduce((v,e)=>v+Math.abs(e.mag)*P.droughtPenalty,0) : 0);
     const yields = REGIONS.map((r, ri) => {
       if (!online[ri]) return 100;
       const a = anomalies[ri];
       const damage = (Math.max(0, -a) * r.sens * P.droughtPenalty
         + Math.max(0, a - P.floodThreshold) * r.sens * P.floodPenalty)
         * (1 - Math.min(90, resil[ri]) / 100);
-      return Math.max(0, Math.min(135, 100 - damage));
+      return Math.max(0, Math.min(135, 100 - damage - biologicalDamage[ri]));
     });
 
     // R8 — markets.
@@ -581,7 +622,10 @@ function createEngine(MODEL, opts) {
       (s, r, ri) => s + yields[ri] * shareNow[ri] / 100, 0);
     const price = Math.min(priceCap, 100 * Math.pow(100 / Math.max(1, supply), elasticity || P.priceElasticity));
     const homelandIdx = REGIONS.findIndex((r) => r.homeland);
-    const revenue = yields[homelandIdx] * price / 100 * P.revenueScale;
+    const homeRegion = REGIONS[homelandIdx];
+    const marketFactor = strategic ? 1 + (homeRegion.export === undefined ? 1 : homeRegion.export) * (price/100-1) : price/100;
+    const productionFactor = strategic ? .75 + .25 * homeRegion.weight / REGIONS[0].weight : 1;
+    const revenue = yields[homelandIdx] * marketFactor * productionFactor * P.revenueScale;
     const baseRevenue = shadow ? shadow.resolve(t, {}).revenue : null;
     const windfall = (shadow && windfallCut) ? Math.max(0, revenue - baseRevenue) * windfallCut : 0;
 
@@ -599,7 +643,7 @@ function createEngine(MODEL, opts) {
     const idleWin = Math.max(4, 2 * every), realWin = Math.max(8, 3 * every);
     // the committee funds programmes that do things
     const recentOp = state.ops.some(
-      (o) => o.owner === "player"
+      (o) => o.owner === "player" && (!strategic || o.useful)
         && (o.t > t - idleWin                             // committed recently
             || (o.mag !== 0 && t < o.t + o.lag + (o.dur || 1))));  // or still burning
 
@@ -608,7 +652,7 @@ function createEngine(MODEL, opts) {
     // (signature or magnitude) in eight seasons — research and adaptation
     // keep the appropriation, not the mandate to exist (budget gate only)
     const recentRealOp = state.ops.some(
-      (o) => o.owner === "player" && (o.sig > 0 || o.mag !== 0) && o.t > t - realWin);
+      (o) => o.owner === "player" && (strategic ? o.useful : (o.sig > 0 || o.mag !== 0)) && o.t > t - realWin);
     const budgetIn = revenue * P.budgetFromRevenue
                    + mandate * P.budgetFromMandate * (trimmed ? idleTrim : 1)
                    + Math.max(0, cmd.grant || 0) + earmarkUsed   // directive appropriations, the earmark if drawn
@@ -644,13 +688,13 @@ function createEngine(MODEL, opts) {
       if (e.owner !== "player" || !e.sig) continue;
       // relief pays half its signature under scrutiny and none of the rung's
       // eyes: rain on a harvest is announced and thanked, not investigated
-      const reliefOp = scrutiny && e.kind === "region" && e.mag > 0;
+      const reliefOp = scrutiny && e.kind === "region" && e.cap === "Cloud Seeding";
       let sig = e.sig * (reliefOp ? 0.5 : scrutinyMult);
       // relief is the programme's public face (ADR-0020, widened in the
       // century session): rain put on a harvest is announced, photographed
       // and thanked — it is never pattern evidence, at home or abroad. It
       // still pays its signature under the eyes.
-      const homeRelief = scrutiny && e.kind === "region" && e.mag > 0;
+      const homeRelief = reliefOp;
       if (forensics && !homeRelief) {
         // pattern evidence: same-target player landings in the repeat window
         let repeats = 0;
@@ -734,7 +778,7 @@ function createEngine(MODEL, opts) {
 
     const row = { t, year: clim.year, qtr: clim.qtr, driverNat: clim.drivers,
                   baseRevenue, windfall, lapsed,
-                  driverTotals, sigmas, anomalies, resil, yields, supply,
+                  driverTotals, sigmas, anomalies, resil, biologicalDamage, yields, supply,
                   price, revenue, severity, mandate, opsSpend, containment,
                   budgetIn, trimmed, jetTriggered, jetActive,
                   treasury, attribution, dossier, ladderText,
@@ -746,7 +790,11 @@ function createEngine(MODEL, opts) {
     return row;
   }
 
-  return { resolve, state,
+  function quote(cap,target) {
+    const op=makeOp(state.rows.length+1,cap,target,state.rows.length?state.rows[state.rows.length-1].anomalies:new Array(NR).fill(0),'player');
+    return op ? {valid:true,cost:op.cost,resil:op.resil,useful:op.useful} : {valid:false,cost:0,reason:'Invalid target or protection already at 90%'};
+  }
+  return { resolve, state, quote,
            capabilities: MODEL.capabilities, regions: REGIONS,
            drivers: DRIVERS, ladder: MODEL.ladder, assumptions: P,
            seasons: MODEL.climate.length,

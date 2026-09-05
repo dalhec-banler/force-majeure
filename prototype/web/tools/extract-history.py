@@ -6,16 +6,14 @@
   weather    — real major weather disasters mapped to prototype regions
                (authored; the console fires each unless the player's own
                ops pushed the region against the record)
-Season index t: 1946 Winter = 1 (Jan–Mar), Spring 2, Summer 3, Autumn 4, ...
+Season index t: 1946 Winter = 1 (Dec 1945–Feb 1946), Spring 2, Summer 3, Autumn 4, ...
 Run: python3 tools/extract-history.py   (from prototype/web)
 """
 import json, glob, math, pathlib
 HERE=pathlib.Path(__file__).resolve().parent.parent
 RAW=sorted(glob.glob(str(HERE/'../../data/raw/hurdat2-*.txt')))
 LAST_YEAR=2022    # the record ends here; 2023 on is fiction (ADR-0023)
-def season(y,m): return (y-1946)*4 + (m-1)//3 + 1
-def doq(y,m,d):   # fraction through the quarter, 0..1
-    m0=((m-1)//3)*3+1; days=92; return min(1,max(0,((m-m0)*30.5+d-1)/days))
+from season_calendar import season, doq
 
 PORTS=[("MIAMI",25.8,-80.2),("HAVANA",23.1,-82.4),("NEW ORLEANS",30.0,-90.1),("GALVESTON",29.3,-94.8),
  ("SAN JUAN",18.5,-66.1),("KINGSTON",18.0,-76.8),("HAMILTON",32.3,-64.8),("CAPE HATTERAS",35.2,-75.7),

@@ -1,7 +1,7 @@
 /* ---------------------------------------------------------------- globe */
 const cv = $("globe"), cx = cv.getContext("2d");
 let W=0,H=0,CXp=0,CYp=0,Rp=0,Rbase=0,zoom=1,
-    rot = -30, tilt = -18, dragging=false, moved=0, lastX=0;
+    rot = -REGPOS[HOMELAND][1], tilt = REGPOS[HOMELAND][0], dragging=false, moved=0, lastX=0;
 /* The globe is sized and centred on the FREE pane — the strip between the
    legend and the tool tray. The insets are CACHED and re-measured only when
    the layout itself changes: a chyron, a banner, a briefing card or an

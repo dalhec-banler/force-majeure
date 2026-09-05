@@ -10,9 +10,63 @@ function initEarth(){
   const fs=`precision mediump float;
     uniform sampler2D uT,uCl;uniform vec2 uC;
     uniform float uR,uRot,uTilt,uClOff,uHasCl;
-    uniform vec3 uRV[40];uniform float uRD[40];uniform float uDV[40];uniform float uRW[40];uniform float uIceEdge,uDevG,uT2,uFlat,uSunLon,uSea;
+    uniform vec3 uRV[40];uniform float uRD[40];uniform float uDV[40];uniform float uRW[40];uniform float uRain[40];uniform vec4 uAfter[40];uniform float uWeatherTime;uniform float uIceEdge,uDevG,uT2,uFlat,uSunLon,uSea;
     float water(vec2 q){ vec3 c=texture2D(uT,q).rgb; return smoothstep(0.02,0.18,c.b-c.r); }
     float flooded(vec2 q, float r){ if(r<=0.0) return 0.0; float m=0.0; for(int i=0;i<8;i++){ float a=float(i)*0.785398; vec2 o=vec2(cos(a),sin(a))*r; m=max(m, water(q+o)); m=max(m, water(q+o*0.5)); } return m; }
+    // The seeding observation is weather on the Earth's surface, lit by
+    // the same sun as the existing cloud layer. No screen-space sprites.
+    float cloudDetail(vec2 q){
+      float broad=texture2D(uCl,fract(q*0.19+vec2(0.21,0.36))).r;
+      float fine=texture2D(uCl,fract(q*0.53+vec2(0.57,0.24))).r;
+      float filament=texture2D(uCl,fract(q*1.27+vec2(0.13,0.61))).r;
+      return broad*0.56+fine*0.29+filament*0.15;
+    }
+    vec3 operationalAftermath(vec3 col, vec3 ve){
+      for(int i=0;i<40;i++){
+        if(dot(ve,uRV[i])<0.97) continue;
+        vec3 east=normalize(vec3(uRV[i].z,0.0,-uRV[i].x));
+        vec3 north=cross(uRV[i],east);
+        vec2 q=vec2(dot(ve,east),dot(ve,north))/0.14;
+        float texture=cloudDetail(q*2.1);
+        float edge=(1.0-smoothstep(0.45,1.0,length(q)))*smoothstep(0.25,0.65,texture);
+        // False-colour satellite evidence: damage, smoke, inundation, protection.
+        col=mix(col,col*vec3(0.65,0.48,0.31),edge*uAfter[i].x*0.65);
+        float smoke=cloudDetail(q-vec2(uWeatherTime*0.006,0.0));
+        col=mix(col,vec3(0.28,0.26,0.23),edge*smoke*uAfter[i].y*0.6);
+        col=mix(col,col*vec3(0.45,0.75,0.95),edge*uAfter[i].z*0.45);
+        col=mix(col,col*vec3(0.85,1.12,0.9),edge*uAfter[i].w*0.35);
+      }
+      return col;
+    }
+    vec3 seededWeather(vec3 col,vec3 ve){
+      if(uHasCl<0.5) return col;
+      for(int i=0;i<40;i++){
+        if(uRain[i]<=0.0 || dot(ve,uRV[i])<0.94) continue;
+        vec3 east=normalize(vec3(uRV[i].z,0.0,-uRV[i].x));
+        vec3 north=cross(uRV[i],east);
+        vec2 q=vec2(dot(ve,east),dot(ve,north))/0.18;
+        // Sheared, broken frontal cloud, not a circular stamp.
+        q=mat2(0.94,-0.34,0.34,0.94)*q;
+        float age=uRain[i], form=smoothstep(0.0,5.0,age);
+        vec2 drift=vec2(uWeatherTime*0.004,0.0);
+        float n=cloudDetail(q-drift);
+        float shape=length(vec2(q.x*0.65,q.y*1.15+(n-0.45)*0.62));
+        float edge=1.0-smoothstep(0.55,1.35,shape);
+        float coverage=smoothstep(0.36-form*0.29,0.68-form*0.23,n)*edge*form;
+        // The rain shaft is a translucent, textured veil beneath openings
+        // in the bank; it moves with the front, not down the monitor.
+        float rain=smoothstep(2.0,6.0,age)*edge;
+        float veil=cloudDetail(q*vec2(2.8,0.35)-vec2(0.0,uWeatherTime*0.015));
+        float wet=rain*smoothstep(0.3,0.7,veil)*(1.0-coverage)*0.24;
+        col=mix(col,col*vec3(0.72,0.84,0.90)+vec3(0.035,0.055,0.06),wet);
+        // Small relief in the texture provides cloud-top light and shadow.
+        float shade=cloudDetail(q-drift+vec2(0.035,0.025))-n;
+        vec3 top=vec3(0.80,0.85,0.88)+shade*0.65+n*0.10;
+        col*=1.0-coverage*0.13;
+        col=mix(col,top,coverage*0.88);
+      }
+      return col;
+    }
     void main(){
       vec2 p=(gl_FragCoord.xy-uC)/uR;
       if(uFlat>0.5){
@@ -48,6 +102,8 @@ function initEarth(){
           float f=smoothstep(uIceEdge,uIceEdge+0.06,lat);
           col=mix(col, vec3(0.93,0.96,0.99), f*0.92);
         }
+        col=operationalAftermath(col,ve);
+        col=seededWeather(col,ve);
         vec3 sun=vec3(cos(0.1)*sin(uSunLon),sin(0.1),cos(0.1)*cos(uSunLon));
         float day=clamp(dot(ve,sun),-1.,1.);
         col*=0.42+0.58*smoothstep(-0.22,0.3,day);
@@ -97,6 +153,8 @@ function initEarth(){
         float c=texture2D(uCl,vec2(fract(uv.x+uClOff),uv.y)).r;
         col=mix(col,vec3(1.0),c*0.5);
       }
+      col=operationalAftermath(col,ve);
+        col=seededWeather(col,ve);
       // the sun: day/night terminator and a glint on the water
       vec3 sun=vec3(cos(0.1)*sin(uSunLon),sin(0.1),cos(0.1)*cos(uSunLon));
       float day=clamp(dot(ve,sun),-1.,1.);
@@ -131,6 +189,7 @@ function initEarth(){
         RV:gl.getUniformLocation(pr,"uRV[0]"), RD:gl.getUniformLocation(pr,"uRD[0]"),
         DV:gl.getUniformLocation(pr,"uDV[0]"), DevG:gl.getUniformLocation(pr,"uDevG"),
         RW:gl.getUniformLocation(pr,"uRW[0]"), Sea:gl.getUniformLocation(pr,"uSea"),
+        After:gl.getUniformLocation(pr,"uAfter[0]"), Rain:gl.getUniformLocation(pr,"uRain[0]"), WeatherTime:gl.getUniformLocation(pr,"uWeatherTime"),
         T2:gl.getUniformLocation(pr,"uT2"),
         Flat:gl.getUniformLocation(pr,"uFlat"),
         SunLon:gl.getUniformLocation(pr,"uSunLon"),
@@ -179,6 +238,24 @@ function drawEarth(nowMs){
   gl.uniform1fv(glU.RD, dry);
   gl.uniform1fv(glU.DV, dv);
   gl.uniform1fv(glU.RW, wet);
+  const rain=new Float32Array(40);
+  for(const o of rainObservations){
+    const ri=REG.findIndex(r=>r.name===o.target);
+    if(ri>=0 && ri<40) rain[ri]=Math.max(rain[ri],reduced?8:Math.min(30,Math.max(0.001,(nowMs-o.ms)/1000)));
+  }
+  gl.uniform1fv(glU.Rain,rain);
+  const aftermath=new Float32Array(160);
+  if(row) for(let i=0;i<Math.min(40,REG.length);i++){
+    const name=REG[i].name;
+    const fire=row.landed.filter(e=>e.target===name&&e.cap==='Fire Enablement').reduce((v,e)=>v+Math.abs(e.mag),0);
+    const wetOps=row.landed.some(e=>e.target===name&&e.owner==='player'&&e.mag>0);
+    aftermath[i*4]=Math.min(1,(row.biologicalDamage?.[i]||0)/25+fire*.35);
+    aftermath[i*4+1]=Math.min(1,fire*.6);
+    aftermath[i*4+2]=wetOps?Math.min(1,Math.max(0,row.anomalies[i]-1.2)):0;
+    aftermath[i*4+3]=row.resil[i]/90;
+  }
+  gl.uniform4fv(glU.After,aftermath);
+  gl.uniform1f(glU.WeatherTime,reduced?0:nowMs/1000);
   gl.uniform1f(glU.Sea, 0.0066*Math.pow(iceMelt,0.8));   // the coasts go under as the ice goes
   gl.uniform1f(glU.DevG, devastation());
   gl.uniform1f(glU.T2, nowMs/1000);
@@ -214,18 +291,13 @@ function globeClick(e){
       return;
     }
   }
-  if(!pendingTool) return;
-  const c=CAPS.find(x=>x.name===pendingTool);
-  if(budgetRefuse(c)) return;
   const ri=nearestRegion(e);
-  if(ri===null){ $("toolinfo").textContent="Click closer to a region marker."; return; }
-  slots.push({cap:pendingTool, target:REG[ri].name});
-  clampContainment(); renderTray(); sfxClick();
-  $("toolinfo").textContent=`${pendingTool} armed on ${REG[ri].name} — ${c.lag===0?"acts this season":`lands in ${c.lag} season${c.lag===1?"":"s"}`}. $${fmt(available(),0)}M left. Keep clicking, or put the tool down.`;
+  if(ri===null){ if(pendingTool) $("toolinfo").textContent="Click closer to a region marker."; return; }
+  if(!pendingTool){focusObservation(REG[ri].name);return;}
+  armRegion(REG[ri].name);
 }
 function anomColor(a, alpha){
   if(a<0){ const k=Math.min(1,-a/2);
     return `rgba(${224+31*k|0},${164-112*k|0},${88-6*k|0},${alpha})`; }
   return `rgba(91,200,232,${alpha})`;
 }
-

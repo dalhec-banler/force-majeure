@@ -11,7 +11,7 @@ function drawGlobeInner(now){
     const rect=cv.parentElement.getBoundingClientRect(), dpr=devicePixelRatio||1;
     if(rect.width && (Math.abs(rect.width*dpr-cv.width)>1.5 || Math.abs(rect.height*dpr-cv.height)>1.5)) relayout();
   }
-  if(!dragging && !reduced && !FLAT) rot += 0.022;
+  if(!dragging && !reduced && !FLAT && !inspectionTarget) rot += 0.022;
   const nowMs=now||0;
   cx.clearRect(0,0,W,H);
   const FC=(running&&eng.knowledge.on&&lastRow())? eng.knowledge.forecast(slots):null;
@@ -65,6 +65,7 @@ function drawGlobeInner(now){
   drawAmbient(nowMs);
   drawEffects(nowMs);
   drawWires(nowMs, row);
+  drawRainObservations(nowMs);
   { const AD=armedDrivers();
     if(AD.GLOBAL!==undefined){                   // aerosol / polar: the whole board
       const ph=(nowMs/1600)%1;
@@ -246,6 +247,7 @@ function drawWires(nowMs,row){
   if(researching){
     const targets=new Set(slots.filter(s=>s.cap==="Climate Research").map(s=>s.target));
     for(const e of K.edges){
+    if(WIRE_MODE==="selected" && (DRV.includes(inspectionTarget)?e.driver!==inspectionTarget:e.region!==(inspectionTarget||HOMELAND))) continue;
       if(K.isKnown(e.di,e.ri) || !isOnline(e.ri)) continue;
       const dp=DRVPOS[e.driver]; if(!dp) continue;
       const a=project(...REGPOS[e.region]), b=project(...dp); if(!a.vis) continue;
@@ -261,6 +263,7 @@ function drawWires(nowMs,row){
     cx.lineWidth=1;
   }
   for(const e of K.edges){
+    if(WIRE_MODE==="selected" && (DRV.includes(inspectionTarget)?e.driver!==inspectionTarget:e.region!==(inspectionTarget||HOMELAND))) continue;
     if(!K.isKnown(e.di,e.ri) || !isOnline(e.ri)) continue;
     const dp=DRVPOS[e.driver]; if(!dp) continue;
     const a=project(...dp), b=project(...REGPOS[e.region]);
@@ -384,4 +387,3 @@ function investmentLine(ri){
   return bits.join("<br>");
 }
 /* kick-off happens in 70-boot.js once every part has run */
-

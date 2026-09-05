@@ -1,4 +1,11 @@
 const MODEL = __MODEL__;
+let CRISIS=false; try { CRISIS=localStorage.getItem('fm.mode')==='crisis'; } catch(e){}
+if(CRISIS){
+  MODEL.climate=MODEL.climate.filter(c=>c.year>=2030&&c.year<=2033);
+  MODEL.tiers=[{from:2030,every:1,name:'CRISIS',clock:90}];
+  const arsenal=['Cloud Seeding','Adaptation Investment','Climate Research','Watershed Interference','Fire Enablement','Ocean Thermal Forcing','Stratospheric Aerosol Inj.','Engineered Bloom'];
+  MODEL.capabilities=MODEL.capabilities.map(c=>({...c,from:arsenal.includes(c.name)?2030:2100,chest:arsenal.includes(c.name)?55:c.chest,upkeep:arsenal.includes(c.name)?1:c.upkeep}));
+}
 const LAND = __LAND__;
 const HISTORY = __HISTORY__;     // the record: real storms, eruptions, quakes, disasters 1946–55 (ADR-0017)
 __ENGINE__
@@ -54,9 +61,17 @@ const STARTS={
    minus:["drought bites hardest (sens 1.2) and the monsoon is El Niño's to take","the thinnest chest ($45M) and the least generous committee (−4)","little of your grain reaches the market (export 0.4)"]},
 };
 let HOMELAND="North American Plains"; try{ const h=localStorage.getItem("fm.homeland"); if(h && STARTS[h]) HOMELAND=h; }catch(e){}
-const START=STARTS[HOMELAND];
-const eng = createEngine(MODEL, {homeland:HOMELAND, rivalHome:START.rival, startingTreasury:START.treasury, mandateBonus:START.mandate||0, rivals:true, idleTrim:0.6, jetstream:true, forensics:true, knowledge:true, budgetGate:true, exogenous:EXO, priceCap:300, scrutiny:true, grainSupply:true, priceElasticity:3.0, rivalEras:true, shadow:true, eras:true, envelopeWidening:0.0006, windfall:2, reserveCap:400});
+const START={...STARTS[HOMELAND],...(CRISIS?{treasury:120}: {})};
+if(CRISIS){
+  EXO.length=0;
+  EXO.push({t:2,region:HOMELAND,mag:-1.6,dur:4,cap:'The failed rains'},
+    {t:6,region:START.rival,mag:-2,dur:4,cap:'The export squeeze'},
+    {t:10,region:HOMELAND,mag:2,dur:3,cap:'The returning monsoon'});
+  for(const key of ['storms','weather','quakes','eruptions']) HISTORY[key]=[];
+}
+const eng = createEngine(MODEL, {homeland:HOMELAND, rivalHome:START.rival, startingTreasury:START.treasury, mandateBonus:START.mandate||0, strategic:true, crisis:CRISIS, rivals:true, idleTrim:0.6, jetstream:true, forensics:true, knowledge:true, budgetGate:true, exogenous:EXO, priceCap:300, scrutiny:true, grainSupply:true, priceElasticity:3.0, rivalEras:true, shadow:true, eras:true, envelopeWidening:0.0006, windfall:0.65, reserveCap:400});
 const DRVNAME = { ENSO:"the Pacific", IOD:"the Indian Ocean", NATL:"the Atlantic", GLOBAL:"the planet" };
+let WIRE_MODE="selected";
 let SHOW_WIRES=true;             // the known wiring, drawn on the globe
 let newWires=[];                 // wires revealed recently: {di,ri,bornT}
 let recordStopped=false;         // the geophysical record ends with the first lithospheric op
@@ -156,13 +171,32 @@ function placeName(dl){ return dl.toLowerCase().replace(/(^|[\s\-'])(\S)/g,(m,a,
 function funds(){ const r=lastRow(); return r? r.treasury : eng.assumptions.startingTreasury; }
 function capCost(name){ const c=CAPS.find(c2=>c2.name===name); if(!c) return 0;
   const fc = flagship? (flagship.caps||FLAGSHIP_CAPS) : [];
-  const funded = flagship && fc.includes(name) && !slots.some(s=>fc.includes(s.cap) && s.cap!==name);
+  const funded = flagship && fc.includes(name) && !slots.some(s=>fc.includes(s.cap));
   return funded? 0 : c.cost; }
 function escapeHTML(x){ return String(x).replace(/[&<>"]/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch])); }
-function armedCost(){ return slots.reduce((s,x)=>s+capCost(x.cap),0); }
-function spendable(){ const r=lastRow(); return Math.max(0, funds()-(r&&r.overhead!==undefined? r.overhead : eng.assumptions.overhead)); }   // after the overhead reserve (rent plus the wings' upkeep)
+function armedCost(){
+  let total=0, funded=false; const protection={};
+  for(const x of slots){
+    const c=CAPS.find(c=>c.name===x.cap); if(!c) continue;
+    let cost=c.cost;
+    if(c.resil){
+      if(protection[x.target]===undefined) protection[x.target]=eng.state.ops.filter(o=>o.target===x.target).reduce((v,o)=>v+(o.resil||0),0);
+      const gain=Math.min(c.resil,Math.max(0,90-protection[x.target])); protection[x.target]+=gain;cost=Math.round(c.cost*gain/c.resil*100)/100;
+    }
+    if(flagship&&!funded&&(flagship.caps||FLAGSHIP_CAPS).includes(x.cap)){funded=true;cost=0;}
+    total+=cost;
+  }
+  return total;
+}
+function spendable(){
+  let overhead=eng.assumptions.overhead;
+  if(eng.eras) for(const c of CAPS){if(c.type==='NONE')continue;const w=eng.wingStatus(c.name);
+    if((w.online&&!wingOrders.mothball.includes(c.name)) || (wingOrders.standup.includes(c.name)&&w.canStand)) overhead+=c.upkeep||0;
+  }
+  return Math.max(0,funds()-overhead);
+}
 function available(){ return Math.max(0, spendable()-armedCost()); }
-function canAfford(c){ if(capCost(c.name)===0 && c.cost>0) return funds()>=eng.assumptions.overhead; return capCost(c.name) <= available(); }
+function canAfford(c){ if(c.resil){const q=eng.quote(c.name,inspectionTarget||HOMELAND);if(q.valid&&q.cost<=available())return true;} if(capCost(c.name)===0 && c.cost>0) return funds()>=eng.assumptions.overhead; return capCost(c.name) <= available(); }
 function renderTab(){
   const a=armedCost(), el=$("hTab"); if(!el) return;
   el.style.display = slots.length? "" : "none";

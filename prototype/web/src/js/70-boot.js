@@ -5,7 +5,9 @@ buildTray(); clampContainment(); renderTray(); renderDirective(); renderReviewBu
   $("introHome").textContent="the "+home.name; $("introCrop").textContent=(home.crop||"").toLowerCase();
   const row=$("homepickrow");
   const crop=r=>(REG.find(x=>x.name===r)||{}).crop||"";
-  for(const [region,st] of Object.entries(STARTS).sort((a,b)=>(a[1].rank||9)-(b[1].rank||9))){
+  for(const [region,original] of Object.entries(STARTS).sort((a,b)=>(a[1].rank||9)-(b[1].rank||9))){
+    const rr=REG.find(r=>r.name===region);
+    const st=CRISIS?{...original,treasury:120,plus:[`Export participation ${Math.round(rr.export*100)}%`,`Production weight ${fmt(rr.weight,1)}`],minus:[`Drought sensitivity ${rr.sens}`,`Weather variability ${rr.sigma}`]}:original;
     const b=document.createElement("button"); b.className="hp"+(region===HOMELAND?" on":"");
     b.innerHTML=`<div class="hp-top"><span class="hp-nation">${st.nation}</span><span class="hp-diff" style="color:${st.dcol};border-color:${st.dcol}">${st.difficulty}</span></div>
       <div class="hp-meta">${region} · ${crop(region).toLowerCase()}</div>
@@ -20,6 +22,10 @@ buildTray(); clampContainment(); renderTray(); renderDirective(); renderReviewBu
 requestAnimationFrame(drawGlobe);            // every part has run; the loop may start
 const savedLog=loadSave();
 if(savedLog){ $("resume").style.display=""; $("begin").textContent="NEW PROGRAMME ▸"; }
+if(savedLog && saveRulesChanged){
+  $("saverules").hidden=false;
+  $("resume").textContent="RESUME WITH UPDATED RULES ▸";
+}
 /* ---- the way in: boot → operating brief → the world, all of it a fade.
    Nothing ever cuts, and the dashboard is never shown before it is played.
    Picking a programme reloads the console (the engine is built around the
@@ -54,7 +60,7 @@ function showIntro(instant){                // fade the brief up
 }
 function leaveIntro(then){                  // fade the brief down, revealing the world
   if(introDismissed) return; introDismissed=true;
-  const i=$("intro");
+  const i=$("intro"); i.style.pointerEvents="none";
   if(reduced){ i.style.display="none"; if(then) then(); return; }
   fadeTo(i,0,FADE,()=>{ i.style.display="none"; if(then) then(); });
 }
@@ -87,8 +93,8 @@ function toggleView(){
 $("viewtoggle").addEventListener("click",toggleView);
 $("viewbtn").addEventListener("click",toggleView);
 $("wiretoggle").addEventListener("click",()=>{
-  SHOW_WIRES=!SHOW_WIRES;
-  $("wiretoggle").textContent="WIRES: "+(SHOW_WIRES?"ON":"OFF");
+  WIRE_MODE=WIRE_MODE==="selected"?"all":WIRE_MODE==="all"?"off":"selected"; SHOW_WIRES=WIRE_MODE!=="off";
+  $("wiretoggle").textContent="WIRES: "+WIRE_MODE.toUpperCase();
   sfxClick();
 });
 $("sndtoggle").addEventListener("click",()=>{
@@ -117,3 +123,19 @@ $("teltoggle").addEventListener("click",()=>{
   $("dosnum").style.display=telemetry?"inline":"none";
   $("teltoggle").textContent="TELEMETRY: "+(telemetry?"FULL (playtest)":"LADDER ONLY");
 });
+
+$("campaignbrief").textContent=CRISIS ? "THE SIXTEEN-REVIEW CRISIS · 2030–33. Failed rains, an export squeeze, then the floods. Finish sixteen reviews, average at least 85% homeland output over the last four, and retain $100M. Each nation has a $120M emergency chest. Eight wings are available; their upkeep still costs money. This scenario is fictional." : "THE LONG RECORD · 1946–2060. Or take command of a sixteen-review crisis with a defined recovery objective.";
+$("campaignmode").textContent=CRISIS?"RETURN TO THE LONG RECORD ▸":"PLAY THE SIXTEEN-REVIEW CRISIS ▸";
+$("campaignmode").addEventListener('click',()=>{try{localStorage.setItem('fm.mode',CRISIS?'long':'crisis');}catch(e){} location.reload();});
+
+for(const r of REG){ const option=document.createElement('option');option.value=r.name;option.textContent=r.name;$("regionpick").appendChild(option); }
+$("regionpick").addEventListener('change',()=>{focusObservation($("regionpick").value);});
+$("regionarm").addEventListener('click',()=>armRegion($("regionpick").value));
+renderRegionInspector();
+
+if(CRISIS){
+  $("longbrief").textContent='2030. An emergency directorate inherits a harvest crisis and a $120M chest. Choose your homeland below. Sixteen seasonal reviews: protect output, manage the cost of your wings, and retain enough money to keep the programme alive. The rival has limited funds and watches repeated interventions.';
+  $("clock").textContent='2030 · WINTER · CRISIS';
+  $("hFunds").textContent='$120.0M';$("hFree").textContent='$'+fmt(spendable(),0)+'M';
+  $("wire").innerHTML='<p><span class="stamp">2030·W</span> Emergency authority established. Failed rains are expected next season. The committee requires recovery and a $100M closing reserve.</p>';
+}

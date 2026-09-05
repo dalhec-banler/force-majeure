@@ -134,6 +134,18 @@
   #cmdpanel{position:sticky;bottom:0;margin-top:auto;background:var(--panel);
             border-top:1px solid var(--line);border-bottom:none;z-index:2}
   .panel{border-bottom:1px solid var(--line);padding:9px 14px}
+  #opreport[hidden]{display:none}
+  #opreport summary{cursor:pointer;color:var(--ink-dim);font-size:10px;letter-spacing:.12em}
+  #opcount{color:var(--cyan);font-variant-numeric:tabular-nums}
+  #opresults{max-height:176px;overflow:auto;overscroll-behavior:contain;margin-top:8px}
+  .opresult{padding:8px 0;border-top:1px solid var(--line);font-size:11px}
+  .opresult:first-child{border-top:0;padding-top:0}
+  .opresult b{font-size:12px;font-weight:500;color:var(--ink)}
+  .op-target{color:var(--cyan);margin-top:4px}
+  .opresult p{color:var(--ink-dim);margin:4px 0}
+  .op-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--ink-faint);font-size:10px}
+  .op-foot button{min-height:28px;flex-shrink:0}
+  #opreport summary:focus-visible,.op-foot button:focus-visible{outline:2px solid var(--green);outline-offset:3px}
   .panel h2{font-size:10px;font-weight:500;letter-spacing:.24em;
             color:var(--ink-faint);margin-bottom:6px;display:flex;
             justify-content:space-between}
@@ -422,3 +434,10 @@
 .wc.up{border-color:var(--green);color:var(--ink)} .wc.up i{color:var(--green)}
 .wc.ordered{border-color:var(--amber);color:var(--ink)} .wc.ordered i{color:var(--amber)}
 .wc.down{border-color:var(--red);color:var(--ink-dim)} .wc.down i{color:var(--red)}
+
+#regionpanel label{display:block;margin:12px 0 6px;font-size:10px;letter-spacing:.1em;color:var(--ink-dim)}
+#regionpick{width:100%;background:#0a130e;color:var(--ink);border:1px solid rgba(200,230,207,.22);font:12px var(--mono);padding:8px}
+#regionreadout p{font:11px/1.5 var(--mono);margin:8px 0;color:var(--ink-dim)}
+#regionreadout p:first-child{color:var(--ink)}
+.wmode:disabled{opacity:.4;cursor:default}
+#campaignbrief{border-left:2px solid var(--green);padding-left:12px}

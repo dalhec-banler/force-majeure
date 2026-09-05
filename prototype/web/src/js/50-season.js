@@ -7,7 +7,9 @@ async function runSeason(auto){
   if(!running || resolving) return;
   resolving=true; seasonDeadline=null;
   $("resolve").disabled=true;
+  for(const id of ["toolbar","wingbar"]) for(const b of $(id).children) b.disabled=true;
   alertQ.length=0;                                   // a new review's chyrons, not last review's backlog
+  rainObservations=[];
   try{
     const n=nextBatch();
     { const lr=lastRow(); if(lr && !replaying){ const y0=eng.state.rows[Math.max(0,t-nextBatchWas)]; foldWire(lr.year+(lr.qtr==="Autumn"?"":" · "+lr.qtr.toLowerCase())); } }
@@ -15,7 +17,7 @@ async function runSeason(auto){
     for(let i=0;i<n && running;i++){ brisk=i<n-1; await runSeasonInner(auto); }
   }
   catch(e){ console.error("season error", e); wire(`<span class="tag tagr">FAULT</span> The season resolved with an error in the instrument: ${escapeHTML(e.message)}. The record stands.`,"att"); }
-  finally{ brisk=false; resolving=false; $("resolve").disabled=!running; SEASON_MS=clockMs(); renderReviewButton(); if(running && seasonDeadline===null) seasonDeadline=performance.now()+SEASON_MS; }
+  finally{ brisk=false; resolving=false; renderTray(); renderOperationReport(); $("resolve").disabled=!running; SEASON_MS=clockMs(); renderReviewButton(); if(running && seasonDeadline===null) seasonDeadline=performance.now()+SEASON_MS; }
 }
 let nextBatchWas=1;
 let pendingArchive=null;          // the campaign's final row, waiting for the player to open the archive
@@ -39,11 +41,14 @@ async function runSeasonInner(auto, cmdOverride){
           prediction: first? $("predict").value.trim() : "" };
     if(first && (wingOrders.standup.length||wingOrders.mothball.length)){
       cmd.standup=wingOrders.standup.slice(); cmd.mothball=wingOrders.mothball.slice();
-      wingOrders={standup:[],mothball:[]}; }
+    }
     // the flagship earmark travels with the commitment; the engine draws it
     // only if the flagship op actually commits
     if(flagship) cmd.earmark={amount:flagship.amount, caps:flagship.caps||FLAGSHIP_CAPS};
   }
+  // Recorded commands consume the same pending orders as live commands.
+  // Later flagship processing may enqueue NEW orders for the next review.
+  if(first) wingOrders={standup:[],mothball:[]};
   pendingGrant=0; pendingClaw=0;
   t++;
   const row = eng.resolve(t, cmd);
@@ -195,7 +200,7 @@ async function runSeasonInner(auto, cmdOverride){
         news(DATELINE[e.target],"Fires burning at a scale visible from orbit tonight.",true);
         shakeNow();
       }
-      if(e.cap==="Cloud Seeding"&&pos) effects.push({type:"rain",pos,bornT:t,life:1});
+      if(e.cap==="Cloud Seeding"&&pos && !replaying) observeRain(row,e);
       if(e.cap.startsWith("Ionospheric")&&pos&&e.first){
         const reg2=REG.find(x=>x.name===e.target);
         if(reg2&&reg2.kind){                     // coastal hub strike → tsunami
@@ -294,7 +299,7 @@ async function runSeasonInner(auto, cmdOverride){
     }
     if(outside){
       shocks.push({pos,until:performance.now()+1600,dur:1600});
-      if(loud) alertStrip((a<0?"HARVEST COLLAPSE — ":"FLOOD EVENT — ")+r.name.toUpperCase());
+      if(loud) alertStrip((a<0?(row.yields[ri]<65?"HARVEST COLLAPSE — ":"DROUGHT STRESS — "):"FLOOD EVENT — ")+r.name.toUpperCase());
       if(loud && !shaken){ shakeNow(); shaken=true; }
       if(a<0)                              // deep drought sparks wildfire
         effects.push({type:"fire",pos,bornT:t,life:1,scale:0.55});
@@ -303,7 +308,7 @@ async function runSeasonInner(auto, cmdOverride){
       if(told) news(boardDateline(ri, DATELINE[r.name]), pick("unrest", t*3+ri), true);
     if(outside && loud){
       showBriefing(
-        (a<0? "EVENT: HARVEST COLLAPSE":"EVENT: FLOOD / STORM")+"",
+        (a<0?(row.yields[ri]<65?"EVENT: HARVEST COLLAPSE":"EVENT: DROUGHT STRESS"):"EVENT: FLOOD / STORM")+"",
         `${r.name} · anomaly ${a.toFixed(2)} vs ±${s2f(row.sigmas[ri])} · ${r.kind?"output":"harvest"} ${pct}%`,
         a<0? SMOKE_SRC : STORM_SRC);
     }
@@ -440,10 +445,15 @@ $("resolve").addEventListener("click",()=>{ sfxClick(); if(pendingArchive){ cons
 
 /* Saves (ADR-0001 in prototype form): the campaign is the list of commands;
    the engine is deterministic, so a save replays in a second. One slot. */
-const SAVE_KEY="fm.campaign."+(MODEL.long?"long":"short")+".v1:"+HOMELAND;
-let saveLog=[], replaying=false;
-function persistSave(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify({v:1, log:saveLog})); }catch(e){} }
-function loadSave(){ try{ const s=JSON.parse(localStorage.getItem(SAVE_KEY)||"null"); return (s&&s.v===1&&Array.isArray(s.log)&&s.log.length)? s.log : null; }catch(e){ return null; } }
+const SAVE_KEY="fm.campaign."+(CRISIS?"crisis":MODEL.long?"long":"short")+".v1:"+HOMELAND;
+const RULES_REVISION=3;
+let saveLog=[], replaying=false, saveRulesChanged=false;
+function persistSave(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify({v:1, rules:RULES_REVISION, log:saveLog})); }catch(e){} }
+function loadSave(){ try{ const s=JSON.parse(localStorage.getItem(SAVE_KEY)||"null");
+  if(!(s&&s.v===1&&Array.isArray(s.log)&&s.log.length)) return null;
+  saveRulesChanged=s.rules!==RULES_REVISION;
+  return s.log;
+}catch(e){ return null; } }
 function clearSave(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
 async function replaySave(log){
   replaying=true; const wasMuted=sndMuted; sndMuted=true;
@@ -456,6 +466,7 @@ async function replaySave(log){
   wire(`<span class="tag tagd">RESUMED</span> The programme picks up where the file left off — ${last? last.year+" · "+last.qtr : "1946"}. ${t} seasons on the record.`,"op");
   if(last) updateHUD(last, eng.state.rows[t-2]);
   clampContainment(); renderTray(); renderDirective(); renderReviewButton();
+  renderOperationReport();
   SEASON_MS=clockMs(); if(running) seasonDeadline=performance.now()+SEASON_MS;
 }
 setInterval(()=>{
@@ -463,7 +474,7 @@ setInterval(()=>{
   if(!running || seasonDeadline===null){ el.textContent="—"; el.style.color=""; return; }
   const left=Math.max(0, seasonDeadline-performance.now());
   const sec=Math.ceil(left/1000);
-  el.textContent= left<=0 && !CLOCK_AUTO ? "OVERDUE" : "0:"+String(sec).padStart(2,"0");
+  el.textContent= left<=0 && !CLOCK_AUTO ? "OVERDUE" : Math.floor(sec/60)+":"+String(sec%60).padStart(2,"0");
   el.style.color = sec<=10? "var(--red)" : "";
   if(left<=0 && !resolving && CLOCK_AUTO) runSeason(true);   // manual by default: the clock nags, you advance
 },250);

@@ -108,7 +108,7 @@ function showArchive(finalRow){
 
   // ---------- lessons the numbers support
   const lessons=[];
-  if(trimmed>0) lessons.push(`The committee trimmed your appropriation in <b>${trimmed} season${trimmed===1?"":"s"}</b> for having nothing in the air. A seed a year keeps it whole.`);
+  if(trimmed>0) lessons.push(`The committee trimmed your appropriation in <b>${trimmed} season${trimmed===1?"":"s"}</b> without recent useful work. Seeding needs an observed or forecast drought; protection and research also count.`);
   { const hits={}; for(const o of mine.filter(o=>o.sig>0&&o.mag<0)){ (hits[o.target]=hits[o.target]||[]).push(o.t); }   // strikes, not relief
     const rep=Object.entries(hits).map(([k,ts])=>{ ts.sort((a,b)=>a-b); let m=0; for(let i=0;i<ts.length;i++){ let n=0; for(let j=i;j<ts.length&&ts[j]<ts[i]+12;j++) n++; m=Math.max(m,n);} return [k,m]; }).filter(x=>x[1]>=3).sort((a,b)=>b[1]-a[1]);
     if(rep.length) lessons.push(`You struck <b>${rep[0][0]}</b> ${rep[0][1]} times inside three years. Repeats compound the signature — a pattern is the evidence; rotate targets.`); }
@@ -118,7 +118,7 @@ function showArchive(finalRow){
   if(moth>0) lessons.push(`<b>${moth}</b> wing${moth===1?"":"s"} went to the desert by attrition. A wing costs its upkeep every season; the chest must carry it, not just stand it up.`);
   if(lapsed>0) lessons.push(`<b>${lapsed}</b> directive${lapsed===1?"":"s"} lapsed and the committee clawed back. The fuse is in reviews — answer the cheap ones the season they arrive.`);
   { let bi=-1,bv=0; rows.forEach((r,i)=>{ if((r.windfall||0)>bv){bv=r.windfall;bi=i;} });
-    if(bi>=0&&bv>=10) lessons.push(`Your best season was <b>${rows[bi].year} ${rows[bi].qtr}</b>: the desk returned $${fmt(bv,0)}M${rows[bi].landed.some(e=>e.owner==="player"&&e.kind==="driver")?" — an ocean or atmosphere operation landing into a market":" — a strike landing into a shortage"}. That is the shape of a profitable move.`); }
+    if(bi>=0&&bv>=10) lessons.push(`Your best season was <b>${rows[bi].year} ${rows[bi].qtr}</b>: the desk returned $${fmt(bv,0)}M${rows[bi].landed.some(e=>e.owner==="player"&&e.kind==="driver")?" — an ocean or atmosphere operation landing into a market":" — homeland revenue exceeded the shadow world"}. That is the shape of a profitable move.`); }
   const helped=regionStats.filter(x=>x.online&&x.delta>1.5).length, hurt=regionStats.filter(x=>x.online&&x.delta<-1.5).length;
   lessons.push(`Against the world where you never acted, you left <b>${helped}</b> harvest${helped===1?"":"s"} better off and <b>${hurt}</b> worse — hover the map to see which, and by how much.`);
   if(!lessons.length) lessons.push("Nothing in the numbers argues with what you did. Play it more ambitiously.");
@@ -126,6 +126,23 @@ function showArchive(finalRow){
   // ---------- table view
   const table=`<table class="szt"><tr><th>season</th><th>chest</th><th>dossier</th><th>grain</th><th>revenue</th><th>shadow</th><th>ops</th></tr>${rows.map((r,i)=>`<tr><td>${r.year} ${r.qtr[0]}</td><td>${fmt(r.treasury,0)}</td><td>${fmt(r.dossier,0)}</td><td>${fmt(r.price,0)}</td><td>${fmt(r.revenue,0)}</td><td>${fmt(base[i],0)}</td><td>${r.committed.map(o=>o.cap.replace(" [T3]","")).join(", ")}</td></tr>`).join("")}</table>`;
 
+  const hi=REG.findIndex(r=>r.homeland), recovery=rows.slice(-4).reduce((v,r)=>v+r.yields[hi],0)/Math.min(4,N);
+  const crisisWon=CRISIS&&N===16&&recovery>=85&&finalRow.treasury>=100&&!['exposed','insolvent','dissolved'].includes(finalRow.status);
+  const decisions=rows.filter(r=>r.prediction).map(r=>{
+    const end=rows[Math.min(N-1,r.t-1+tierFor(r.t).every-1)];
+    return `<tr><td>${r.year} ${r.qtr}</td><td>${esc(r.prediction)}</td><td>Review close: output ${fmt(end.yields[hi],0)}%; grain ${fmt(end.price,0)}; treasury $${fmt(end.treasury,0)}M. Revenue vs shadow ${fmt(end.revenue-end.baseRevenue,1)}M.</td></tr>`;
+  }).join('');
+  const decisive=rows.filter(r=>Math.abs(seasonProfit(r))>.01).sort((a,b)=>Math.abs(seasonProfit(b))-Math.abs(seasonProfit(a))).slice(0,3).sort((a,b)=>a.t-b.t);
+  const decisionReview=`${CRISIS?`<h3>${crisisWon?'CRISIS CONTAINED':'RECOVERY OBJECTIVE MISSED'}</h3><p>${N}/16 reviews · last-four output ${fmt(recovery,1)}% / 85% · final treasury $${fmt(finalRow.treasury,1)}M / $100M.</p>`:''}
+    <h3>YOUR DECISIONS, OPENED</h3><p>Free-text predictions are preserved for your assessment; no automatic interpretation or score is applied. The shadow world has the same natural forcing and rules, with no player orders; its rival can respond differently.</p>
+    <table class="szt"><tr><th>committed</th><th>prediction</th><th>observed outcome</th></tr>${decisions||'<tr><td colspan="3">No predictions recorded.</td></tr>'}</table>
+    <h3>THREE LARGEST REVENUE DEPARTURES</h3>${decisive.length?'':'<p>No measurable revenue departure from the shadow world.</p>'}${decisive.map(r=>`<p><b>${r.year} ${r.qtr}</b> · ${fmt(seasonProfit(r),1)}M vs shadow. Landings: ${esc(r.landed.filter(e=>e.owner==='player').map(e=>e.cap+' at '+e.target).join('; ')||'none — lagged effects and market responses can dominate')}.</p>`).join('')}
+    <p>Incremental homeland revenue $${fmt(profit,1)}M; operation spend $${fmt(spend,1)}M; containment $${fmt(contSpend,1)}M. Revenue less those costs: $${fmt(profit-spend-contSpend,1)}M. Programme upkeep remains in the treasury ledger.</p>`;
+  let history=[];try{history=JSON.parse(localStorage.getItem('fm.archive.v1')||'[]');if(!Array.isArray(history))history=[];}catch(e){}
+  const record={rules:RULES_REVISION,nation:START.nation,mode:CRISIS?'crisis':'long',seasons:N,recovery,treasury:finalRow.treasury,profit,spend,won:crisisWon};
+  const prior=history.filter(r=>r.rules===RULES_REVISION&&r.mode===record.mode&&r.nation===record.nation).slice(-5);
+  history.push(record);try{localStorage.setItem('fm.archive.v1',JSON.stringify(history.slice(-20)));}catch(e){}
+  const comparisons=prior.length?`<h3>PREVIOUS TENURES · SAME NATION / FORMAT</h3><table class="szt"><tr><th>seasons</th><th>closing chest</th><th>incremental revenue</th></tr>${prior.map(r=>`<tr><td>${esc(r.seasons)}</td><td>$${fmt(Number(r.treasury),0)}M</td><td>$${fmt(Number(r.profit),0)}M</td></tr>`).join('')}</table>`:'';
   let html=`<div class="arc-head"><div><h2>THE ARCHIVE OPENS — TWENTY-FIVE YEARS LATER</h2>
     <div class="cls">DECLASSIFIED ${y1+25} // ${START.nation} PROGRAMME // ${y0}–${y1} // REVIEW COPY</div></div></div>
     <p class="q">${cause}</p>
@@ -137,6 +154,7 @@ function showArchive(finalRow){
       ${tile("THE COMMITTEE",`${met} met · ${lapsed} lapsed`,`${earmarksDrawn} of ${emOffered} earmarks flown`)}
       ${tile("DEATH TOLL",fmtDead(cumDead),`${fmtDead(cumDeadYours)} attributable to you · in no report`,"#e05252")}
     </div>
+    ${decisionReview}${comparisons}
     <h3>TENURE</h3>${legend}${svg}
     <h3>THE LEDGER</h3>${led}<div class="two"><div><div class="sub">SPEND BY TOOL</div>${bars}</div>
       <div><div class="sub">THE COMMITTEE'S LEDGER</div><div class="dirs">${dirLog.length? dirLog.map(d=>`<span class="${d.done?"ok":"no"}" title="${esc(d.title)}">${rows[d.t-1]?rows[d.t-1].year:""} ${d.done?"✓":"✗"} ${esc(d.title)}</span>`).join("") : "<span>No directives on the record.</span>"}</div></div></div>
@@ -146,9 +164,9 @@ function showArchive(finalRow){
     <h3>THE LADDER'S LOUDEST SEASONS</h3>
     <table class="szt"><tr><th>season</th><th>added to the file</th><th>file after</th><th>what landed</th></tr>${loudRows||"<tr><td colspan=4>Nothing you did ever reached the file.</td></tr>"}</table>
     <h3>THE RECORD ON YOUR WATCH</h3>
-    <p><b>${histAsRecorded}</b> recorded disasters happened as the record has them. ${histAltered.length? histAltered.map(h=>`<span class="${h.how==="unmade"?"ok":"no"}">${h.how==="unmade"?"unmade":"worse"}: ${esc(h.what)}${rows[h.t-1]?" ("+rows[h.t-1].year+")":""}</span>`).join(" · ") : "You changed none of it."}${recordStopped? " <b>The geophysical record stopped the day you reached for the lithosphere.</b>" : " Every earthquake and eruption is in the textbooks, exactly as it happened."}</p>
+    <p><b>${histAsRecorded}</b> recorded disasters happened as the record has them. ${histAltered.length? histAltered.map(h=>`<span class="${h.how==="unmade"?"ok":"no"}">${h.how==="unmade"?"unmade":"worse"}: ${esc(h.what)}${rows[h.t-1]?" ("+rows[h.t-1].year+")":""}</span>`).join(" · ") : "You changed none of it."}${recordStopped? " <b>The geophysical record stopped the day you reached for the lithosphere.</b>" : (CRISIS?" This crisis is fictional; its natural shocks are authored scenario events.":" Every earthquake and eruption is in the historical baseline.")}</p>
     <h3>LESSONS THE NUMBERS SUPPORT</h3><ul class="lessons">${lessons.map(l=>`<li>${l}</li>`).join("")}</ul>
-    <p style="margin-top:10px">Which season was the most fun, and why? <span class="redact">That answer gates everything.</span> (Select to reveal.)</p>
+    <p style="margin-top:10px">${CRISIS&&crisisWon?"The harvest recovered. The emergency authority remains on the books.":"The committee retains the file. Your successor receives the weather."}</p>
     <div class="arc-actions"><button onclick="location.reload()">RUN IT BACK ▸</button><button id="arcTable" class="ghost">TABLE VIEW</button></div>
     <div id="arcTableWrap" style="display:none">${table}</div>
     <div id="arctip" class="arctip" style="display:none"></div>`;

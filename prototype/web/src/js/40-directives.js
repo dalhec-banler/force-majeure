@@ -112,7 +112,7 @@ function useLine(d){                       // the USE line names only wings you 
   const where=(d.tool||"").split("—").slice(1).join("—").trim();
   return (have.length? have.join(", ") : (d.tool||"").split("—")[0].trim())+(where? " — "+where : "");
 }
-function curDir(){ const d=DIRECTIVES[dirIdx]; return (d && !gated(d))? d : (standing||d||null); }
+function curDir(){ if(CRISIS) return null; const d=DIRECTIVES[dirIdx]; return (d && !gated(d))? d : (standing||d||null); }
 function onboardingGated(){ return gated(DIRECTIVES[dirIdx]); }
 function dirActive(d){ return d && !gated(d); }
 function issueStanding(row){
@@ -133,7 +133,7 @@ function issueStanding(row){
   wire(`<span class="tag tagd">DIRECTIVE</span><b>${standing.title.toUpperCase()}</b> — ${standing.text}`,"op");
   sfxChime(); if(!replaying) showDirCard(standing);
 }
-function directiveStep(row){
+function directiveStep(row){ if(CRISIS){renderDirective();return;}
   const d=curDir();
   if(d){
     if(gated(d)){ /* drafting language */ }
@@ -201,14 +201,24 @@ function dirCardResult(d, ok, amount){
   cardTimer=setTimeout(()=>{ if(!cardDir) $("dircard").style.display="none"; }, reduced?0:5000);
 }
 function renderDirective(){
+  if(CRISIS){
+    const stage=t<5?'FAILED RAINS':t<9?'EXPORT SQUEEZE':t<12?'RETURNING MONSOON':'RECOVERY';
+    $("dirtext").textContent=`${stage} · Review ${Math.min(16,t+1)}/16. ${t<5?'Protect the harvest; excessive seeding can flood it.':t<9?'Scarcity lifts export prices. The rival must also protect its own harvest.':t<12?'Wet forcing persists. Seed only where the water is needed.':'Restore homeland output. Protection remains useful after the weather clears.'} Finish with last-four output ≥85% and treasury ≥$100M.`;
+    $("dirreward").textContent=''; $("diropen").style.display='none'; return;
+  }
   const d=curDir();
   if(!d || gated(d)){
-    $("dirtext").innerHTML="The committee is drafting language. Nothing is asked of you this review — <b>if the world is stable, run the year.</b> A seed a year keeps the appropriation whole."+earmarkLine();
+    $("dirtext").innerHTML="The committee is drafting language. Nothing is asked of you this review — <b>if the world is stable, run the year.</b> Useful interventions, research and protection keep the appropriation whole."+earmarkLine();
     $("dirreward").textContent=""; $("diropen").style.display="none"; if(cardDir) hideDirCard(); return; }
   const left=dirLeft(d);
   $("dirtext").innerHTML=`<b>${d.title.toUpperCase()}</b>${d.tool?` <span style="font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--green)">· ${useLine(d)}</span>`:""}`+earmarkLine();
   $("dirreward").innerHTML=`+$${d.reward}M <span style="color:${left<=1?"var(--red)":"var(--ink-dim)"}">· ${left} review${left===1?"":"s"}</span>`;
   $("diropen").style.display=(cardDir===d)? "none" : "";
+  const target=d.region || REG.find(r=>(d.tool||'').includes(r.name))?.name || (/homeland/i.test(d.tool||'')?HOMELAND:/the Atlantic/.test(d.tool||'')?'NATL':null);
+  if(target && (REGPOS[target]||DRVPOS[target])){
+    const b=document.createElement('button'); b.className='wmode'; b.textContent='LOCATE TARGET ▸';
+    b.addEventListener('click',()=>{focusObservation(target);renderRegionInspector();}); $("dirtext").appendChild(b);
+  }
   if(cardDir===d) showDirCard(d);                           // refresh the fuse on the open card
 }
 
@@ -228,7 +238,7 @@ const EARMARKS=[
 ];
 const FLAGSHIP_FUSE=3;
 let flagship=null; const earmarksOffered=new Set();
-function flagshipStep(row){
+function flagshipStep(row){ if(CRISIS) return;
   // wings the earmark stood up stand down with it if the demonstration never flew
   if(flagship) for(const w of (row.wingEvents||[])) if(w.what==="online"&&w.why==="earmark") (flagship.stood||(flagship.stood=[])).push(w.cap);
   if(flagship && rv-flagship.issuedRv>=FLAGSHIP_FUSE){

@@ -1,14 +1,14 @@
 <div id="app">
 <header>
   <h1>FORCE MAJEURE</h1>
-  <span class="stat" title="Cash on hand at the close of last season. Each season: funds + income − operations − containment − $32M overhead. Income = 12% of homeland revenue + 90% of the mandate appropriation (×0.6 if the committee has seen no operation from you in four seasons) + directive rewards and earmarks − lapse clawbacks."><span class="lbl">FUNDS</span><span class="val" id="hFunds">$90.0M</span><span class="d" id="hFundsD"></span></span>
+  <span class="stat" title="Cash on hand at the close of last season. Each season: funds + income − operations − containment − $32M overhead. Income = 12% of homeland revenue + 90% of the mandate appropriation (×0.6 if the committee has seen no useful work recently) + directive rewards and earmarks − lapse clawbacks."><span class="lbl">FUNDS</span><span class="val" id="hFunds">$90.0M</span><span class="d" id="hFundsD"></span></span>
   <span class="stat" title="Funds minus this season's $32M overhead — stations, salaries, flights. The overhead is reserved before anything can be armed; the rest is yours."><span class="lbl">SPENDABLE</span><span class="val" id="hFree">$58M</span></span>
   <span class="stat" id="hTab" style="display:none"><span class="lbl">THIS SEASON</span><span class="val" id="hTabVal">$0M</span><span class="d" id="hTabOf"></span></span>
   <span class="stat"><span class="lbl">FEAR</span></span><span id="hMandateWrap"><span id="hMandate" style="width:28%"></span></span>
   <span class="stat"><span class="lbl">GRAIN</span><span class="val" id="hPrice">100.0</span><span class="d" id="hPriceD"></span></span>
   <span class="stat"><span class="lbl">HARVEST</span><span class="val" id="hYield">—</span></span>
   <span class="stat"><span class="lbl">WIRES</span><span class="val" id="hWires">—</span></span>
-  <span class="stat"><span class="lbl">PROFIT</span><span class="val" id="hProfit">$0M</span></span>
+  <span class="stat" title="Incremental homeland revenue versus the world without your orders. Operation and containment spending are reported separately in the archive."><span class="lbl">PROFIT</span><span class="val" id="hProfit">$0M</span></span>
   <span class="stat"><span class="lbl">DEATH TOLL</span><span class="val" id="hDead" style="color:var(--red)">0</span></span>
   <span class="stat"><span class="lbl" id="szclockLbl">REVIEW CLOSES</span><span class="val" id="szclock">—</span></span>
   <span id="hdrright"><span id="phase">PHASE <b id="phasename">FORECAST</b></span>
@@ -68,6 +68,16 @@
         Two tools, a stable climate, a small budget. <b>The timeline is the tutorial.</b></p></div>
     </div>
 
+    <details class="panel" open id="regionpanel">
+      <summary>REGIONAL INTELLIGENCE</summary>
+      <label for="regionpick">INSPECT / TARGET</label><select id="regionpick"></select>
+      <div id="regionreadout"></div><button id="regionarm" class="wmode" type="button">ARM SELECTED TOOL HERE ▸</button>
+    </details>
+    <details class="panel" id="opreport" open hidden>
+      <summary>FIELD REPORT — YOUR OPERATIONS <span id="opcount"></span></summary>
+      <div id="opresults" aria-live="polite" aria-relevant="additions text"></div>
+    </details>
+
     <div class="panel" id="dirpanel">
       <h2><span>DIRECTIVE — FROM THE COMMITTEE</span><span id="dirreward" style="color:var(--amber)"></span></h2>
       <div id="dirtext" style="font-family:var(--sans);font-size:12.5px;color:var(--ink)"></div>
@@ -96,7 +106,7 @@
     </div>
 
     <div class="panel" id="cmdpanel">
-      <input type="text" id="predict" placeholder="prediction — what happens next? (scored at end)">
+      <input type="text" id="predict" placeholder="prediction — what happens next? (reviewed in archive)">
       <button id="resolve">RUN SEASON ▸</button>
     </div>
   </div>
@@ -105,7 +115,7 @@
 <footer>
   <span>EYES ONLY // NOFORN // 1946–2060 CORE-LOOP INSTRUMENT</span>
   <button id="viewtoggle">VIEW: GLOBE</button>
-  <button id="wiretoggle">WIRES: ON</button>
+  <button id="wiretoggle">WIRES: SELECTED</button>
   <button id="sndtoggle">SOUND: ON</button>
   <button id="clocktoggle">CLOCK: MANUAL</button>
   <button id="teltoggle">TELEMETRY: LADDER ONLY</button>
@@ -127,9 +137,8 @@
   <div class="sheet">
     <h2>OPERATING BRIEF — READ BEFORE FIRST COMMIT</h2>
     <div class="cls">CLASSIFICATION: DIRECTOR EYES ONLY</div>
-    <p class="q">Is it fun to nudge an invisible system and watch consequences
-      arrive four to eight seasons later, in a country you did not target?</p>
-    <p>You direct a national environmental warfare programme from 1946 to
+    <p class="q">The weather is public. Your orders are not.</p>
+    <p id="longbrief">You direct a national environmental warfare programme from 1946 to
       2060. Your homeland is the programme you take over — <b>choose it
       below</b>; the console is set for <b id="introHome">the North American Plains</b>
       (<span id="introCrop">wheat and maize</span>) until you do.
@@ -165,8 +174,10 @@
         ladder reaches the top, the record goes public, and it is yours.</li>
     </ul>
     <p>One honest run, no undo. Write a prediction each season — the archive
-      scores you against them at the end.</p>
+      pairs your words with the recorded outcomes at the end.</p>
+    <p id="campaignbrief"></p><button id="campaignmode" class="ghost" type="button">PLAY THE SIXTEEN-REVIEW CRISIS ▸</button>
     <button id="begin">ASSUME DIRECTION ▸</button>
+    <p id="saverules" hidden>This programme was recorded under earlier rules. Resuming reconstructs its orders with updated funding, targeting, national economics, and attribution rules; past balances and exposure may change. The saved orders remain intact until you advance.</p>
     <button id="resume" style="display:none">RESUME THE PROGRAMME ▸</button>
   </div>
 </div>
