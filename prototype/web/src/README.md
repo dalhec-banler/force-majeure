@@ -31,13 +31,20 @@ semantics (declarations before first use at load time).
 
 After any edit: `python3 build.py`, then the engine integrity check in
 `docs/graphics-handoff.md` (treasury 302.40), then grep-verify the
-feature list in the night report before publishing. Engine opts that must be
-present in `00-setup.js`: `rivals:true, idleTrim:0.6, jetstream:true, forensics:true,
-knowledge:true, budgetGate:true, priceCap:300, scrutiny:true, grainSupply:true,
-priceElasticity:3.0, rivalEras:true, shadow:true, eras:true, envelopeWidening:0.0006,
-windfall:2, reserveCap:400`. Capabilities may carry `once` (one operation a
-campaign) and `requires` (wings that must have stood up first) — ADR-0026. `model-expanded.json` is the
-console's world for engine-level tests (`HTML=` overrides the harness page).
+feature list in the night report before publishing, and run the tests
+(`node --test tests/*.test.js` and `python3 -m unittest discover -s tests
+-p 'test_*.py'` from `prototype/web/`). Engine opts that must be present in
+`00-setup.js`: `strategic:true, crisis:CRISIS, rivals:true, idleTrim:0.6,
+jetstream:true, forensics:true, knowledge:true, budgetGate:true, exogenous:EXO,
+priceCap:300, scrutiny:true, grainSupply:true, priceElasticity:3.0,
+rivalEras:true, shadow:true, eras:true, envelopeWidening:0.0006, windfall:0.65,
+reserveCap:400`, plus the nation start (`homeland`, `rivalHome`,
+`startingTreasury`, `mandateBonus`) read from the `STARTS` table. `windfall`
+dropped from 2 to 0.65 in the September 2026 pass. Capabilities may carry
+`once` (one operation a campaign) and `requires` (wings that must have stood
+up first) — ADR-0026. `model-expanded.json` is the console's world for
+engine-level tests (`HTML=` overrides the harness page). `CRISIS` (localStorage
+`fm.mode`) trims the climate to 2030–33 and sets a single seasonal tier.
 
 ## The long campaign (ADR-0023)
 `build.py` with `LONG = True` builds the 460-season world (1946–2060)

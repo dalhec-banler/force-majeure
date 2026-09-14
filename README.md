@@ -48,21 +48,30 @@ docs/
   handoff.md                Scope, constraints, gaps register.
   technical-design.md       Deliverable 1 — the Technical Design Document.
   north-star.md             Retention, beautiful+destructive, chess-feel.
-  decisions/                ADRs 0001–0025, one file per decision.
-  night-report*.md, century-session.md, ladder notes — session records.
+  decisions/                ADRs 0001–0026, one file per decision.
+  teleconnections.md        Every wire, its mechanism, and how sure we are.
   history-sources.md        How the record was verified.
+  resources.md              Open-source engine / asset survey.
+  graphics-handoff.md       Console graphics brief and the engine integrity check.
+  playtests/                Playtest records with screenshots
+                            (six-priorities, visible-consequences).
+  night-report*.md, century-session.md — session records.
 prototype/
   force-majeure-prototype.xlsx   The ENGINE sheet. Reference tick.
   web/
     engine.js               Exact port of the sheet + gated mechanisms (opts).
     model-data.json         Pristine sheet extraction (conformance target).
-    build.py                Assembles console.html: the expanded world
-                            (36 regions, 16 tools, 460 seasons), src/ parts.
+    model-expanded.json     The console's world as built (36 regions, 16 tools,
+                            460 seasons) — what the tests load.
+    build.py                Assembles console.html from src/, the engine and
+                            the expanded world.
     src/                    Console source (head, css, body, js/NN-topic.js).
     history.json            The record 1946–2022 (built by tools/extract-history.py).
+    tests/                  Automated tests — *.test.js (Node) and test_*.py.
     tools/                  playharness.js + campaign-*.js (scripted playtests),
-                            extract-history.py, history/ (verified catalogs),
-                            sizes.html (viewport harness).
+                            extract-history.py, season_calendar.py, history/
+                            (verified catalogs), sizes.html (viewport harness).
+index.html, .nojekyll       GitHub Pages entry — redirects to the console.
 data/
   raw/                      Gitignored. Fetched, never committed.
   processed/pack-climate.json   ONI/DMI/AMO/PDO 1946–2022 + basin activity.
@@ -80,6 +89,11 @@ const e=createEngine(M);let r;for(let t=1;t<=40;t++)r=e.resolve(t,{});
 console.assert(Math.abs(r.treasury-302.40)<0.01,'ENGINE DRIFT');console.log('engine OK')"
 node tools/playharness.js "$PWD/tools/campaign-century.js"     # a scripted century (LAB=1 for the lab line)
 python3 tools/extract-history.py       # rebuild history.json from data/raw + tools/history/
+
+cd ../..
+node --test prototype/web/tests/*.test.js                          # 25 tests: rules, rival, economics, crisis, saves
+python3 -m unittest discover -s prototype/web/tests -p 'test_*.py'  # 2 tests: season calendar, leap years
+.venv/bin/python -m pytest ingest/tests -q                          # 21 tests: the ingest layer (venv from ingest/README.md)
 ```
 
 The sheet baseline (treasury 302.40 after forty no-op seasons on
@@ -93,6 +107,10 @@ engine option, default off, listed in `prototype/web/src/README.md`.
 - [x] Playable console: the century, reviews, the arsenal on the calendar, the
       growing board, the ladder with teeth, counterfactual PROFIT, the record
       to 2022, nation starts, the later arsenal (ADR-0013 → ADR-0026)
+- [x] September 2026 pass: the sixteen-review crisis (2030–33) as a second
+      campaign format, a DJF/MAM/JJA/SON season calendar, a budgeted rival,
+      readable consequences, archive comparisons, and the automated test
+      suite (`docs/playtests/six-priorities/`)
 - [ ] Core loop validated by the author playing the century
 - [ ] ERA5/FAOSTAT ingest — gated on the authored region list
 - [ ] `sim/` — gated on the playtest

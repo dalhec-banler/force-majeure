@@ -1,6 +1,6 @@
 # Six-priority development pass
 
-Completed on the `development/visible-consequences` branch, September 4–5, 2026. Entry point: `prototype/web/console.html`. Choose **PLAY THE SIXTEEN-REVIEW CRISIS** in the operating brief, or keep the long record. This is a playable development build; no public deployment was made.
+Completed on the `development/visible-consequences` branch, September 4–5, 2026. Entry point: `prototype/web/console.html`. Choose **PLAY THE SIXTEEN-REVIEW CRISIS** in the operating brief, or keep the long record. Merged to `main` the same week and published at https://dalhec-banler.github.io/force-majeure/ (commit `96323b2` added the Pages entry point).
 
 ## Design intent
 
