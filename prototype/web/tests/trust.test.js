@@ -66,3 +66,25 @@ test('late-game save continues identically, including pending wing orders',async
   assert.deepEqual(b.json('eng.wings()'),a.json('eng.wings()'));
   assert.deepEqual(a.errors,[]);assert.deepEqual(b.errors,[]);
 });
+test('a save cut mid-review finishes that review on resume, and the next orders commit',async()=>{
+  const a=consoleGame();
+  await a.run(`slots=[{cap:'Cloud Seeding',target:HOMELAND}]; runSeason(false)`);
+  assert.equal(a.json('t'),4);
+  const cut=a.json('saveLog').slice(0,2);                  // the tab closed two seasons into the year
+  const b=consoleGame();await b.run(`replaySave(${JSON.stringify(cut)})`);
+  assert.equal(b.json('t'),4);                             // the year closed before the desk came back
+  assert.deepEqual(b.json('lastRow()'),a.json('lastRow()'));
+  await b.run(`slots=[{cap:'Adaptation Investment',target:HOMELAND}]; runSeason(false)`);
+  assert.equal(b.json(`eng.state.ops.filter(o=>o.owner==='player'&&o.t===5&&o.cap==='Adaptation Investment').length`),1);
+  assert.deepEqual(a.errors,[]);assert.deepEqual(b.errors,[]);
+});
+test('orders armed mid-review wait for the next review instead of vanishing',async()=>{
+  const g=consoleGame();
+  await g.run(`(async()=>{await runSeasonInner(false);await runSeasonInner(false)})()`);   // interrupted after two seasons
+  assert.equal(g.json('t'),2);
+  await g.run(`slots=[{cap:'Cloud Seeding',target:HOMELAND}]; runSeason(false)`);
+  assert.equal(g.json('t'),4);assert.equal(g.json('slots.length'),1);
+  await g.run(`runSeason(false)`);
+  assert.equal(g.json(`eng.state.ops.filter(o=>o.owner==='player'&&o.t===5).length`),1);
+  assert.deepEqual(g.errors,[]);
+});

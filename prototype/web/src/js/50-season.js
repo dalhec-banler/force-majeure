@@ -12,6 +12,8 @@ async function runSeason(auto){
   rainObservations=[];
   try{
     const n=nextBatch();
+    if(!isReviewStart(t+1) && slots.length && !replaying)
+      wire(`The review in progress closes first. Your orders go with the next one.`,"op");
     { const lr=lastRow(); if(lr && !replaying){ const y0=eng.state.rows[Math.max(0,t-nextBatchWas)]; foldWire(lr.year+(lr.qtr==="Autumn"?"":" · "+lr.qtr.toLowerCase())); } }
     nextBatchWas=n;
     for(let i=0;i<n && running;i++){ brisk=i<n-1; await runSeasonInner(auto); }
@@ -31,7 +33,6 @@ function renderReviewButton(){
 async function runSeasonInner(auto, cmdOverride){
   const prev=lastRow();
   const first=isReviewStart(t+1);
-  if(first) rv++;
   let cmd;
   if(cmdOverride) cmd=cmdOverride;
   else {
@@ -46,12 +47,14 @@ async function runSeasonInner(auto, cmdOverride){
     // only if the flagship op actually commits
     if(flagship) cmd.earmark={amount:flagship.amount, caps:flagship.caps||FLAGSHIP_CAPS};
   }
+  // the engine takes the season first: if it throws, nothing below has moved
+  // and the next attempt resolves the same season again
+  const row = eng.resolve(t+1, cmd);
+  t++; if(first) rv++;
   // Recorded commands consume the same pending orders as live commands.
   // Later flagship processing may enqueue NEW orders for the next review.
   if(first) wingOrders={standup:[],mothball:[]};
   pendingGrant=0; pendingClaw=0;
-  t++;
-  const row = eng.resolve(t, cmd);
   if(!replaying){ saveLog.push(cmd); persistSave(); }
   for(const w of (row.wingEvents||[])){
     const c=CAPS.find(x=>x.name===w.cap); const nm=w.cap.replace(" [T3]","").toUpperCase();
@@ -429,7 +432,8 @@ async function runSeasonInner(auto, cmdOverride){
   memos(row);
   updateHUD(row, prev);
   $("phasename").textContent="FORECAST";
-  $("predict").value=""; slots=[]; pendingTool=null; clampContainment(); renderTray();
+  if(first){ $("predict").value=""; slots=[]; }
+  pendingTool=null; clampContainment(); renderTray();
   $("toolinfo").textContent="Pick a tool. Aim it at the world. Scroll to zoom.";
   if(row.status==="exposed"||row.status==="insolvent"||row.status==="dissolved"||t>=eng.seasons){
     // the campaign is over; the archive waits for you — read the last season first
@@ -468,6 +472,10 @@ async function replaySave(log){
   clampContainment(); renderTray(); renderDirective(); renderReviewButton();
   renderOperationReport();
   SEASON_MS=clockMs(); if(running) seasonDeadline=performance.now()+SEASON_MS;
+  if(running && t>0 && !isReviewStart(t+1)){
+    wire(`The file was closed mid-review. The review's remaining seasons resolve now.`,"op");
+    await runSeason(false);
+  }
 }
 setInterval(()=>{
   const el=$("szclock");
