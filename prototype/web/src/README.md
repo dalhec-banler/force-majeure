@@ -11,8 +11,8 @@ may reference names declared in an earlier (or, for functions, later) part.
 | `head.html` | title, meta, font links |
 | `console.css` | all styling (single phosphor theme, no host-theme leak) |
 | `body.html` | header / main / footer / overlays markup |
-| `js/00-setup.js` | `__MODEL__` `__LAND__` `__ENGINE__` placeholders, engine instance + opts, positions, datelines, shared `let` state |
-| `js/10-tray.js` | tool tray, descriptions, click-to-aim |
+| `js/00-setup.js` | `__MODEL__` `__LAND__` `__ENGINE__` placeholders, engine instance + opts, positions, datelines, shared `let` state, the purse (`spendable`/`available`/`canAfford`, `earmarkCovers`, `autoStands`, containment cap) |
+| `js/10-tray.js` | tool tray, WINGS bar, tool cards, click-to-aim |
 | `js/20-canvas.js` | 2D canvas sizing, drag/zoom, `project()` |
 | `js/21-earth.js` | WebGL Blue Marble shader (drought browning, ice, terminator), region click |
 | `js/22-effects.js` | persistent spectacle: fire, smoke, storms, beams |
@@ -22,7 +22,7 @@ may reference names declared in an earlier (or, for functions, later) part.
 | `js/31-hud.js` | sparks, in-flight board, header HUD, TRACE attribution, advisor memos |
 | `js/40-directives.js` | phase strip, committee directives (onboarding) |
 | `js/41-audio.js` | WebAudio synth SFX |
-| `js/50-season.js` | `runSeason` — the whole resolve/consequence/attribution beat, season clock |
+| `js/50-season.js` | `runSeason` — the whole resolve/consequence/attribution beat, season clock, saves and replay |
 | `js/60-archive.js` | end-of-campaign archive |
 | `js/70-boot.js` | boot sequence, toggles, event wiring |
 
@@ -54,3 +54,8 @@ rebuilds `history.json` to 2022 from `data/raw` and `tools/history/`.
 Harness: `node tools/playharness.js "$PWD/tools/campaign-century.js"`
 (`LAB=1` for the lab line); `api.review()` runs one review, `api.standup(cap)`
 / `api.mothball(cap)` order wings, `api.wing(cap)` reads a wing's status.
+The harness plays by the tray's rules: `api.arm` refuses a wing that is not
+flying unless it is ordered up this review, stands itself up (the lab), or is
+carried by a live earmark, and `api.containment` goes through the slider's
+cap. Refusals are listed in `::RESULT::` as `refused` so a script cannot
+quietly do what a player could not.

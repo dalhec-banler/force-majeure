@@ -105,7 +105,7 @@ function wingLine(c){
   if(autoStands(c.name)) return `<i>the committee stands this wing up at this review · upkeep $${ws.upkeep}M/season</i>`;
   if(earmarkCovers(c.name)) return `<i>the earmark stands this wing up for the demonstration · upkeep $${ws.upkeep}M/season after, while you keep it</i>`;
   if(ws.online) return (ws.once? `<i>one operation, ever</i>` : "")
-    +(ws.upkeep? `<i>wing online · upkeep $${ws.upkeep}M/season</i><i>⏏ stands it down — the upkeep stops, it reopens at $${Math.round(ws.chest*0.75)}M</i>` : "");
+    +(ws.upkeep? `<i>wing online · upkeep $${ws.upkeep}M/season</i><i>click it on the WINGS bar to stand it down — the upkeep stops, it reopens at $${Math.round(ws.chest*0.75)}M</i>` : "");
   if(ws.requires && ws.requires.length) return `<i>needs first: ${ws.requires.map(n=>n.replace(" [T3]","")).join(", ")}</i>`;
   if(!ws.eligible) return `<i>arrives ${ws.from}</i>`;
   return `<i>${ws.canStand? "the wing can stand up" : `needs $${Math.round(ws.need)}M in the chest`} · upkeep $${ws.upkeep}M/season</i>`;

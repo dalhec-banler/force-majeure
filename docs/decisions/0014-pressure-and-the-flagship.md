@@ -49,3 +49,15 @@ is unchanged; every new engine path is behind `rivals:true` or a new
   does the same job without touching the record.
 - The play harness gained `directiveLeft`, `flagship`, `lapses` in its
   view, plus two campaigns: `campaign-turtle.js` and `campaign-flagship.js`.
+
+**Revised 2026-09-21 (current behaviour).** The flagship is no longer twice
+a campaign at S12/S28. In the long campaign it is four earmarks on the
+calendar (`EARMARKS` in `40-directives.js`, see ADR-0024): 1982 $40M aerosol;
+1990 $60M ENSO; 2014 $60M ENSO, Ionospheric or Polar; 2035 $80M Orbital,
+Biological, Ionospheric or Polar. Each has a three-*review* fuse, and the
+earmark stands its wing up for the demonstration even when the chest could
+not. The console now lets you arm that wing while the earmark is live (one
+op); before this revision the tray refused any wing that was not flying, so
+lean programmes watched the earmarks lapse. The standing "answer" demand is
+titled for the actual rival ("Answer the Steppe" for the United States,
+"Answer the Plains" for the Soviet Union, and so on).

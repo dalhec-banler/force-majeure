@@ -33,3 +33,18 @@
 - Verified: the idle 36-region programme is wound up at S15; a research-only
   programme is warned from S9; a campaign that tries to buy T3 + ENSO + full
   containment every season is refused throughout and never goes negative.
+
+**Revised 2026-09-21 (current behaviour).**
+- There is no second slot: any number of operations a review, within the
+  purse (ADR-0017 onward).
+- SPENDABLE is the engine's purse as the console can see it: treasury, plus
+  a directive grant landing next season, minus a lapse clawback, minus
+  overhead and the upkeep of every standing wing — including a wing the
+  committee stands up this review on its own (the lab) or on an earmark.
+  Before this revision the header ignored grants and clawbacks, so
+  operations it called affordable could be refused.
+- Containment is charged every season of a review, from what the operations
+  leave (the engine commits operations first and clamps containment to the
+  rest). The slider is set per season and capped at what the whole review
+  can carry; its label shows the review's total ("10 · $40M this year") and
+  the THIS SEASON tab counts it. It stays set until you move it.

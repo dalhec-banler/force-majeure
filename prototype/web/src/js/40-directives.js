@@ -222,8 +222,8 @@ function renderDirective(){
   if(cardDir===d) showDirCard(d);                           // refresh the fuse on the open card
 }
 
-/* Flagship earmark — twice a campaign the committee finds money in a
-   classified line for one demonstration: ENSO, T3, or Polar. Three seasons,
+/* Flagship earmark — four times a campaign (EARMARKS below) the committee
+   finds money in a classified line for one demonstration. Three reviews,
    then it goes to the Navy. Funds the fantasy; the signature is still yours. */
 const FLAGSHIP_CAPS=["ENSO Forcing","Ionospheric Coupling [T3]","Polar Destabilization"];
 const LATE_CAPS=["Orbital Mirror","Engineered Biology","Polar Destabilization","Ionospheric Coupling [T3]"];

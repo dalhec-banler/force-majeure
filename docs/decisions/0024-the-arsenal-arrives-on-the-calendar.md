@@ -42,3 +42,13 @@ yet — the "Move a market" directive waits for 1966 and asks for the wing.
 
 
 **Revised 2026-08-26 (author: arrivals felt laggy).** Dates brought forward as above — Cirrus 1947 / Stormfury 1962 justify a watershed wing in 1962; Budyko 1974 → aerosol 1980; the 1982–83 Niño → ENSO 1990; HAARP 1993 → 1996. Earmarks follow (1982, 1990, 2014, 2035). The first weapon now arrives at review 16 instead of 20; the longest early gap falls from 22 reviews to 12. The back half (2014–2060, ~150 reviews) still has no arrivals — new wings proposed: Hurricane Steering (1955), Engineered Bloom (2008), Marine Cloud Brightening (2024), Orbital Mirror (2032), Engineered Biology (2040), the AMOC Lever (2046).
+
+**Revised 2026-09-21 (current behaviour).** The six proposed wings shipped
+in ADR-0026, so the back half has arrivals. Wings are stood up and down on
+the WINGS bar above the tray (the ⏏ on tool tiles is gone). Only the lab
+(Climate Research, upkeep $1M) stands itself up; you can arm it at the
+review it does. The earmarks are 1982, 1990, 2014 and 2035 (the bullet above
+predates the date revision). While an earmark is live its wings can be armed
+from the tray whatever the chest holds; if the demonstration never flies,
+the wing goes back to the desert with the money.
+

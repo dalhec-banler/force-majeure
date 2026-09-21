@@ -38,7 +38,14 @@ Open it locally (`cd prototype/web && python3 -m http.server 8471`, then
   action, wings, the ladder, BREAKING events); each operation is one card that
   grows as it lands and is filed; each review folds into one line when the
   next begins.
-- Separate save slots per programme and campaign format, in the browser; RESUME replays your orders.
+- **Money is honest.** SPENDABLE is what the engine will let you spend: the
+  treasury, next season's grant or clawback, less overhead and wing upkeep.
+  Containment is set per season and charged every season of the review; its
+  label shows the review's total. A flagship earmark (1982, 1990, 2014, 2035)
+  stands its wing up for one demonstration even when the chest could not.
+- Separate save slots per programme and campaign format, in the browser;
+  RESUME replays your orders, and finishes a review the file was closed in
+  the middle of.
 
 ## Layout
 
@@ -91,7 +98,7 @@ node tools/playharness.js "$PWD/tools/campaign-century.js"     # a scripted cent
 python3 tools/extract-history.py       # rebuild history.json from data/raw + tools/history/
 
 cd ../..
-node --test prototype/web/tests/*.test.js                          # 25 tests: rules, rival, economics, crisis, saves
+node --test prototype/web/tests/*.test.js                          # 29 tests: rules, rival, economics, crisis, saves, earmarks
 python3 -m unittest discover -s prototype/web/tests -p 'test_*.py'  # 2 tests: season calendar, leap years
 .venv/bin/python -m pytest ingest/tests -q                          # 21 tests: the ingest layer (venv from ingest/README.md)
 ```

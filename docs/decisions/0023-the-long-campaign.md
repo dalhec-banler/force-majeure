@@ -60,3 +60,13 @@ that unlocks weapons and can be lost) only make sense across the century.
 Console 3.9 MB. Open: the ramp anchors and GLOBAL scale want a real GMST
 series in the pack; PDO is in the pack but not yet a driver (ADR-0006);
 the situation-room decade is ~124 reviews — playtest the length.
+
+**Revised 2026-09-21 (current behaviour).** Saves: one slot per programme
+and campaign format (`fm.campaign.<mode>.v1:<homeland>`). A file closed in
+the middle of a review finishes that review on RESUME, before the desk comes
+back, so orders armed afterwards commit at a real review start. The same
+harness today (after the September windfall change and the ADR-0016/0024
+revisions): lab line reaches 2060 running at $652M, PROFIT +$350M, rung 1;
+builder reaches 2060 running at $97M, PROFIT +$1,142M, rung 4 (peak 5),
+8 wings.
+
