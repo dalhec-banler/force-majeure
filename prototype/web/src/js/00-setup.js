@@ -162,6 +162,7 @@ function fmtDead(n){
 
 function fmt(n,d=1){ return n.toLocaleString("en-US",
   {minimumFractionDigits:d,maximumFractionDigits:d}); }
+function signedM(n,d=1){ return (n<0?"−$":"$")+fmt(Math.abs(n),d)+"M"; }
 function lastRow(){ return eng.state.rows[t-1]; }
 // PROFIT: what the programme made — homeland revenue over the shadow world where it never acted
 function profitOf(rows){ return rows.reduce((s,r)=>s+r.revenue-(r.baseRevenue==null?85:r.baseRevenue),0); }
@@ -193,7 +194,8 @@ function spendable(){
   if(eng.eras) for(const c of CAPS){if(c.type==='NONE')continue;const w=eng.wingStatus(c.name);
     if((w.online&&!wingOrders.mothball.includes(c.name)) || (wingOrders.standup.includes(c.name)&&w.canStand)) overhead+=c.upkeep||0;
   }
-  return Math.max(0,funds()-overhead);
+  // the engine's purse: next season's grant in, any lapse clawback out
+  return Math.max(0,funds()+pendingGrant-pendingClaw-overhead);
 }
 function available(){ return Math.max(0, spendable()-armedCost()); }
 function canAfford(c){ if(c.resil){const q=eng.quote(c.name,inspectionTarget||HOMELAND);if(q.valid&&q.cost<=available())return true;} if(capCost(c.name)===0 && c.cost>0) return funds()>=eng.assumptions.overhead; return capCost(c.name) <= available(); }

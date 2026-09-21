@@ -164,6 +164,7 @@ function renderStormCard(){
     `<button data-n="${i}"${armed?" disabled":""}>${n.name.toUpperCase()}${n.home?" · OURS":""}</button>`).join("");
   for(const b of $("scopts").querySelectorAll("button"))
     b.addEventListener("click",()=>{
+      if(!running||resolving) return;
       const n=near[+b.dataset.n];
       if(budgetRefuse(CAPS.find(c=>c.name==="Hurricane Steering"))) return;
       slots.push({cap:"Hurricane Steering", target:n.name});
@@ -178,7 +179,7 @@ const usedCaps=new Set();
 let filedCount=0, punctureFired=false, briefSeason=0;
 
 function showBriefing(title, text, img){
-  if(briefSeason===t) return; briefSeason=t;
+  if((typeof replaying!=="undefined" && replaying) || briefSeason===t) return; briefSeason=t;
   $("bc-title").textContent=title;
   $("bc-text").textContent=text;
   $("bc-img").src=img;

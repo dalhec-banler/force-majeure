@@ -1,5 +1,6 @@
 /* --------------------------------------------------------------- misc */
 buildTray(); clampContainment(); renderTray(); renderDirective(); renderReviewButton();
+$("hFunds").textContent="$"+fmt(funds())+"M"; $("hFree").textContent="$"+fmt(spendable(),0)+"M";   // body.html carries the US figures
 /* Briefing intent: a prospective director chooses a country and understands
    its tradeoffs. Preserve the original ruled terminal dossier, phosphor
    palette, Plex type hierarchy and 8/12px card spacing. Country names lead;
@@ -27,7 +28,7 @@ const CRISIS_START_BRIEFS={
       <div><div class="hp-h">WEAKNESSES</div>${(st.minus||[]).map(x=>`<div class="hp-li m">${x}</div>`).join("")}</div></div>`;
     b.addEventListener("click",()=>{ if(region===HOMELAND) return;
       try{ localStorage.setItem("fm.homeland", region); sessionStorage.setItem("fm.skipboot","1"); }catch(e){}
-      const i=$("intro"); if(!reduced) fadeTo(i,0,400);
+      if(!reduced) fadeTo($("briefsheet"),0,400);
       setTimeout(()=>location.reload(), reduced?0:420); });
     row.appendChild(b); } }
 requestAnimationFrame(drawGlobe);            // every part has run; the loop may start
@@ -149,6 +150,5 @@ if(CRISIS){
   $("longbrief").innerHTML=`You direct a national environmental warfare programme. Your homeland is the programme you take over — <b>choose it below</b>; the console is set for <b>the ${HOMELAND}</b>. A calm world defunds you. A frightening one earns your appropriation. In this shorter campaign, you take command in 2030 with a $120M emergency chest and eight wings already standing. The failed rains become an export crisis; then the rain returns. Every season is a decision: protect your harvest, move a competitor's weather, investigate the ocean connections, or close a wing to save its upkeep. The rival protects its own harvest and watches your repeated interventions. Sixteen reviews decide whether the programme survives. The instructions below explain how to operate it.`;
   $("introresolve").textContent="RUN SEASON";
   $("clock").textContent='2030 · WINTER · CRISIS';
-  $("hFunds").textContent='$120.0M';$("hFree").textContent='$'+fmt(spendable(),0)+'M';
   $("wire").innerHTML='<p><span class="stamp">2030·W</span> Emergency authority established. Failed rains are expected next season. The committee requires recovery and a $100M closing reserve.</p>';
 }

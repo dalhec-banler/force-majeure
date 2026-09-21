@@ -171,6 +171,14 @@ function toolClick(c){
    One chip per wing: standing (with its upkeep), ready to stand up, or
    ordered either way. Click a chip to give the order. Fixed height, so the
    world below it never resizes when a wing comes or goes. */
+/* the bar is one fixed-height row; when the wings outrun it, the wheel scrolls it
+   sideways and the right edge fades while there is more to see */
+function wingBarEdge(bar){ bar.classList.toggle("more", bar.scrollLeft+bar.clientWidth < bar.scrollWidth-1); }
+{ const bar=$("wingbar");
+  if(bar){ bar.addEventListener("wheel",e=>{
+      if(bar.scrollWidth<=bar.clientWidth || Math.abs(e.deltaX)>Math.abs(e.deltaY)) return;
+      bar.scrollLeft+=e.deltaY; e.preventDefault(); wingBarEdge(bar); },{passive:false});
+    bar.addEventListener("scroll",()=>wingBarEdge(bar),{passive:true}); } }
 function renderWingBar(){
   const bar=$("wingbar"); if(!bar) return;
   if(!eng.eras){ bar.style.display="none"; return; }
@@ -190,6 +198,7 @@ function renderWingBar(){
     ? `<span class="wl">WINGS <b>$${upkeep}M</b>/season</span>`
     : `<span class="wl">WINGS <b>none standing</b></span>`;
   bar.innerHTML=lbl+chips.join("");
+  wingBarEdge(bar);
   for(const b of bar.querySelectorAll("button.wc")) b.disabled=resolving||!running;
   for(const b of bar.querySelectorAll("button.wc")) b.addEventListener("click",()=>{
     if(!running||resolving) return;

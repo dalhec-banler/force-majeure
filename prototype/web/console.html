@@ -431,6 +431,7 @@
 #wingbar{display:flex;align-items:center;gap:5px;height:24px;max-width:100%;overflow-x:auto;overflow-y:hidden;
          background:rgba(15,23,18,.94);border:1px solid var(--line);padding:0 8px;font-family:var(--mono);white-space:nowrap}
 #wingbar::-webkit-scrollbar{height:0}
+#wingbar.more{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 48px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 48px),transparent)}
 #wingbar .wl{font-size:9px;letter-spacing:.2em;color:var(--ink-dim);flex:0 0 auto} #wingbar .wl b{color:var(--ink)}
 .wc{flex:0 0 auto;background:none;border:1px solid var(--line);color:var(--ink-dim);font:inherit;font-size:9.5px;
     letter-spacing:.08em;padding:2px 7px;cursor:pointer;line-height:1.5}
@@ -1629,6 +1630,7 @@ function fmtDead(n){
 
 function fmt(n,d=1){ return n.toLocaleString("en-US",
   {minimumFractionDigits:d,maximumFractionDigits:d}); }
+function signedM(n,d=1){ return (n<0?"−$":"$")+fmt(Math.abs(n),d)+"M"; }
 function lastRow(){ return eng.state.rows[t-1]; }
 // PROFIT: what the programme made — homeland revenue over the shadow world where it never acted
 function profitOf(rows){ return rows.reduce((s,r)=>s+r.revenue-(r.baseRevenue==null?85:r.baseRevenue),0); }
@@ -1660,7 +1662,8 @@ function spendable(){
   if(eng.eras) for(const c of CAPS){if(c.type==='NONE')continue;const w=eng.wingStatus(c.name);
     if((w.online&&!wingOrders.mothball.includes(c.name)) || (wingOrders.standup.includes(c.name)&&w.canStand)) overhead+=c.upkeep||0;
   }
-  return Math.max(0,funds()-overhead);
+  // the engine's purse: next season's grant in, any lapse clawback out
+  return Math.max(0,funds()+pendingGrant-pendingClaw-overhead);
 }
 function available(){ return Math.max(0, spendable()-armedCost()); }
 function canAfford(c){ if(c.resil){const q=eng.quote(c.name,inspectionTarget||HOMELAND);if(q.valid&&q.cost<=available())return true;} if(capCost(c.name)===0 && c.cost>0) return funds()>=eng.assumptions.overhead; return capCost(c.name) <= available(); }
@@ -1850,6 +1853,14 @@ function toolClick(c){
    One chip per wing: standing (with its upkeep), ready to stand up, or
    ordered either way. Click a chip to give the order. Fixed height, so the
    world below it never resizes when a wing comes or goes. */
+/* the bar is one fixed-height row; when the wings outrun it, the wheel scrolls it
+   sideways and the right edge fades while there is more to see */
+function wingBarEdge(bar){ bar.classList.toggle("more", bar.scrollLeft+bar.clientWidth < bar.scrollWidth-1); }
+{ const bar=$("wingbar");
+  if(bar){ bar.addEventListener("wheel",e=>{
+      if(bar.scrollWidth<=bar.clientWidth || Math.abs(e.deltaX)>Math.abs(e.deltaY)) return;
+      bar.scrollLeft+=e.deltaY; e.preventDefault(); wingBarEdge(bar); },{passive:false});
+    bar.addEventListener("scroll",()=>wingBarEdge(bar),{passive:true}); } }
 function renderWingBar(){
   const bar=$("wingbar"); if(!bar) return;
   if(!eng.eras){ bar.style.display="none"; return; }
@@ -1869,6 +1880,7 @@ function renderWingBar(){
     ? `<span class="wl">WINGS <b>$${upkeep}M</b>/season</span>`
     : `<span class="wl">WINGS <b>none standing</b></span>`;
   bar.innerHTML=lbl+chips.join("");
+  wingBarEdge(bar);
   for(const b of bar.querySelectorAll("button.wc")) b.disabled=resolving||!running;
   for(const b of bar.querySelectorAll("button.wc")) b.addEventListener("click",()=>{
     if(!running||resolving) return;
@@ -3239,6 +3251,7 @@ function renderStormCard(){
     `<button data-n="${i}"${armed?" disabled":""}>${n.name.toUpperCase()}${n.home?" · OURS":""}</button>`).join("");
   for(const b of $("scopts").querySelectorAll("button"))
     b.addEventListener("click",()=>{
+      if(!running||resolving) return;
       const n=near[+b.dataset.n];
       if(budgetRefuse(CAPS.find(c=>c.name==="Hurricane Steering"))) return;
       slots.push({cap:"Hurricane Steering", target:n.name});
@@ -3253,7 +3266,7 @@ const usedCaps=new Set();
 let filedCount=0, punctureFired=false, briefSeason=0;
 
 function showBriefing(title, text, img){
-  if(briefSeason===t) return; briefSeason=t;
+  if((typeof replaying!=="undefined" && replaying) || briefSeason===t) return; briefSeason=t;
   $("bc-title").textContent=title;
   $("bc-text").textContent=text;
   $("bc-img").src=img;
@@ -3445,8 +3458,9 @@ function memos(row){
     out.push("Budget office: at current burn this programme fails within the year.");
   if(iceMelt>=0.5 && t%6===0)
     out.push("Science desk: the Greenland sheet is past recovering on any timescale we will see. The coastlines on the map are now the coastlines.");
-  if(flagship && flagship.deadline-t<=1)
-    out.unshift(`Budget office: the flagship earmark lapses ${flagship.deadline-t===0?"this season":"next season"}. Sixty million dollars, and nothing to show the committee.`);
+  const fuseLeft=flagship? FLAGSHIP_FUSE-(rv-flagship.issuedRv) : 99;
+  if(fuseLeft<=1)
+    out.unshift(`Budget office: the flagship earmark lapses ${fuseLeft<=0?"at this review":"at the next review"}. $${flagship.amount}M, and nothing to show the committee.`);
   if(lapses>=2 && t%3===0)
     out.push("Chief of staff: two lapsed directives on the record. The committee has started using the word 'review'.");
   if(t%9===5)
@@ -3643,7 +3657,7 @@ const DIRECTIVES=[
    first, a failing client second, then a rotation of demands. */
 let lastHostileT=-99;                 // last season the homeland was worked by a rival
 const STANDING=[
- {key:"answer", when:()=>lastHostileT>=t-3, needs:["Watershed Interference","Fire Enablement","Ionospheric Coupling [T3]"], title:"Answer the Steppe", reward:18, window:2,
+ {key:"answer", when:()=>lastHostileT>=t-3, needs:["Watershed Interference","Fire Enablement","Ionospheric Coupling [T3]"], title:`Answer ${START.rivalShort}`, reward:18, window:2,
   tool:`🚱 WATERSHED, 🔥 FIRE, or ⚡ IONOSPHERIC — ${START.rival}`,
   text:`They worked our watershed again. The committee wants a reply on ${START.rivalShort} before the next hearing — it does not care what kind.`,
   check:(row,d)=>eng.state.ops.some(o=>o.owner==="player"&&o.sig>0&&o.target===START.rival&&o.t>d.issued)},
@@ -3720,7 +3734,7 @@ function issueStanding(row){
        ||STANDING.find(s=>s.key===rot[standingCount%rot.length]&&ok(s)&&(!s.when||s.when(row)))
        ||STANDING.find(s=>s.key===rot[(standingCount+1)%rot.length]&&ok(s)&&(!s.when||s.when(row)))
        ||STANDING.find(s=>s.key===rot[(standingCount+2)%rot.length]&&ok(s)&&(!s.when||s.when(row)))
-       ||STANDING.find(s=>s.key==="relief"&&ok(s))
+       ||STANDING.find(s=>s.key==="relief"&&ok(s)&&s.when(row))
        ||STANDING.find(s=>s.key==="hold");
   lastStandingKey=src.key;
   standing=Object.assign({},src,{issued:t, issuedT:t, issuedRv:rv, standing:true});
@@ -4609,7 +4623,7 @@ function showArchive(finalRow){
     <h3>YOUR DECISIONS, OPENED</h3><p>Free-text predictions are preserved for your assessment; no automatic interpretation or score is applied. The shadow world has the same natural forcing and rules, with no player orders; its rival can respond differently.</p>
     <table class="szt"><tr><th>committed</th><th>prediction</th><th>observed outcome</th></tr>${decisions||'<tr><td colspan="3">No predictions recorded.</td></tr>'}</table>
     <h3>THREE LARGEST REVENUE DEPARTURES</h3>${decisive.length?'':'<p>No measurable revenue departure from the shadow world.</p>'}${decisive.map(r=>`<p><b>${r.year} ${r.qtr}</b> · ${fmt(seasonProfit(r),1)}M vs shadow. Landings: ${esc(r.landed.filter(e=>e.owner==='player').map(e=>e.cap+' at '+e.target).join('; ')||'none — lagged effects and market responses can dominate')}.</p>`).join('')}
-    <p>Incremental homeland revenue $${fmt(profit,1)}M; operation spend $${fmt(spend,1)}M; containment $${fmt(contSpend,1)}M. Revenue less those costs: $${fmt(profit-spend-contSpend,1)}M. Programme upkeep remains in the treasury ledger.</p>`;
+    <p>Incremental homeland revenue ${signedM(profit)}; operation spend $${fmt(spend,1)}M; containment $${fmt(contSpend,1)}M. Revenue less those costs: ${signedM(profit-spend-contSpend)}. Programme upkeep remains in the treasury ledger.</p>`;
   let history=[];try{history=JSON.parse(localStorage.getItem('fm.archive.v1')||'[]');if(!Array.isArray(history))history=[];}catch(e){}
   const record={rules:RULES_REVISION,nation:START.nation,mode:CRISIS?'crisis':'long',seasons:N,recovery,treasury:finalRow.treasury,profit,spend,won:crisisWon};
   const prior=history.filter(r=>r.rules===RULES_REVISION&&r.mode===record.mode&&r.nation===record.nation).slice(-5);
@@ -4686,6 +4700,7 @@ function showArchive(finalRow){
 }
 /* --------------------------------------------------------------- misc */
 buildTray(); clampContainment(); renderTray(); renderDirective(); renderReviewButton();
+$("hFunds").textContent="$"+fmt(funds())+"M"; $("hFree").textContent="$"+fmt(spendable(),0)+"M";   // body.html carries the US figures
 /* Briefing intent: a prospective director chooses a country and understands
    its tradeoffs. Preserve the original ruled terminal dossier, phosphor
    palette, Plex type hierarchy and 8/12px card spacing. Country names lead;
@@ -4713,7 +4728,7 @@ const CRISIS_START_BRIEFS={
       <div><div class="hp-h">WEAKNESSES</div>${(st.minus||[]).map(x=>`<div class="hp-li m">${x}</div>`).join("")}</div></div>`;
     b.addEventListener("click",()=>{ if(region===HOMELAND) return;
       try{ localStorage.setItem("fm.homeland", region); sessionStorage.setItem("fm.skipboot","1"); }catch(e){}
-      const i=$("intro"); if(!reduced) fadeTo(i,0,400);
+      if(!reduced) fadeTo($("briefsheet"),0,400);
       setTimeout(()=>location.reload(), reduced?0:420); });
     row.appendChild(b); } }
 requestAnimationFrame(drawGlobe);            // every part has run; the loop may start
@@ -4835,7 +4850,6 @@ if(CRISIS){
   $("longbrief").innerHTML=`You direct a national environmental warfare programme. Your homeland is the programme you take over — <b>choose it below</b>; the console is set for <b>the ${HOMELAND}</b>. A calm world defunds you. A frightening one earns your appropriation. In this shorter campaign, you take command in 2030 with a $120M emergency chest and eight wings already standing. The failed rains become an export crisis; then the rain returns. Every season is a decision: protect your harvest, move a competitor's weather, investigate the ocean connections, or close a wing to save its upkeep. The rival protects its own harvest and watches your repeated interventions. Sixteen reviews decide whether the programme survives. The instructions below explain how to operate it.`;
   $("introresolve").textContent="RUN SEASON";
   $("clock").textContent='2030 · WINTER · CRISIS';
-  $("hFunds").textContent='$120.0M';$("hFree").textContent='$'+fmt(spendable(),0)+'M';
   $("wire").innerHTML='<p><span class="stamp">2030·W</span> Emergency authority established. Failed rains are expected next season. The committee requires recovery and a $100M closing reserve.</p>';
 }
 </script>

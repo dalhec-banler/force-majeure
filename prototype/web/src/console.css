@@ -425,6 +425,7 @@
 #wingbar{display:flex;align-items:center;gap:5px;height:24px;max-width:100%;overflow-x:auto;overflow-y:hidden;
          background:rgba(15,23,18,.94);border:1px solid var(--line);padding:0 8px;font-family:var(--mono);white-space:nowrap}
 #wingbar::-webkit-scrollbar{height:0}
+#wingbar.more{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 48px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 48px),transparent)}
 #wingbar .wl{font-size:9px;letter-spacing:.2em;color:var(--ink-dim);flex:0 0 auto} #wingbar .wl b{color:var(--ink)}
 .wc{flex:0 0 auto;background:none;border:1px solid var(--line);color:var(--ink-dim);font:inherit;font-size:9.5px;
     letter-spacing:.08em;padding:2px 7px;cursor:pointer;line-height:1.5}

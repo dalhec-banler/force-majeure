@@ -137,7 +137,7 @@ function showArchive(finalRow){
     <h3>YOUR DECISIONS, OPENED</h3><p>Free-text predictions are preserved for your assessment; no automatic interpretation or score is applied. The shadow world has the same natural forcing and rules, with no player orders; its rival can respond differently.</p>
     <table class="szt"><tr><th>committed</th><th>prediction</th><th>observed outcome</th></tr>${decisions||'<tr><td colspan="3">No predictions recorded.</td></tr>'}</table>
     <h3>THREE LARGEST REVENUE DEPARTURES</h3>${decisive.length?'':'<p>No measurable revenue departure from the shadow world.</p>'}${decisive.map(r=>`<p><b>${r.year} ${r.qtr}</b> · ${fmt(seasonProfit(r),1)}M vs shadow. Landings: ${esc(r.landed.filter(e=>e.owner==='player').map(e=>e.cap+' at '+e.target).join('; ')||'none — lagged effects and market responses can dominate')}.</p>`).join('')}
-    <p>Incremental homeland revenue $${fmt(profit,1)}M; operation spend $${fmt(spend,1)}M; containment $${fmt(contSpend,1)}M. Revenue less those costs: $${fmt(profit-spend-contSpend,1)}M. Programme upkeep remains in the treasury ledger.</p>`;
+    <p>Incremental homeland revenue ${signedM(profit)}; operation spend $${fmt(spend,1)}M; containment $${fmt(contSpend,1)}M. Revenue less those costs: ${signedM(profit-spend-contSpend)}. Programme upkeep remains in the treasury ledger.</p>`;
   let history=[];try{history=JSON.parse(localStorage.getItem('fm.archive.v1')||'[]');if(!Array.isArray(history))history=[];}catch(e){}
   const record={rules:RULES_REVISION,nation:START.nation,mode:CRISIS?'crisis':'long',seasons:N,recovery,treasury:finalRow.treasury,profit,spend,won:crisisWon};
   const prior=history.filter(r=>r.rules===RULES_REVISION&&r.mode===record.mode&&r.nation===record.nation).slice(-5);

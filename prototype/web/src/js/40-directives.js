@@ -47,7 +47,7 @@ const DIRECTIVES=[
    first, a failing client second, then a rotation of demands. */
 let lastHostileT=-99;                 // last season the homeland was worked by a rival
 const STANDING=[
- {key:"answer", when:()=>lastHostileT>=t-3, needs:["Watershed Interference","Fire Enablement","Ionospheric Coupling [T3]"], title:"Answer the Steppe", reward:18, window:2,
+ {key:"answer", when:()=>lastHostileT>=t-3, needs:["Watershed Interference","Fire Enablement","Ionospheric Coupling [T3]"], title:`Answer ${START.rivalShort}`, reward:18, window:2,
   tool:`🚱 WATERSHED, 🔥 FIRE, or ⚡ IONOSPHERIC — ${START.rival}`,
   text:`They worked our watershed again. The committee wants a reply on ${START.rivalShort} before the next hearing — it does not care what kind.`,
   check:(row,d)=>eng.state.ops.some(o=>o.owner==="player"&&o.sig>0&&o.target===START.rival&&o.t>d.issued)},
@@ -124,7 +124,7 @@ function issueStanding(row){
        ||STANDING.find(s=>s.key===rot[standingCount%rot.length]&&ok(s)&&(!s.when||s.when(row)))
        ||STANDING.find(s=>s.key===rot[(standingCount+1)%rot.length]&&ok(s)&&(!s.when||s.when(row)))
        ||STANDING.find(s=>s.key===rot[(standingCount+2)%rot.length]&&ok(s)&&(!s.when||s.when(row)))
-       ||STANDING.find(s=>s.key==="relief"&&ok(s))
+       ||STANDING.find(s=>s.key==="relief"&&ok(s)&&s.when(row))
        ||STANDING.find(s=>s.key==="hold");
   lastStandingKey=src.key;
   standing=Object.assign({},src,{issued:t, issuedT:t, issuedRv:rv, standing:true});

@@ -148,8 +148,9 @@ function memos(row){
     out.push("Budget office: at current burn this programme fails within the year.");
   if(iceMelt>=0.5 && t%6===0)
     out.push("Science desk: the Greenland sheet is past recovering on any timescale we will see. The coastlines on the map are now the coastlines.");
-  if(flagship && flagship.deadline-t<=1)
-    out.unshift(`Budget office: the flagship earmark lapses ${flagship.deadline-t===0?"this season":"next season"}. Sixty million dollars, and nothing to show the committee.`);
+  const fuseLeft=flagship? FLAGSHIP_FUSE-(rv-flagship.issuedRv) : 99;
+  if(fuseLeft<=1)
+    out.unshift(`Budget office: the flagship earmark lapses ${fuseLeft<=0?"at this review":"at the next review"}. $${flagship.amount}M, and nothing to show the committee.`);
   if(lapses>=2 && t%3===0)
     out.push("Chief of staff: two lapsed directives on the record. The committee has started using the word 'review'.");
   if(t%9===5)
