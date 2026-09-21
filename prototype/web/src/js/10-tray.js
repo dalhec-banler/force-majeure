@@ -45,7 +45,7 @@ function toolCard(c){
   const sig=(c.sig>=20? "loud — the ladder moves" : c.sig>=10? "leaves a signature" : c.sig>0? "quiet" : "invisible")+(c.sig>0?eyes:"");
   const when=c.lag===0? "acts this season" : `lands in ${c.lag} season${c.lag===1?"":"s"}`;
   const burn=c.dur&&c.dur>1? ` · burns ${c.dur} seasons` : "";
-  return `<div class="tc-h">${(TOOLICON[c.name]||"")+" "+c.name.replace(" [T3]","").toUpperCase()}<span>$${c.cost}M${flagship&&FLAGSHIP_CAPS.includes(c.name)?" · FUNDED":""}</span></div>
+  return `<div class="tc-h">${(TOOLICON[c.name]||"")+" "+c.name.replace(" [T3]","").toUpperCase()}<span>$${c.cost}M${flagship&&(flagship.caps||FLAGSHIP_CAPS).includes(c.name)?" · FUNDED":""}</span></div>
     ${BRIEF[c.name]||DESC[c.name]||""}
     <div class="tc-f"><i>${when}${burn}</i><i>${sig}</i>${c.needsDrought?"<i>wants drought</i>":""}${c.resil?"<i>permanent</i>":""}${reach}${wingLine(c)}</div>`;
 }
@@ -102,6 +102,8 @@ const WHEN={
 function wingLine(c){
   const ws=eng.eras? eng.wingStatus(c.name) : null; if(!ws) return "";
   if(ws.spent) return `<i>spent — it was only ever going to happen once</i>`;
+  if(autoStands(c.name)) return `<i>the committee stands this wing up at this review · upkeep $${ws.upkeep}M/season</i>`;
+  if(earmarkCovers(c.name)) return `<i>the earmark stands this wing up for the demonstration · upkeep $${ws.upkeep}M/season after, while you keep it</i>`;
   if(ws.online) return (ws.once? `<i>one operation, ever</i>` : "")
     +(ws.upkeep? `<i>wing online · upkeep $${ws.upkeep}M/season</i><i>⏏ stands it down — the upkeep stops, it reopens at $${Math.round(ws.chest*0.75)}M</i>` : "");
   if(ws.requires && ws.requires.length) return `<i>needs first: ${ws.requires.map(n=>n.replace(" [T3]","")).join(", ")}</i>`;
@@ -144,7 +146,9 @@ function toolClick(c){
   const ws=eng.eras? eng.wingStatus(c.name) : null;
   if(freshWings.has(c.name)){ freshWings.delete(c.name); wingSeen.add(c.name); renderTray(); }
   if(readyWings.has(c.name)){ readyWings.delete(c.name); readySeen.add(c.name); renderTray(); }
-  if(ws && !ws.online){                        // a wing that is not flying
+  const carried=ws && !ws.online && earmarkCovers(c.name);
+  if(carried && slots.some(s=>s.cap===c.name)){ $("toolinfo").innerHTML=`<span style="color:var(--amber)">${c.name.replace(" [T3]","")}</span> — the earmark pays for <b>one</b> demonstration, and it is already armed.`; sfxAlert(); return; }
+  if(ws && !ws.online && !carried && !autoStands(c.name)){             // a wing that is not flying
     const i=wingOrders.standup.indexOf(c.name);
     if(i>=0){ wingOrders.standup.splice(i,1); renderTray(); sfxClick(); $("toolinfo").textContent=`${c.name} — the order is withdrawn.`; return; }
     if(ws.spent){ $("toolinfo").innerHTML=`<span style="color:var(--amber)">${c.name.replace(" [T3]","")}</span> — <b>spent.</b> It was only ever going to happen once.`; sfxAlert(); return; }
@@ -224,7 +228,7 @@ function renderTray(){
     const funded=!!flagship && (flagship.caps||FLAGSHIP_CAPS).includes(cap);
     const ws=eng.eras? eng.wingStatus(cap) : null;
     const ordered=wingOrders.standup.includes(cap), moth=wingOrders.mothball.includes(cap);
-    const locked=!!ws && !ws.online;
+    const locked=!!ws && !ws.online && !earmarkCovers(cap) && !autoStands(cap);
     b.classList.toggle("locked", locked && !ordered);
     b.classList.toggle("fresh", freshWings.has(cap)||readyWings.has(cap));
     b.classList.toggle("standable", !!ws && !ws.online && ws.eligible && ws.canStand && !ordered);

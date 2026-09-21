@@ -88,3 +88,30 @@ test('orders armed mid-review wait for the next review instead of vanishing',asy
   assert.equal(g.json(`eng.state.ops.filter(o=>o.owner==='player'&&o.t===5).length`),1);
   assert.deepEqual(g.errors,[]);
 });
+test('a live earmark stands up a wing the chest cannot carry, through the tray',async()=>{
+  const g=consoleGame();
+  await g.run(`(async()=>{while(running&&!(flagship&&earmarkCovers('ENSO Forcing'))&&t<260){
+    slots=[{cap:'Cloud Seeding',target:REG[lastRow()?lastRow().anomalies.indexOf(Math.min(...lastRow().anomalies)):0].name}];await runSeason(false)}})()`);
+  assert.ok(g.json('!!flagship'),'the 1990 earmark is live');
+  g.run(`lastRow().treasury=70`);          // a lean programme: the chest cannot carry the wing on its own
+  const ws=g.json(`eng.wingStatus('ENSO Forcing')`);
+  assert.equal(ws.online,false);assert.equal(ws.canStand,false,'the chest alone cannot stand it up');
+  g.run(`slots=[]; toolClick(CAPS.find(c=>c.name==='ENSO Forcing'))`);      // a driver aims itself at its ocean
+  assert.equal(g.json(`slots.filter(s=>s.cap==='ENSO Forcing').length`),1,'the tray arms the earmarked wing');
+  const tBefore=g.json('t');
+  await g.run(`toolClick(CAPS.find(c=>c.name==='ENSO Forcing'))`);          // a second demonstration is refused
+  assert.equal(g.json(`slots.filter(s=>s.cap==='ENSO Forcing').length`),1);
+  await g.run('runSeason(false)');
+  assert.equal(g.json(`eng.wingStatus('ENSO Forcing').online`),true);
+  assert.equal(g.json(`eng.state.ops.filter(o=>o.owner==='player'&&o.cap==='ENSO Forcing'&&o.t===${tBefore+1}).length`),1);
+  assert.deepEqual(g.errors,[]);
+});
+test('containment is capped by what the whole review can carry',()=>{
+  const g=consoleGame();
+  assert.equal(g.json('nextBatch()'),4);
+  const cap=g.json(`(clampContainment(), +$("containment").max)`);
+  assert.equal(cap,Math.min(40,Math.floor(g.json('spendable()')/4)));
+  g.run(`$("containment").value="40"; clampContainment()`);
+  assert.ok(g.json(`+$("containment").value*4<=spendable()`));
+  assert.deepEqual(g.errors,[]);
+});

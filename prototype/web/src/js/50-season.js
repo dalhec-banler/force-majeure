@@ -465,7 +465,7 @@ async function replaySave(log){
   catch(e){ console.error("replay error", e); }
   saveLog=log.slice(0, t); replaying=false; sndMuted=wasMuted;
   flash=[]; shocks=[]; vehicles=[];
-  const last=lastRow(); if(last){ $("containment").value=String(log[log.length-1].containment||0); $("contval").textContent=$("containment").value; }
+  const last=lastRow(); if(last){ $("containment").value=String(log[log.length-1].containment||0); showCont(); }
   $("wire").innerHTML="";
   wire(`<span class="tag tagd">RESUMED</span> The programme picks up where the file left off — ${last? last.year+" · "+last.qtr : "1946"}. ${t} seasons on the record.`,"op");
   if(last) updateHUD(last, eng.state.rows[t-2]);
@@ -486,7 +486,7 @@ setInterval(()=>{
   el.style.color = sec<=10? "var(--red)" : "";
   if(left<=0 && !resolving && CLOCK_AUTO) runSeason(true);   // manual by default: the clock nags, you advance
 },250);
-$("containment").addEventListener("input",()=>{ clampContainment(); $("contval").textContent=$("containment").value; renderTray(); });
+$("containment").addEventListener("input",()=>{ clampContainment(); renderTray(); });
 
 
 /* The record on your watch. Geophysics is canon until the first lithospheric

@@ -555,7 +555,7 @@
       <div id="sigmeter"><i></i><i></i><i></i><i></i><i></i><i></i></div>
       <div id="ladder">Nothing. No one is looking.</div>
       <span id="dosnum"></span>
-      <label class="kv" for="containment"><span>containment budget ($M)</span>
+      <label class="kv" for="containment"><span title="Hush money, paid every season of the review from what the operations leave. It stays set until you move it.">containment ($M a season)</span>
         <span class="num" id="contval">0</span></label>
       <input type="range" id="containment" min="0" max="40" value="0" step="1">
     </div>
@@ -1630,6 +1630,19 @@ function fmtDead(n){
 
 function fmt(n,d=1){ return n.toLocaleString("en-US",
   {minimumFractionDigits:d,maximumFractionDigits:d}); }
+/* A live flagship earmark stands its wing up for the demonstration, whatever
+   the chest holds (engine: fundedNow). One op rides the earmark. */
+function earmarkCovers(name){
+  if(!flagship || !(flagship.caps||FLAGSHIP_CAPS).includes(name)) return false;
+  const ws=eng.eras? eng.wingStatus(name) : null;
+  return !!ws && !ws.online && ws.eligible && !ws.spent;
+}
+/* The lab wing is wanted from the start: the committee stands it up on its own
+   at the first review the year and the chest allow (engine: w.wanted). */
+function autoStands(name){
+  const ws=eng.eras? eng.wingStatus(name) : null;
+  return !!ws && !ws.online && ws.wanted && ws.canStand && !wingOrders.mothball.includes(name);
+}
 function signedM(n,d=1){ return (n<0?"−$":"$")+fmt(Math.abs(n),d)+"M"; }
 function lastRow(){ return eng.state.rows[t-1]; }
 // PROFIT: what the programme made — homeland revenue over the shadow world where it never acted
@@ -1660,24 +1673,34 @@ function armedCost(){
 function spendable(){
   let overhead=eng.assumptions.overhead;
   if(eng.eras) for(const c of CAPS){if(c.type==='NONE')continue;const w=eng.wingStatus(c.name);
-    if((w.online&&!wingOrders.mothball.includes(c.name)) || (wingOrders.standup.includes(c.name)&&w.canStand)) overhead+=c.upkeep||0;
+    if((w.online&&!wingOrders.mothball.includes(c.name)) || (wingOrders.standup.includes(c.name)&&w.canStand)
+       || autoStands(c.name) || (earmarkCovers(c.name)&&slots.some(s=>s.cap===c.name))) overhead+=c.upkeep||0;
   }
   // the engine's purse: next season's grant in, any lapse clawback out
   return Math.max(0,funds()+pendingGrant-pendingClaw-overhead);
 }
 function available(){ return Math.max(0, spendable()-armedCost()); }
 function canAfford(c){ if(c.resil){const q=eng.quote(c.name,inspectionTarget||HOMELAND);if(q.valid&&q.cost<=available())return true;} if(capCost(c.name)===0 && c.cost>0) return funds()>=eng.assumptions.overhead; return capCost(c.name) <= available(); }
+/* Containment is paid every season of a review, from what the operations
+   leave (the engine commits operations first and clamps containment to the
+   rest). The slider is per season; the label and the tab show the review. */
+function contSeasons(){ return running? Math.max(1,nextBatch()) : 1; }
+function contTotal(){ return (+$("containment").value||0)*contSeasons(); }
+function showCont(){ const v=+$("containment").value||0, n=contSeasons();
+  $("contval").textContent = n>1 && v>0? `${v} · $${v*n}M this ${n>=4?"year":"half-year"}` : String(v); }
 function renderTab(){
-  const a=armedCost(), el=$("hTab"); if(!el) return;
-  el.style.display = slots.length? "" : "none";
-  $("hTabVal").textContent="$"+fmt(a,0)+"M";
-  $("hTabVal").style.color = a>spendable()*0.8? "var(--amber)" : "var(--green)";
-  $("hTabOf").textContent=`of $${fmt(spendable(),0)}M · ${slots.length} op${slots.length===1?"":"s"}`;
+  const a=armedCost(), c=contTotal(), el=$("hTab"); if(!el) return;
+  el.style.display = slots.length||c? "" : "none";
+  $("hTabVal").textContent="$"+fmt(a+c,0)+"M";
+  $("hTabVal").style.color = a+c>spendable()*0.8? "var(--amber)" : "var(--green)";
+  $("hTabOf").textContent=`of $${fmt(spendable(),0)}M · ${slots.length} op${slots.length===1?"":"s"}${c?` · $${fmt(c,0)}M containment`:""}`;
   $("hTabOf").className="d";
 }
 function clampContainment(){
-  const el=$("containment"), mx=Math.max(0, Math.min(40, Math.floor(available())));
-  el.max=mx; if(+el.value>mx){ el.value=mx; $("contval").textContent=el.value; }
+  const el=$("containment"), room=Math.max(0, spendable()-armedCost());
+  const mx=Math.max(0, Math.min(40, Math.floor(room/contSeasons())));
+  el.max=mx; if(+el.value>mx) el.value=mx;
+  showCont();
 }
 
 /* ------------------------------------------------------------ tool tray */
@@ -1727,7 +1750,7 @@ function toolCard(c){
   const sig=(c.sig>=20? "loud — the ladder moves" : c.sig>=10? "leaves a signature" : c.sig>0? "quiet" : "invisible")+(c.sig>0?eyes:"");
   const when=c.lag===0? "acts this season" : `lands in ${c.lag} season${c.lag===1?"":"s"}`;
   const burn=c.dur&&c.dur>1? ` · burns ${c.dur} seasons` : "";
-  return `<div class="tc-h">${(TOOLICON[c.name]||"")+" "+c.name.replace(" [T3]","").toUpperCase()}<span>$${c.cost}M${flagship&&FLAGSHIP_CAPS.includes(c.name)?" · FUNDED":""}</span></div>
+  return `<div class="tc-h">${(TOOLICON[c.name]||"")+" "+c.name.replace(" [T3]","").toUpperCase()}<span>$${c.cost}M${flagship&&(flagship.caps||FLAGSHIP_CAPS).includes(c.name)?" · FUNDED":""}</span></div>
     ${BRIEF[c.name]||DESC[c.name]||""}
     <div class="tc-f"><i>${when}${burn}</i><i>${sig}</i>${c.needsDrought?"<i>wants drought</i>":""}${c.resil?"<i>permanent</i>":""}${reach}${wingLine(c)}</div>`;
 }
@@ -1784,6 +1807,8 @@ const WHEN={
 function wingLine(c){
   const ws=eng.eras? eng.wingStatus(c.name) : null; if(!ws) return "";
   if(ws.spent) return `<i>spent — it was only ever going to happen once</i>`;
+  if(autoStands(c.name)) return `<i>the committee stands this wing up at this review · upkeep $${ws.upkeep}M/season</i>`;
+  if(earmarkCovers(c.name)) return `<i>the earmark stands this wing up for the demonstration · upkeep $${ws.upkeep}M/season after, while you keep it</i>`;
   if(ws.online) return (ws.once? `<i>one operation, ever</i>` : "")
     +(ws.upkeep? `<i>wing online · upkeep $${ws.upkeep}M/season</i><i>⏏ stands it down — the upkeep stops, it reopens at $${Math.round(ws.chest*0.75)}M</i>` : "");
   if(ws.requires && ws.requires.length) return `<i>needs first: ${ws.requires.map(n=>n.replace(" [T3]","")).join(", ")}</i>`;
@@ -1826,7 +1851,9 @@ function toolClick(c){
   const ws=eng.eras? eng.wingStatus(c.name) : null;
   if(freshWings.has(c.name)){ freshWings.delete(c.name); wingSeen.add(c.name); renderTray(); }
   if(readyWings.has(c.name)){ readyWings.delete(c.name); readySeen.add(c.name); renderTray(); }
-  if(ws && !ws.online){                        // a wing that is not flying
+  const carried=ws && !ws.online && earmarkCovers(c.name);
+  if(carried && slots.some(s=>s.cap===c.name)){ $("toolinfo").innerHTML=`<span style="color:var(--amber)">${c.name.replace(" [T3]","")}</span> — the earmark pays for <b>one</b> demonstration, and it is already armed.`; sfxAlert(); return; }
+  if(ws && !ws.online && !carried && !autoStands(c.name)){             // a wing that is not flying
     const i=wingOrders.standup.indexOf(c.name);
     if(i>=0){ wingOrders.standup.splice(i,1); renderTray(); sfxClick(); $("toolinfo").textContent=`${c.name} — the order is withdrawn.`; return; }
     if(ws.spent){ $("toolinfo").innerHTML=`<span style="color:var(--amber)">${c.name.replace(" [T3]","")}</span> — <b>spent.</b> It was only ever going to happen once.`; sfxAlert(); return; }
@@ -1906,7 +1933,7 @@ function renderTray(){
     const funded=!!flagship && (flagship.caps||FLAGSHIP_CAPS).includes(cap);
     const ws=eng.eras? eng.wingStatus(cap) : null;
     const ordered=wingOrders.standup.includes(cap), moth=wingOrders.mothball.includes(cap);
-    const locked=!!ws && !ws.online;
+    const locked=!!ws && !ws.online && !earmarkCovers(cap) && !autoStands(cap);
     b.classList.toggle("locked", locked && !ordered);
     b.classList.toggle("fresh", freshWings.has(cap)||readyWings.has(cap));
     b.classList.toggle("standable", !!ws && !ws.online && ws.eligible && ws.canStand && !ordered);
@@ -4355,7 +4382,7 @@ async function replaySave(log){
   catch(e){ console.error("replay error", e); }
   saveLog=log.slice(0, t); replaying=false; sndMuted=wasMuted;
   flash=[]; shocks=[]; vehicles=[];
-  const last=lastRow(); if(last){ $("containment").value=String(log[log.length-1].containment||0); $("contval").textContent=$("containment").value; }
+  const last=lastRow(); if(last){ $("containment").value=String(log[log.length-1].containment||0); showCont(); }
   $("wire").innerHTML="";
   wire(`<span class="tag tagd">RESUMED</span> The programme picks up where the file left off — ${last? last.year+" · "+last.qtr : "1946"}. ${t} seasons on the record.`,"op");
   if(last) updateHUD(last, eng.state.rows[t-2]);
@@ -4376,7 +4403,7 @@ setInterval(()=>{
   el.style.color = sec<=10? "var(--red)" : "";
   if(left<=0 && !resolving && CLOCK_AUTO) runSeason(true);   // manual by default: the clock nags, you advance
 },250);
-$("containment").addEventListener("input",()=>{ clampContainment(); $("contval").textContent=$("containment").value; renderTray(); });
+$("containment").addEventListener("input",()=>{ clampContainment(); renderTray(); });
 
 
 /* The record on your watch. Geophysics is canon until the first lithospheric

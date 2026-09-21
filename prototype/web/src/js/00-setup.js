@@ -162,6 +162,19 @@ function fmtDead(n){
 
 function fmt(n,d=1){ return n.toLocaleString("en-US",
   {minimumFractionDigits:d,maximumFractionDigits:d}); }
+/* A live flagship earmark stands its wing up for the demonstration, whatever
+   the chest holds (engine: fundedNow). One op rides the earmark. */
+function earmarkCovers(name){
+  if(!flagship || !(flagship.caps||FLAGSHIP_CAPS).includes(name)) return false;
+  const ws=eng.eras? eng.wingStatus(name) : null;
+  return !!ws && !ws.online && ws.eligible && !ws.spent;
+}
+/* The lab wing is wanted from the start: the committee stands it up on its own
+   at the first review the year and the chest allow (engine: w.wanted). */
+function autoStands(name){
+  const ws=eng.eras? eng.wingStatus(name) : null;
+  return !!ws && !ws.online && ws.wanted && ws.canStand && !wingOrders.mothball.includes(name);
+}
 function signedM(n,d=1){ return (n<0?"−$":"$")+fmt(Math.abs(n),d)+"M"; }
 function lastRow(){ return eng.state.rows[t-1]; }
 // PROFIT: what the programme made — homeland revenue over the shadow world where it never acted
@@ -192,23 +205,33 @@ function armedCost(){
 function spendable(){
   let overhead=eng.assumptions.overhead;
   if(eng.eras) for(const c of CAPS){if(c.type==='NONE')continue;const w=eng.wingStatus(c.name);
-    if((w.online&&!wingOrders.mothball.includes(c.name)) || (wingOrders.standup.includes(c.name)&&w.canStand)) overhead+=c.upkeep||0;
+    if((w.online&&!wingOrders.mothball.includes(c.name)) || (wingOrders.standup.includes(c.name)&&w.canStand)
+       || autoStands(c.name) || (earmarkCovers(c.name)&&slots.some(s=>s.cap===c.name))) overhead+=c.upkeep||0;
   }
   // the engine's purse: next season's grant in, any lapse clawback out
   return Math.max(0,funds()+pendingGrant-pendingClaw-overhead);
 }
 function available(){ return Math.max(0, spendable()-armedCost()); }
 function canAfford(c){ if(c.resil){const q=eng.quote(c.name,inspectionTarget||HOMELAND);if(q.valid&&q.cost<=available())return true;} if(capCost(c.name)===0 && c.cost>0) return funds()>=eng.assumptions.overhead; return capCost(c.name) <= available(); }
+/* Containment is paid every season of a review, from what the operations
+   leave (the engine commits operations first and clamps containment to the
+   rest). The slider is per season; the label and the tab show the review. */
+function contSeasons(){ return running? Math.max(1,nextBatch()) : 1; }
+function contTotal(){ return (+$("containment").value||0)*contSeasons(); }
+function showCont(){ const v=+$("containment").value||0, n=contSeasons();
+  $("contval").textContent = n>1 && v>0? `${v} · $${v*n}M this ${n>=4?"year":"half-year"}` : String(v); }
 function renderTab(){
-  const a=armedCost(), el=$("hTab"); if(!el) return;
-  el.style.display = slots.length? "" : "none";
-  $("hTabVal").textContent="$"+fmt(a,0)+"M";
-  $("hTabVal").style.color = a>spendable()*0.8? "var(--amber)" : "var(--green)";
-  $("hTabOf").textContent=`of $${fmt(spendable(),0)}M · ${slots.length} op${slots.length===1?"":"s"}`;
+  const a=armedCost(), c=contTotal(), el=$("hTab"); if(!el) return;
+  el.style.display = slots.length||c? "" : "none";
+  $("hTabVal").textContent="$"+fmt(a+c,0)+"M";
+  $("hTabVal").style.color = a+c>spendable()*0.8? "var(--amber)" : "var(--green)";
+  $("hTabOf").textContent=`of $${fmt(spendable(),0)}M · ${slots.length} op${slots.length===1?"":"s"}${c?` · $${fmt(c,0)}M containment`:""}`;
   $("hTabOf").className="d";
 }
 function clampContainment(){
-  const el=$("containment"), mx=Math.max(0, Math.min(40, Math.floor(available())));
-  el.max=mx; if(+el.value>mx){ el.value=mx; $("contval").textContent=el.value; }
+  const el=$("containment"), room=Math.max(0, spendable()-armedCost());
+  const mx=Math.max(0, Math.min(40, Math.floor(room/contSeasons())));
+  el.max=mx; if(+el.value>mx) el.value=mx;
+  showCont();
 }
 

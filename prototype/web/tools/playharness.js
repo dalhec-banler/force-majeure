@@ -43,7 +43,7 @@ const strategy=require(strategyPath);
 
 const driver=`
 ;(async function(){
-  const journal=[];
+  const journal=[], refused=[];
   const _wire=wire;
   wire=(h,c)=>{ journal.push({t:t, c:c||"", h:String(h).replace(/<[^>]*>/g," ").replace(/\\s+/g," ").trim()}); };
   const _alert=alertStrip; alertStrip=(m)=>{ journal.push({t:t,c:"CHYRON",h:m}); };
@@ -74,18 +74,24 @@ const driver=`
     },
     journalSince:(n)=>journal.slice(n),
     journalLen:()=>journal.length,
-    arm:(cap,target)=>{ slots.push({cap,target}); },
+    // arm as the tray would: an offline wing only if it is ordered up this review
+    // or the live earmark carries it (one op); refusals are logged, not hidden
+    arm:(cap,target)=>{ const ws=eng.eras? eng.wingStatus(cap) : null;
+      if(ws && !ws.online && !wingOrders.standup.includes(cap) && !autoStands(cap) && !(earmarkCovers(cap) && !slots.some(s=>s.cap===cap))){
+        journal.push({t, c:"harness", h:"ARM REFUSED "+cap+" — wing not flying"}); refused.push({t,cap}); return false; }
+      slots.push({cap,target}); return true; },
     standup:(cap)=>{ if(!wingOrders.standup.includes(cap)) wingOrders.standup.push(cap); },
     mothball:(cap)=>{ if(!wingOrders.mothball.includes(cap)) wingOrders.mothball.push(cap); },
     wing:(cap)=>eng.wingStatus? eng.wingStatus(cap) : {online:true},
     review:async()=>{ await runSeason(false); try{ drawGlobeInner(0); }catch(e){ console.error("DRAW ERROR", e.stack); } },
-    containment:(v)=>{ document.getElementById("containment").value=String(Math.max(0,Math.min(40,v))); },
+    // as the slider would: capped by what the whole review can carry
+    containment:(v)=>{ document.getElementById("containment").value=String(Math.max(0,Math.min(40,v))); clampContainment(); },
     predict:(p)=>{ document.getElementById("predict").value=p; },
     season:async()=>{ await runSeason(false); try{ drawGlobeInner(0); }catch(e){ console.error("DRAW ERROR", e.stack); } },
     telemetryDossier:()=>lastRow()? +lastRow().dossier.toFixed(1):0,
   };
   const result=await (${strategy.play.toString()})(api);
-  console.log("::RESULT::"+JSON.stringify({result, view:api.view(),
+  console.log("::RESULT::"+JSON.stringify({result, refused, view:api.view(),
     dossierFinal:api.telemetryDossier(),
     journal: journal.filter(j=>${strategy.journalFilter||"true"})}));
 })().catch(e=>{ console.error("HARNESS ERROR", e); process.exit(1); });
